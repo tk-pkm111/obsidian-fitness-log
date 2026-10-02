@@ -1,0 +1,10 @@
+{
+	"id": "fitness-log",
+	"name": "Fitness Log",
+	"version": "0.1.0",
+	"minAppVersion": "1.13.0",
+	"description": "Log strength-training workouts in your vault.",
+	"author": "tk-pkm111",
+	"authorUrl": "https://github.com/tk-pkm111",
+	"isDesktopOnly": false
+}

@@ -1,0 +1,27 @@
+# エディタ
+.vscode
+*.iml
+.idea
+
+# npm
+node_modules
+
+# ビルド成果物（リリース時に GitHub Release へ添付する。リポジトリには入れない）
+main.js
+*.map
+
+# Obsidian のプラグイン設定ファイル
+data.json
+
+# macOS
+.DS_Store
+
+# テスト
+coverage
+
+# 開発用 Vault: 作業状態とプラグイン本体（ビルド／スクリプトで再生成できる）
+dev-vault/.obsidian/workspace*.json
+dev-vault/.obsidian/plugins/
+
+# 参照用に取得した外部リポジトリ（npm run references:fetch で再取得できる）
+references/
