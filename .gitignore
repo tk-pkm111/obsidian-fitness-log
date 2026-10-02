@@ -25,3 +25,14 @@ dev-vault/.obsidian/plugins/
 
 # 参照用に取得した外部リポジトリ（npm run references:fetch で再取得できる）
 references/
+
+# オンボーディング動画の書き出し途中・手元用のファイル（docs/onboarding-video/render.sh で再生成できる）
+docs/onboarding-video/.chrome/
+docs/onboarding-video/stills/
+docs/onboarding-video/chunk-*
+docs/onboarding-video/chunks.txt
+docs/onboarding-video/video-only.mp4
+docs/onboarding-video/master.mp4
+docs/onboarding-video/reel.wav
+docs/onboarding-video/reel.m4a
+docs/onboarding-video/*.png
