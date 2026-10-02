@@ -1410,48 +1410,691 @@ button.fitness-log-weekday.is-active {
 	color: var(--text-muted);
 }
 
-/* ---------------------------------------------------------------- ログ（推移チャート・自己ベスト・一覧） */
+/* ---------------------------------------------------------------- ログ（パッケージ別の推移・種目・月ごと） */
 
-.fitness-log-picker {
-	max-width: 100%;
-}
-
-.fitness-log-picker span:last-child {
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.fitness-log-recent {
-	margin-top: calc(var(--size-4-1) * -1);
-}
-
-.fitness-log-tiles {
+/* タブ（パッケージ／種目／月ごと） */
+.fitness-log-seg {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 3px;
+	padding: 3px;
+	margin-bottom: var(--size-4-3);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+
+.fitness-log-page .fitness-log-seg > button {
+	height: auto;
+	min-height: 34px;
+	padding: 4px var(--size-4-1);
+	border-radius: calc(var(--radius-m) - 2px);
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-page .fitness-log-seg > button[aria-selected='true'] {
+	background: var(--background-primary);
+	color: var(--text-normal);
+	box-shadow: 0 0 0 1px var(--background-modifier-border);
+}
+
+/* パッケージの色の点 */
+.fitness-log-dot {
+	display: inline-block;
+	width: 9px;
+	height: 9px;
+	flex-shrink: 0;
+	border-radius: 50%;
+	background: rgb(var(--fitness-log-pkg-rgb));
+}
+
+/* パッケージの選択 */
+.fitness-log-group-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-1);
+	margin-bottom: var(--size-4-3);
+}
+
+.fitness-log-page button.fitness-log-group-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: auto;
+	min-height: 32px;
+	padding: 2px var(--size-4-3) 2px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.fitness-log-page button.fitness-log-group-chip[aria-pressed='true'] {
+	border-color: rgb(var(--fitness-log-pkg-rgb));
+	background: rgba(var(--fitness-log-pkg-rgb), 0.16);
+	color: var(--text-normal);
+	font-weight: var(--font-bold);
+}
+
+.fitness-log-page button.fitness-log-group-chip.is-empty:not([aria-pressed='true']) {
+	opacity: 0.5;
+}
+
+/* パッケージの概要（回数・最後の日・1 回ごとの棒） */
+.fitness-log-summary {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	padding: var(--size-4-3) var(--size-4-3) var(--size-4-2);
+	margin-bottom: var(--size-4-4);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-l);
+}
+
+.fitness-log-summary-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.fitness-log-summary-head .fitness-log-dot {
+	width: 11px;
+	height: 11px;
+}
+
+.fitness-log-summary-name {
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-extrabold, 800);
+	line-height: 1.25;
+}
+
+.fitness-log-summary-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px var(--size-4-3);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-caption {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+.fitness-log-section-title {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	margin: var(--size-4-4) 0 var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	letter-spacing: 0.03em;
+}
+
+.fitness-log-section-title > span:last-child {
+	color: var(--text-faint);
+	font-weight: var(--font-normal);
+	letter-spacing: 0;
+	text-align: right;
+}
+
+/* 種目の行（名前・前回のセット・前回比・推移の線・自己ベスト） */
+.fitness-log-ex-rows {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-l);
+	overflow: hidden;
+}
+
+.fitness-log-page button.fitness-log-ex-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-areas: 'name spark' 'last spark' 'badges badges';
+	align-items: center;
+	gap: 2px var(--size-4-3);
+	width: 100%;
+	height: auto;
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 0;
+	border-top: 1px solid var(--background-modifier-border);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: left;
+	font-weight: var(--font-normal);
+	white-space: normal;
+}
+
+.fitness-log-page button.fitness-log-ex-row:first-child {
+	border-top: 0;
+}
+
+.fitness-log-page button.fitness-log-ex-row:not(:disabled):hover {
+	background: var(--background-modifier-hover);
+}
+
+.fitness-log-page button.fitness-log-ex-row:disabled {
+	opacity: 1;
+	cursor: default;
+}
+
+.fitness-log-ex-name {
+	grid-area: name;
+	min-width: 0;
+	overflow-wrap: anywhere;
+	font-weight: var(--font-semibold);
+	line-height: 1.35;
+}
+
+.fitness-log-ex-row.is-other .fitness-log-ex-name {
+	color: var(--text-muted);
+}
+
+.fitness-log-ex-last {
+	grid-area: last;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 var(--size-4-2);
+	min-width: 0;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-ex-spark {
+	grid-area: spark;
+	display: flex;
+}
+
+.fitness-log-ex-badges {
+	grid-area: badges;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-1);
+}
+
+.fitness-log-ex-badges:empty {
+	display: none;
+}
+
+.fitness-log-delta {
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.fitness-log-delta.is-up {
+	color: var(--color-green);
+}
+
+.fitness-log-delta.is-down {
+	color: var(--text-muted);
+}
+
+.fitness-log-delta.is-same {
+	color: var(--text-faint);
+}
+
+/* 自己ベスト（事実としての印。モチベーションに） */
+.fitness-log-best {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 0 8px 0 6px;
+	border-radius: 999px;
+	background: rgba(var(--color-yellow-rgb), 0.16);
+	color: var(--text-normal);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	line-height: 1.75;
+}
+
+.fitness-log-best-icon,
+.fitness-log-record-best {
+	display: inline-flex;
+	color: var(--color-yellow);
+}
+
+.fitness-log-best-icon svg,
+.fitness-log-record-best svg {
+	width: 12px;
+	height: 12px;
+	fill: currentColor;
+}
+
+.fitness-log-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 0 8px;
+	border-radius: 999px;
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.75;
+	font-variant-numeric: tabular-nums;
+}
+
+/* 推移の小さな線 */
+.fitness-log-spark {
+	display: block;
+	overflow: visible;
+}
+
+.fitness-log-spark-line {
+	fill: none;
+	stroke: rgb(var(--fitness-log-pkg-rgb));
+	stroke-width: 1.75;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.fitness-log-spark-point {
+	fill: rgb(var(--fitness-log-pkg-rgb));
+}
+
+.fitness-log-ex-row.is-other .fitness-log-spark {
+	opacity: 0.55;
+}
+
+/* 今の内容に無い種目（たたむ） */
+.fitness-log-fold {
+	margin-top: var(--size-4-3);
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: var(--radius-l);
+}
+
+.fitness-log-fold > summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	min-height: 44px;
+	padding: 0 var(--size-4-3);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+	list-style: none;
+}
+
+.fitness-log-fold > summary::-webkit-details-marker {
+	display: none;
+}
+
+.fitness-log-fold-chevron {
+	display: inline-flex;
+	color: var(--text-faint);
+	transition: transform 120ms ease;
+}
+
+.fitness-log-fold[open] .fitness-log-fold-chevron {
+	transform: rotate(90deg);
+}
+
+.fitness-log-fold[open] > summary {
+	border-bottom: 1px dashed var(--background-modifier-border);
+}
+
+.fitness-log-fold .fitness-log-ex-rows {
+	border: 0;
+	border-radius: 0;
+}
+
+.fitness-log-fold-note {
+	padding: var(--size-4-2) var(--size-4-3) var(--size-4-3);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+/* 種目の詳細（そのパッケージの中での推移） */
+.fitness-log-page button.fitness-log-back-link,
+.fitness-log-page button.fitness-log-link-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	height: auto;
+	min-height: 32px;
+	padding: 2px var(--size-4-1) 2px 0;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.fitness-log-page button.fitness-log-link-button {
+	padding: 2px 0;
+	margin-bottom: var(--size-4-1);
+	color: var(--text-accent);
+}
+
+.fitness-log-back-link svg,
+.fitness-log-link-button svg {
+	width: 16px;
+	height: 16px;
+}
+
+.fitness-log-detail-head {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--size-4-1);
+	margin: var(--size-4-1) 0 var(--size-4-3);
+}
+
+.fitness-log-detail-name {
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-extrabold, 800);
+	line-height: 1.3;
+	text-wrap: balance;
+}
+
+.fitness-log-page-log > .fitness-log-detail-name {
+	margin: var(--size-4-2) 0 var(--size-4-2);
+}
+
+.fitness-log-context {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 1px 10px 1px 8px;
+	border-radius: 999px;
+	background: rgba(var(--fitness-log-pkg-rgb), 0.16);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+}
+
+.fitness-log-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
 	gap: var(--size-4-2);
 	margin-bottom: var(--size-4-3);
 }
 
-.fitness-log-tile {
-	background: var(--background-secondary);
-	border-radius: var(--radius-m);
+.fitness-log-stat {
+	min-width: 0;
 	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
 }
 
-.fitness-log-tile-label {
-	color: var(--text-muted);
+.fitness-log-stat-label,
+.fitness-log-stat-sub {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	font-size: var(--font-ui-smaller);
-}
-
-.fitness-log-tile-value {
-	font-size: var(--font-ui-large);
-	font-weight: var(--font-bold);
 	font-variant-numeric: tabular-nums;
 }
 
+.fitness-log-stat-label {
+	color: var(--text-muted);
+}
+
+.fitness-log-stat-sub {
+	min-height: 1.5em;
+	color: var(--text-faint);
+}
+
+.fitness-log-stat-value {
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-extrabold, 800);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* 指標の切り替え */
+.fitness-log-metric-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-1);
+}
+
+.fitness-log-page button.fitness-log-metric-chip {
+	height: auto;
+	min-height: 30px;
+	padding: 2px var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.fitness-log-page button.fitness-log-metric-chip[aria-pressed='true'] {
+	border-color: var(--text-muted);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-weight: var(--font-bold);
+}
+
+.fitness-log-toggle {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	min-height: 32px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+/* そのパッケージでの記録の表 */
+.fitness-log-records {
+	display: flex;
+	flex-direction: column;
+	border-top: 1px solid var(--background-modifier-border);
+	margin-bottom: var(--size-4-4);
+}
+
+.fitness-log-page button.fitness-log-record {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: baseline;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: auto;
+	min-height: 44px;
+	padding: var(--size-4-2) var(--size-4-1);
+	border-bottom: 1px solid var(--background-modifier-border);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: left;
+	font-weight: var(--font-normal);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+	white-space: normal;
+}
+
+.fitness-log-page button.fitness-log-record:hover {
+	background: var(--background-modifier-hover);
+}
+
+.fitness-log-record-date {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.fitness-log-record-sets {
+	min-width: 0;
+}
+
+.fitness-log-record-value {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	font-weight: var(--font-bold);
+	white-space: nowrap;
+}
+
+.fitness-log-record-value > span:first-child {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+/* 種目のタブ: 検索・凡例・パッケージごとの行 */
+.fitness-log-log-search {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.fitness-log-log-search input.fitness-log-search {
+	width: 100%;
+	max-width: none;
+}
+
+.fitness-log-log-search .fitness-log-chips {
+	margin-bottom: 0;
+}
+
+.fitness-log-search-empty {
+	padding: var(--size-4-2) var(--size-4-1);
+}
+
+.fitness-log-suggest {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	overflow: hidden;
+}
+
+.fitness-log-page button.fitness-log-suggest-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: auto;
+	min-height: 44px;
+	padding: var(--size-4-1) var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: left;
+	font-weight: var(--font-normal);
+	white-space: normal;
+}
+
+.fitness-log-page button.fitness-log-suggest-item:first-child {
+	border-top: 0;
+}
+
+.fitness-log-page button.fitness-log-suggest-item:hover {
+	background: var(--background-modifier-hover);
+}
+
+.fitness-log-dots {
+	display: inline-flex;
+	gap: 3px;
+}
+
+.fitness-log-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-1);
+	margin-top: var(--size-4-2);
+}
+
+.fitness-log-page button.fitness-log-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: auto;
+	min-height: 30px;
+	padding: 2px var(--size-4-3) 2px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+}
+
+.fitness-log-page button.fitness-log-legend-item[aria-pressed='false'] {
+	color: var(--text-faint);
+}
+
+.fitness-log-legend-item[aria-pressed='false'] .fitness-log-dot {
+	background: transparent;
+	box-shadow: inset 0 0 0 1.5px rgb(var(--fitness-log-pkg-rgb));
+}
+
+.fitness-log-group-rows {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	overflow: hidden;
+	margin-bottom: var(--size-4-4);
+}
+
+.fitness-log-page button.fitness-log-group-row {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: auto;
+	min-height: 52px;
+	padding: var(--size-4-2) var(--size-4-2) var(--size-4-2) var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: left;
+	font-weight: var(--font-normal);
+	white-space: normal;
+}
+
+.fitness-log-page button.fitness-log-group-row:first-child {
+	border-top: 0;
+}
+
+.fitness-log-page button.fitness-log-group-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.fitness-log-group-row-body {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.fitness-log-group-row-name {
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-group-row-value {
+	font-weight: var(--font-extrabold, 800);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* チャート */
 .fitness-log-chart {
 	position: relative;
-	margin: var(--size-4-2) 0 var(--size-4-3);
+	margin: var(--size-4-2) 0 var(--size-4-2);
+}
+
+.fitness-log-chart.is-bars {
+	margin: var(--size-4-1) 0 0;
 }
 
 .fitness-log-chart-svg {
@@ -1470,31 +2113,50 @@ button.fitness-log-weekday.is-active {
 	font-variant-numeric: tabular-nums;
 }
 
-.fitness-log-chart-area {
-	fill: var(--interactive-accent);
+.fitness-log-chart-unit {
+	fill: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+.fitness-log-series-area {
+	fill: rgb(var(--fitness-log-pkg-rgb));
 	fill-opacity: 0.1;
 	stroke: none;
 }
 
-.fitness-log-chart-line {
+.fitness-log-series-line {
 	fill: none;
-	stroke: var(--interactive-accent);
+	stroke: rgb(var(--fitness-log-pkg-rgb));
 	stroke-width: 2;
 	stroke-linejoin: round;
 	stroke-linecap: round;
 }
 
-.fitness-log-chart-point {
-	fill: var(--interactive-accent);
+.fitness-log-series.is-dashed .fitness-log-series-line {
+	stroke-dasharray: 5 4;
+}
+
+.fitness-log-series-point {
+	fill: rgb(var(--fitness-log-pkg-rgb));
 	stroke: var(--background-primary);
 	stroke-width: 2;
 }
 
-.fitness-log-chart-point.is-hovered {
+.fitness-log-series.is-dashed .fitness-log-series-point {
+	fill: var(--background-primary);
+	stroke: rgb(var(--fitness-log-pkg-rgb));
+	stroke-width: 1.75;
+}
+
+.fitness-log-chart-ring {
+	fill: none;
+	stroke: rgb(var(--fitness-log-pkg-rgb));
+	stroke-width: 2;
 	pointer-events: none;
 }
 
-.fitness-log-chart-value {
+.fitness-log-chart-value,
+.fitness-log-chart-series-label {
 	fill: var(--text-normal);
 	font-size: var(--font-ui-smaller);
 	font-weight: var(--font-semibold);
@@ -1504,19 +2166,56 @@ button.fitness-log-weekday.is-active {
 .fitness-log-chart-crosshair {
 	stroke: var(--text-faint);
 	stroke-width: 1;
+	pointer-events: none;
 }
 
-.fitness-log-chart-overlay {
+.fitness-log-chart-overlay,
+.fitness-log-bar-hit {
 	fill: transparent;
-	cursor: crosshair;
+	cursor: pointer;
 	touch-action: pan-y;
+}
+
+.fitness-log-bar {
+	fill: rgb(var(--fitness-log-pkg-rgb));
+	fill-opacity: 0.6;
+	pointer-events: none;
+}
+
+.fitness-log-bar.is-latest,
+.fitness-log-bar.is-hovered {
+	fill-opacity: 1;
+}
+
+.fitness-log-chart-keys {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px var(--size-4-3);
+	margin-bottom: var(--size-4-1);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-normal);
+}
+
+.fitness-log-chart-key {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.fitness-log-chart-key-line {
+	width: 16px;
+	border-top: 2px solid rgb(var(--fitness-log-pkg-rgb));
+}
+
+.fitness-log-chart-key.is-dashed .fitness-log-chart-key-line {
+	border-top-style: dashed;
 }
 
 .fitness-log-chart-tooltip {
 	position: absolute;
 	top: 0;
 	left: var(--fitness-log-tooltip-x, 50%);
-	transform: translateX(8px);
+	transform: translateX(10px);
 	pointer-events: none;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
@@ -1529,11 +2228,17 @@ button.fitness-log-weekday.is-active {
 }
 
 .fitness-log-chart-tooltip.is-left {
-	transform: translateX(calc(-100% - 8px));
+	transform: translateX(calc(-100% - 10px));
+}
+
+.fitness-log-chart.is-bars .fitness-log-chart-tooltip {
+	top: auto;
+	bottom: calc(100% + 4px);
 }
 
 .fitness-log-chart-tooltip-title {
-	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-bold);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -2116,33 +2821,61 @@ input.fitness-log-section-name-input[type='text']:focus {
 
 /* ---------------------------------------------------------------- ルーチンのカレンダー */
 
-/* パッケージの色（作った順に決まる。並べ替えても変わらない）。8 色を超えたら繰り返す */
+/*
+パッケージの色（作った順に決まる。並べ替えても変わらない）。8 色を超えたら繰り返す。
+色覚の違い（P・D・T 型）でも隣どうしが見分けられるよう検証した 8 色の順。ライト／ダークで明るさだけ変える。
+ルーチンのカレンダーとログで同じ色。
+*/
 .fitness-log-pkg-color-0 {
-	--fitness-log-pkg-rgb: var(--color-blue-rgb);
+	--fitness-log-pkg-rgb: 42, 120, 214; /* 青 */
 }
 .fitness-log-pkg-color-1 {
-	--fitness-log-pkg-rgb: var(--color-orange-rgb);
+	--fitness-log-pkg-rgb: 235, 104, 52; /* 橙 */
 }
 .fitness-log-pkg-color-2 {
-	--fitness-log-pkg-rgb: var(--color-green-rgb);
+	--fitness-log-pkg-rgb: 27, 175, 122; /* 緑青 */
 }
 .fitness-log-pkg-color-3 {
-	--fitness-log-pkg-rgb: var(--color-purple-rgb);
+	--fitness-log-pkg-rgb: 237, 161, 0; /* 黄 */
 }
 .fitness-log-pkg-color-4 {
-	--fitness-log-pkg-rgb: var(--color-red-rgb);
+	--fitness-log-pkg-rgb: 232, 123, 164; /* 赤紫 */
 }
 .fitness-log-pkg-color-5 {
-	--fitness-log-pkg-rgb: var(--color-cyan-rgb);
+	--fitness-log-pkg-rgb: 0, 131, 0; /* 緑 */
 }
 .fitness-log-pkg-color-6 {
-	--fitness-log-pkg-rgb: var(--color-yellow-rgb);
+	--fitness-log-pkg-rgb: 74, 58, 167; /* 紫 */
 }
 .fitness-log-pkg-color-7 {
-	--fitness-log-pkg-rgb: var(--color-pink-rgb);
+	--fitness-log-pkg-rgb: 227, 73, 72; /* 赤 */
+}
+.theme-dark .fitness-log-pkg-color-0 {
+	--fitness-log-pkg-rgb: 57, 135, 229;
+}
+.theme-dark .fitness-log-pkg-color-1 {
+	--fitness-log-pkg-rgb: 217, 89, 38;
+}
+.theme-dark .fitness-log-pkg-color-2 {
+	--fitness-log-pkg-rgb: 25, 158, 112;
+}
+.theme-dark .fitness-log-pkg-color-3 {
+	--fitness-log-pkg-rgb: 201, 133, 0;
+}
+.theme-dark .fitness-log-pkg-color-4 {
+	--fitness-log-pkg-rgb: 213, 81, 129;
+}
+.theme-dark .fitness-log-pkg-color-5 {
+	--fitness-log-pkg-rgb: 0, 131, 0;
+}
+.theme-dark .fitness-log-pkg-color-6 {
+	--fitness-log-pkg-rgb: 144, 133, 233;
+}
+.theme-dark .fitness-log-pkg-color-7 {
+	--fitness-log-pkg-rgb: 230, 103, 103;
 }
 .fitness-log-pkg-color-none {
-	--fitness-log-pkg-rgb: 128, 128, 128;
+	--fitness-log-pkg-rgb: 139, 139, 134;
 }
 
 .fitness-log-calendar {

@@ -1,5 +1,5 @@
 /**
- * 種目の推移と自己ベスト（ログページ）。
+ * 種目の 1 回分の記録の統計（ログページの推移・自己ベスト）。
  */
 import type { SetLog } from '../model/types';
 import { spanSeconds } from '../time/date';
@@ -71,66 +71,4 @@ export function sessionStat(occurrence: ExerciseOccurrence): SessionStat {
 		maxReps,
 		durationSec,
 	};
-}
-
-/** 古い順のセッション統計（チャート用） */
-export function exerciseTimeline(
-	occurrences: readonly ExerciseOccurrence[],
-): SessionStat[] {
-	return occurrences.map(sessionStat).reverse();
-}
-
-export interface Best {
-	value: number;
-	date: string;
-	/** 最大重量のときの回数など、値の補足 */
-	detail?: string;
-}
-
-export interface PersonalBests {
-	maxWeight?: Best;
-	maxVolume?: Best;
-	estimatedOneRepMax?: Best;
-	maxReps?: Best;
-	maxDurationSec?: Best;
-}
-
-/**
- * 自己ベスト。同じ値なら古い方（最初に達成した日）を採用する。
- * maxWeight の detail は、その重量でできた最大回数。
- */
-export function personalBests(stats: readonly SessionStat[]): PersonalBests {
-	const ordered = [...stats].sort((a, b) =>
-		a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
-	);
-	const bests: PersonalBests = {};
-	const consider = (
-		key: keyof PersonalBests,
-		value: number | null,
-		date: string,
-		detail?: string,
-	) => {
-		if (value === null || value <= 0) return;
-		const current = bests[key];
-		if (!current || value > current.value)
-			bests[key] = { value, date, detail };
-	};
-	for (const stat of ordered) {
-		if (stat.maxWeight !== null) {
-			const repsAtMax = stat.sets
-				.filter((s) => s.weight === stat.maxWeight && s.reps !== null)
-				.reduce((max, s) => Math.max(max, s.reps ?? 0), 0);
-			consider(
-				'maxWeight',
-				stat.maxWeight,
-				stat.date,
-				repsAtMax > 0 ? String(repsAtMax) : undefined,
-			);
-		}
-		consider('maxVolume', stat.volume, stat.date);
-		consider('estimatedOneRepMax', stat.estimatedOneRepMax, stat.date);
-		consider('maxReps', stat.maxReps, stat.date);
-		consider('maxDurationSec', stat.durationSec, stat.date);
-	}
-	return bests;
 }

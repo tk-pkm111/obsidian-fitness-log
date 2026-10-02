@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ExerciseOccurrence } from '../../../src/lib/history/carry-over';
-import {
-	estimateOneRepMax,
-	exerciseTimeline,
-	personalBests,
-	sessionStat,
-} from '../../../src/lib/history/stats';
+import { estimateOneRepMax, sessionStat } from '../../../src/lib/history/stats';
 import type { SetLog } from '../../../src/lib/model/types';
 
 const s = (
@@ -62,38 +57,5 @@ describe('sessionStat', () => {
 			estimatedOneRepMax: null,
 			maxReps: 8,
 		});
-	});
-});
-
-describe('exerciseTimeline / personalBests', () => {
-	const occurrences = [
-		occ('2026-10-01', [s(70, 5)]),
-		occ('2026-09-28', [s(70, 6), s(60, 10)]),
-		occ('2026-09-24', [s(60, 8)]),
-	];
-
-	it('タイムラインは古い順', () => {
-		expect(exerciseTimeline(occurrences).map((t) => t.date)).toEqual([
-			'2026-09-24',
-			'2026-09-28',
-			'2026-10-01',
-		]);
-	});
-
-	it('自己ベストは最初に達成した日を採用し、最大重量には回数を添える', () => {
-		const bests = personalBests(exerciseTimeline(occurrences));
-		expect(bests.maxWeight).toEqual({
-			value: 70,
-			date: '2026-09-28',
-			detail: '6',
-		});
-		expect(bests.maxVolume).toEqual({
-			value: 1020,
-			date: '2026-09-28',
-			detail: undefined,
-		});
-		expect(bests.estimatedOneRepMax?.date).toBe('2026-09-28');
-		expect(bests.maxReps?.value).toBe(10);
-		expect(bests.maxDurationSec).toBeUndefined();
 	});
 });

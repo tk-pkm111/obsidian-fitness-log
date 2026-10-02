@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-	exercisesWithHistory,
-	monthlyOverview,
-} from '../../../src/lib/history/overview';
-import type { DayLog, Exercise, SetLog } from '../../../src/lib/model/types';
+import { monthlyOverview } from '../../../src/lib/history/overview';
+import type { DayLog, SetLog } from '../../../src/lib/model/types';
 
 const s = (weight: number, reps: number): SetLog => ({
 	weight,
@@ -21,15 +18,6 @@ const day = (
 	date,
 	sessions: [{ name, note: '', exercises: [{ name: exercise, sets }] }],
 });
-const ex = (id: string, name: string, aliases: string[] = []): Exercise => ({
-	id,
-	name,
-	category: 'push',
-	recordType: 'weight-reps',
-	aliases,
-	createdAt: '',
-});
-
 const days = [
 	day('2026-09-28', 'A', 'ベンチ', [s(60, 5), s(60, 5)]),
 	day('2026-10-01', 'B', 'BP', [s(62.5, 5)]),
@@ -49,22 +37,6 @@ describe('monthlyOverview', () => {
 		expect(months[0]?.days.map((d) => d.date)).toEqual([
 			'2026-10-02',
 			'2026-10-01',
-		]);
-	});
-});
-
-describe('exercisesWithHistory', () => {
-	it('別名でもまとめ、最後に行った日が新しい順', () => {
-		const result = exercisesWithHistory(days, [
-			ex('ex_b', 'ベンチ', ['BP']),
-			ex('ex_s', 'スクワット'),
-			ex('ex_x', '未実施'),
-		]);
-		expect(
-			result.map((a) => [a.exercise.id, a.lastDate, a.sessions]),
-		).toEqual([
-			['ex_s', '2026-10-02', 1],
-			['ex_b', '2026-10-01', 2],
 		]);
 	});
 });

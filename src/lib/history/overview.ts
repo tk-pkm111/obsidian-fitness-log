@@ -1,8 +1,7 @@
 /**
- * ログページの一覧（月ごとの記録・記録のある種目）。
+ * ログページの月ごとの一覧。
  */
-import { createResolver } from '../model/resolve';
-import type { DayLog, Exercise } from '../model/types';
+import type { DayLog } from '../model/types';
 import { monthOf } from '../time/date';
 import { summarizeDay, type DaySummary } from '../log/summary';
 
@@ -47,42 +46,4 @@ export function monthlyOverview(days: readonly DayLog[]): MonthOverview[] {
 			...m,
 			days: m.days.sort((a, b) => (a.date < b.date ? 1 : -1)),
 		}));
-}
-
-export interface ExerciseActivity {
-	exercise: Exercise;
-	lastDate: string;
-	/** 記録のある日数 */
-	sessions: number;
-}
-
-/** 記録のある種目（最後に行った日が新しい順）。名前は本名・別名で解決する。 */
-export function exercisesWithHistory(
-	days: readonly DayLog[],
-	exercises: readonly Exercise[],
-): ExerciseActivity[] {
-	const resolver = createResolver(exercises);
-	const activity = new Map<string, ExerciseActivity>();
-	for (const day of days) {
-		const seen = new Set<string>();
-		for (const session of day.sessions)
-			for (const log of session.exercises) {
-				if (log.sets.length === 0) continue;
-				const exercise = resolver.resolve(log.name);
-				if (!exercise || seen.has(exercise.id)) continue;
-				seen.add(exercise.id);
-				const current = activity.get(exercise.id);
-				activity.set(exercise.id, {
-					exercise,
-					lastDate:
-						current && current.lastDate > day.date
-							? current.lastDate
-							: day.date,
-					sessions: (current?.sessions ?? 0) + 1,
-				});
-			}
-	}
-	return [...activity.values()].sort((a, b) =>
-		a.lastDate < b.lastDate ? 1 : a.lastDate > b.lastDate ? -1 : 0,
-	);
 }
