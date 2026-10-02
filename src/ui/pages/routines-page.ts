@@ -179,27 +179,28 @@ function renderCalendar(ctx: PageContext, el: HTMLElement): void {
 				data.packages,
 				index.day(date),
 			);
-			const cell = grid.createEl('button', {
+			// マスを押すと下にその日の中身、パッケージ名を押すとその日の画面へ
+			// （ボタンの中にボタンは置けないので、マスは div、日付とパッケージ名をボタンにする）
+			const cell = grid.createDiv({
 				cls: ['fitness-log-cal-day', ...weekendClass(weekdayOf(date))],
-				attr: {
-					type: 'button',
-					'aria-pressed': String(date === state.selected),
-					'aria-label': `${formatMonthDay(date)} (${weekdayLabel(weekdayOf(date))}) ${entries
-						.map((e) => e.name ?? t('today.other'))
-						.join('、')}`,
-				},
 			});
 			cell.toggleClass('is-other-month', monthOf(date) !== state.month);
 			cell.toggleClass('is-today', date === ctx.today);
 			cell.toggleClass('is-selected', date === state.selected);
 			cell.toggleClass('is-past', date < ctx.today);
-			cell.createSpan({
+			cell.createEl('button', {
 				cls: 'fitness-log-cal-date',
 				text: String(Number(date.slice(8))),
+				attr: {
+					type: 'button',
+					'aria-pressed': String(date === state.selected),
+					'aria-label': `${formatMonthDay(date)} (${weekdayLabel(weekdayOf(date))})`,
+				},
 			});
 			const chips = cell.createDiv({ cls: 'fitness-log-cal-chips' });
 			const shown = entries.slice(0, 3);
-			for (const entry of shown) packageChip(chips, data, entry);
+			for (const entry of shown)
+				packageChip(ctx, chips, data, date, entry);
 			if (entries.length > shown.length)
 				chips.createSpan({
 					cls: 'fitness-log-cal-more',
@@ -245,6 +246,22 @@ function renderCalendar(ctx: PageContext, el: HTMLElement): void {
 	renderDayDetail(ctx, cal, state.selected);
 }
 
+/**
+ * その日の今日の画面を開く。やったパッケージから来たときは、その記録を開いた状態にする
+ * （今日の画面の「記録を見る」と同じ状態。キーは today-section.ts の expandKey）
+ */
+function openDay(ctx: PageContext, date: string, entry?: CalendarEntry): void {
+	if (entry?.kind === 'done' && entry.packageId)
+		ctx.pageState('todayExpanded', () => new Set<string>()).add(
+			`${date}:pkg:${entry.packageId}`,
+		);
+	ctx.navigate({
+		page: 'today',
+		date: date === ctx.today ? null : date,
+		selectedId: null,
+	});
+}
+
 function weekendClass(weekday: number): string[] {
 	if (weekday === 6) return ['is-sat'];
 	if (weekday === 0) return ['is-sun'];
@@ -266,17 +283,31 @@ function colorClass(
 
 /** カレンダーの中のパッケージ名（やった＝塗り、予定＝枠、スキップ＝取り消し線） */
 function packageChip(
+	ctx: PageContext,
 	parent: HTMLElement,
 	data: Readonly<PluginData>,
+	date: string,
 	entry: CalendarEntry,
 ): void {
-	parent.createSpan({
+	const name = entry.name ?? t('today.other');
+	const chip = parent.createEl('button', {
 		cls: [
 			'fitness-log-cal-chip',
 			`is-${entry.kind}`,
 			colorClass(data, entry.packageId),
 		],
-		text: entry.name ?? t('today.other'),
+		text: name,
+		attr: {
+			type: 'button',
+			'aria-label': t('routines.openPackageDay', {
+				name,
+				date: formatMonthDay(date),
+			}),
+		},
+	});
+	chip.addEventListener('click', (event) => {
+		event.stopPropagation();
+		openDay(ctx, date, entry);
 	});
 }
 
@@ -308,17 +339,10 @@ function renderDayDetail(
 			? t('date.relative', { label: relative, md, wd })
 			: t('date.plain', { md, wd }),
 	});
-	textButton(
-		head,
-		t('routines.openDay'),
-		() =>
-			ctx.navigate({
-				page: 'today',
-				date: date === ctx.today ? null : date,
-				selectedId: null,
-			}),
-		{ icon: 'arrow-right', cls: 'mod-quiet' },
-	);
+	textButton(head, t('routines.openDay'), () => openDay(ctx, date), {
+		icon: 'arrow-right',
+		cls: 'mod-quiet',
+	});
 
 	if (entries.length === 0) {
 		box.createDiv({ cls: 'fitness-log-muted', text: t('routines.noPlan') });
@@ -334,9 +358,14 @@ function renderDayDetail(
 		title.createSpan({
 			cls: ['fitness-log-cal-dot', colorClass(data, entry.packageId)],
 		});
-		title.createSpan({
+		const name = title.createEl('a', {
 			cls: 'fitness-log-cal-entry-name',
 			text: entry.name ?? t('today.other'),
+			href: '#',
+		});
+		name.addEventListener('click', (event) => {
+			event.preventDefault();
+			openDay(ctx, date, entry);
 		});
 		title.createSpan({
 			cls: 'fitness-log-cal-entry-kind',

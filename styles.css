@@ -2195,8 +2195,8 @@ input.fitness-log-section-name-input[type='text']:focus {
 	color: var(--color-red);
 }
 
-/* （スマホの Obsidian はボタンに左右 20px の余白を付けるので、マスでは打ち消す） */
-.fitness-log-cal-grid button.fitness-log-cal-day {
+.fitness-log-cal-grid .fitness-log-cal-day {
+	cursor: pointer;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
@@ -2215,17 +2215,30 @@ input.fitness-log-section-name-input[type='text']:focus {
 	overflow: hidden;
 }
 
-.fitness-log-cal-grid button.fitness-log-cal-day:hover {
+.fitness-log-cal-grid .fitness-log-cal-day:hover {
 	background: var(--background-modifier-hover);
 }
 
-.fitness-log-cal-grid button.fitness-log-cal-day.is-other-month {
+.fitness-log-cal-grid .fitness-log-cal-day.is-other-month {
 	background: transparent;
 	opacity: 0.45;
 }
 
-.fitness-log-cal-grid button.fitness-log-cal-day.is-selected {
+.fitness-log-cal-grid .fitness-log-cal-day.is-selected {
 	border-color: var(--interactive-accent);
+}
+
+/* 日付とパッケージ名はボタン（スマホの Obsidian はボタンに左右 20px の余白と高さを付けるので打ち消す） */
+.fitness-log-cal-day button.fitness-log-cal-date,
+.fitness-log-cal-chips button.fitness-log-cal-chip {
+	height: auto;
+	min-height: 0;
+	margin: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	font-family: inherit;
+	cursor: pointer;
 }
 
 .fitness-log-cal-date {
@@ -2242,7 +2255,7 @@ input.fitness-log-section-name-input[type='text']:focus {
 }
 
 /* 今日: 日付を丸で */
-button.fitness-log-cal-day.is-today .fitness-log-cal-date {
+.fitness-log-cal-day.is-today .fitness-log-cal-date {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
 }
@@ -2255,7 +2268,10 @@ button.fitness-log-cal-day.is-today .fitness-log-cal-date {
 }
 
 /* パッケージ名: やった＝塗り、予定＝枠、スキップ＝取り消し線 */
-.fitness-log-cal-chip {
+.fitness-log-cal-chips button.fitness-log-cal-chip {
+	display: block;
+	width: 100%;
+	text-align: left;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -2266,18 +2282,23 @@ button.fitness-log-cal-day.is-today .fitness-log-cal-date {
 	line-height: 1.6;
 }
 
-.fitness-log-cal-chip.is-done {
+.fitness-log-cal-chips button.fitness-log-cal-chip:hover {
+	filter: brightness(1.25);
+	text-decoration: underline;
+}
+
+.fitness-log-cal-chips button.fitness-log-cal-chip.is-done {
 	background: rgba(var(--fitness-log-pkg-rgb), 0.28);
 	color: var(--text-normal);
 	font-weight: var(--font-semibold);
 }
 
-.fitness-log-cal-chip.is-planned {
+.fitness-log-cal-chips button.fitness-log-cal-chip.is-planned {
 	border: 1px solid rgba(var(--fitness-log-pkg-rgb), 0.7);
 	color: var(--text-muted);
 }
 
-.fitness-log-cal-chip.is-skipped {
+.fitness-log-cal-chips button.fitness-log-cal-chip.is-skipped {
 	color: var(--text-faint);
 	text-decoration: line-through;
 }
@@ -2359,11 +2380,18 @@ button.fitness-log-cal-day.is-today .fitness-log-cal-date {
 	border: 2px solid rgb(var(--fitness-log-pkg-rgb));
 }
 
-.fitness-log-cal-entry-name {
+a.fitness-log-cal-entry-name {
+	color: var(--text-normal);
 	font-weight: var(--font-semibold);
+	text-decoration: none;
 }
 
-.fitness-log-cal-entry.is-skipped .fitness-log-cal-entry-name {
+a.fitness-log-cal-entry-name:hover {
+	color: var(--text-accent);
+	text-decoration: underline;
+}
+
+.fitness-log-cal-entry.is-skipped a.fitness-log-cal-entry-name {
 	color: var(--text-faint);
 	text-decoration: line-through;
 }
@@ -2387,16 +2415,16 @@ button.fitness-log-cal-day.is-today .fitness-log-cal-date {
 }
 
 /* スマホ: マスを詰め、パッケージ名は 2 つまで */
-.is-phone .fitness-log-cal-grid button.fitness-log-cal-day {
+.is-phone .fitness-log-cal-grid .fitness-log-cal-day {
 	min-height: 58px;
 	padding: 3px 2px;
 }
 
-.is-phone .fitness-log-cal-chip {
+.is-phone .fitness-log-cal-chips button.fitness-log-cal-chip {
 	padding: 0 2px;
 	font-size: 9.5px;
 }
 
-.is-phone .fitness-log-cal-chip:nth-child(n + 3) {
+.is-phone .fitness-log-cal-chips button.fitness-log-cal-chip:nth-child(n + 3) {
 	display: none;
 }

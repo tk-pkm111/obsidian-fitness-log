@@ -319,6 +319,7 @@ export const ja = {
 	'routines.kindPlanned': '予定',
 	'routines.kindSkipped': 'スキップ',
 	'routines.openDay': 'この日を開く',
+	'routines.openPackageDay': '{date} の {name} を開く',
 	'routines.noPlan': '予定なし',
 	'routines.setsCount': '{n} セット',
 	'routines.legendNote': '塗り: やった ・ 枠: 予定',
