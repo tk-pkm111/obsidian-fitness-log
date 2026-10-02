@@ -96,6 +96,7 @@ ESLint の警告も「直す」運用にする（CLAUDE.md に明記）。
   `eval` では `sleep` / `btn` / `click` / `modalText` / `viewText` が使え（`eval` の間はフォーカスを模擬するので、裏のウィンドウでも入力欄の focus / blur が起きる）、`window.__errs` に Console のエラーが溜まる。スマホ幅の確認は `window.require('@electron/remote').getCurrentWindow().setSize(400, 860)` の後に `app.emulateMobile(true)`（再読み込みが走る）。1.14 では設定画面が別ウィンドウなので `E2E_TARGET=設定` で対象を切り替える。
 - `el.click()` では開かないもの（Obsidian のメニュー）は `npm run e2e -- click '<CSS セレクタ>' [right]` で本物のマウス操作をする（出たメニューの項目を表示する）。並べ替えは `npm run e2e -- drag '<つかむ所のセレクタ>' <dy>`（押して縦に dy ピクセル動かして離す。画面の端に寄せると自動スクロールが効くので、画面の中で動かす）。macOS の Obsidian は既定で OS のネイティブメニューを使い、DOM にも画面写真にも出ないので、確かめるときは先に `app.vault.setConfig('nativeMenus', false)` を実行する（コピーの Vault の設定が変わるだけ）。
 - ユーザーが dev-vault を Obsidian で開いているときは、dev-vault をコピーして `E2E_VAULT=<コピーのパス>` で起動する（同じ Vault を 2 つのアプリで開くと data.json や workspace.json を取り合う）。プラグインのコピー先は `OBSIDIAN_PLUGIN_DIR=<コピー>/.obsidian/plugins/fitness-log npm run build` で切り替える。
+- 注意: 裏に隠れたウィンドウでは Obsidian の「レイアウトの準備完了」（`app.workspace.layoutReady`）が遅れることがあり、その間は種目ノートが 0 件に見える（プラグインは準備完了を待ってから読む）。起動直後に確かめるときは `for (let i=0;i<30 && !app.workspace.layoutReady;i++) await sleep(500)` で待つ。
 - 注意: Obsidian 1.14 のドロップダウンは幅計測用の `select` を内部に持つので、`querySelectorAll('select')` の添字は 2 つずつずれる。
 
 ### 9. ダミーデータ（`npm run vault:dummy`）

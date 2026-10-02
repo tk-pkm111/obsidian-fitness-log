@@ -1380,6 +1380,25 @@ input.fitness-log-target-value[type='text'],
 	font-size: var(--font-ui-small);
 }
 
+/* 種目ノートが見つからないときの案内（種目フォルダの名前を変えた・移したなど） */
+.fitness-log-callout {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-left: 3px solid var(--color-orange);
+	border-radius: var(--radius-s);
+	background: rgba(var(--color-orange-rgb), 0.08);
+	font-size: var(--font-ui-small);
+}
+
+.fitness-log-item-title.is-missing {
+	color: var(--text-faint);
+	font-weight: var(--font-normal);
+}
+
 /* 詳細設定の「変更を保存」（押すと保存して閉じる） */
 .fitness-log-item-details-footer {
 	display: flex;

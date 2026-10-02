@@ -280,6 +280,12 @@ export const ja = {
 	'packages.noRest': '目安なし',
 	'packages.itemNoteLabel': 'メモ',
 	'packages.saveItem': '変更を保存',
+	'packages.missingExercise': '（種目ノートが見つかりません）',
+	'packages.missingHint':
+		'種目ノートが見つからない種目があります（{n}）。種目ノートのフォルダ（設定: {folder}）の名前を変えた・移したときは「種目ノートを探す」で合わせられます。',
+	'packages.findNotes': '種目ノートを探す',
+	'packages.notesNotFound':
+		'種目ノートが見つかりませんでした。設定の「種目ノートの保存先」を確認してください。',
 	'packages.itemSaved': '「{exercise}」の目標を保存しました。',
 	'packages.removedTitle': '外した種目（{n}）',
 	'packages.removedNote':
@@ -441,6 +447,9 @@ export const ja = {
 	'log.monthSummary': '{days} 日 ・ {sets} セット ・ {volume}',
 	'log.daySummary': '{sets} セット ・ {volume} ・ {minutes} 分',
 	'notice.basesCreated': '{path} を作成しました。',
+	'notice.folderFollowed': '{name}のフォルダを「{folder}」に合わせました。',
+	'folders.exercise': '種目ノート',
+	'folders.log': '日ノート（ログ）',
 
 	'session.start': '筋トレを開始',
 	'session.end': '筋トレを終了',

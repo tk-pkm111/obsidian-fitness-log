@@ -3,6 +3,7 @@ import { registerCommands } from './commands';
 import { ensureBasesFile } from './data/bases-file';
 import { DataStore } from './data/data-store';
 import { ExerciseLibrary } from './data/exercise-library';
+import { registerFolderFollow, relocateFolders } from './data/folders';
 import { LogIndex } from './data/log-index';
 import { LogRepository } from './data/log-repository';
 import { migrateLogFolder } from './data/migrations';
@@ -73,6 +74,9 @@ export default class FitnessLogPlugin extends Plugin {
 
 	private async onLayoutReady(): Promise<void> {
 		const { store, index, library } = this.services;
+		// フォルダの名前を変えた・移したら設定も追いかける。設定のフォルダが無ければノートのある場所に合わせる
+		registerFolderFollow(this, this.app, store);
+		await this.relocateFolders();
 		// 以前の版（日ノートを Fitness/ の直下に保存）からの移行 → Fitness/ログ/ へ
 		const movedNotes = await migrateLogFolder(this.app, store);
 		if (movedNotes > 0)
@@ -97,6 +101,25 @@ export default class FitnessLogPlugin extends Plugin {
 		if (!store.current.seededAt) await library.seed();
 		if (store.settings.openOnStartup)
 			await activateMainView(this.app, { page: 'today', date: null });
+	}
+
+	/**
+	 * 設定のフォルダが無ければ、ノートのある場所に合わせる。起動直後はノートの frontmatter の
+	 * キャッシュがそろっていないことがあるので、見つからなければ索引が済んだときにもう一度だけ探す。
+	 */
+	private async relocateFolders(): Promise<void> {
+		const { store } = this.services;
+		await relocateFolders(this.app, store);
+		const missing = [
+			store.settings.exerciseFolder,
+			store.settings.logFolder,
+		].some((folder) => this.app.vault.getFolderByPath(folder) === null);
+		if (!missing) return;
+		const ref = this.app.metadataCache.on('resolved', () => {
+			this.app.metadataCache.offref(ref);
+			void relocateFolders(this.app, store);
+		});
+		this.registerEvent(ref);
 	}
 
 	private currentLocationKey(): string {

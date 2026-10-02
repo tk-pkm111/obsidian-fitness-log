@@ -47,6 +47,7 @@ export interface SeedResult {
 export class ExerciseLibrary extends Events {
 	private byPath = new Map<string, Exercise>();
 	private loading: Promise<void> | null = null;
+	private ready = false;
 	private generation = 0;
 	private pending = new Set<string>();
 	/** ファイル名を変えたノート（新しいパス → 旧名）。旧名を別名に足す */
@@ -70,6 +71,11 @@ export class ExerciseLibrary extends Events {
 
 	get isLoaded(): boolean {
 		return this.loading !== null;
+	}
+
+	/** 種目ノートを読み終えたか（まだなら一覧は空のことがある） */
+	get isReady(): boolean {
+		return this.ready;
 	}
 
 	ensureLoaded(): Promise<void> {
@@ -151,6 +157,7 @@ export class ExerciseLibrary extends Events {
 			this.byPath.delete(path);
 		}
 		for (const file of withoutId) await this.assignId(file);
+		this.ready = true;
 		this.publish();
 	}
 

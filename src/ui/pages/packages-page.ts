@@ -56,6 +56,7 @@ import type { PageContext } from '../page-context';
 import { chooseExercise } from '../choose-exercise';
 import { dragHandle, makeSortable, type SortableEntry } from '../sortable';
 import { openPackageLog } from './log-page';
+import { relocateFolders } from '../../data/folders';
 
 const now = () => new Date().toISOString();
 
@@ -247,6 +248,7 @@ function renderPackageDetail(
 			cls: 'fitness-log-muted fitness-log-items-hint',
 			text: t('packages.sectionsHint'),
 		});
+	renderMissingHint(ctx, el, pkg);
 	const items = el.createDiv({ cls: 'fitness-log-items' });
 	if (pkg.items.length === 0 && !(sectionsOn && pkg.sections?.length))
 		items.createDiv({
@@ -332,6 +334,42 @@ function renderPackageDetail(
 		{ icon: 'trash-2' },
 	);
 	remove.addClass('mod-warning');
+}
+
+/**
+ * 種目ノートが見つからない種目があるとき（種目フォルダの名前を変えた・移したなど）の案内と「種目ノートを探す」。
+ */
+function renderMissingHint(
+	ctx: PageContext,
+	el: HTMLElement,
+	pkg: Package,
+): void {
+	const { store, library } = ctx.services;
+	// 種目ノートを読み終える前は判断しない
+	if (!library.isReady) return;
+	const known = new Set(store.current.exercises.map((e) => e.id));
+	const missing = pkg.items.filter((i) => !known.has(i.exerciseId)).length;
+	if (missing === 0) return;
+	const box = el.createDiv({
+		cls: 'fitness-log-callout fitness-log-missing',
+	});
+	box.createDiv({
+		text: t('packages.missingHint', {
+			n: missing,
+			folder: store.settings.exerciseFolder,
+		}),
+	});
+	textButton(
+		box,
+		t('packages.findNotes'),
+		() =>
+			ctx.run(async () => {
+				const patch = await relocateFolders(ctx.app, store, true);
+				if (patch.exerciseFolder === undefined)
+					new Notice(t('packages.notesNotFound'), 8000);
+			}),
+		{ icon: 'search' },
+	);
 }
 
 /** 目標の要約: '2 セット × 6-9 回 ・ 休憩 2:30 ・ ベンチ 60°' */
@@ -476,10 +514,11 @@ function renderItemRow(
 		t('drag.handle'),
 		`drag-item-${pkg.id}-${item.exerciseId}`,
 	);
-	head.createDiv({
+	const titleEl = head.createDiv({
 		cls: 'fitness-log-item-title',
-		text: exercise?.name ?? '?',
+		text: exercise?.name ?? t('packages.missingExercise'),
 	});
+	titleEl.toggleClass('is-missing', !exercise);
 	const buttons = head.createDiv({ cls: 'fitness-log-item-buttons' });
 	// 目標（セット数・回数・休憩・メモ）は詳細設定にしまう（今日の画面には出さない）
 	const openDetails = ctx.pageState(
