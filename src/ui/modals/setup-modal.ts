@@ -15,6 +15,7 @@ import { activateMainView } from '../activate';
 import { checkNoteFolders } from '../folder-check';
 import { FolderSuggest } from '../folder-suggest';
 import { runAction, textButton } from '../helpers';
+import { renderOnboardingVideo } from '../onboarding-video';
 
 /** 既定の保存先（Fitness/ログ・Fitness/種目）の、親とその中のフォルダ名 */
 function splitDefault(path: string): { parent: string; child: string } {
@@ -37,6 +38,7 @@ function join(parent: string, child: string): string {
  * - 入れ直したときなど vault に既に記録・種目のノートがあれば、その場所をそのまま使う（別々の欄に入れておく）
  * - 「はじめる」までは何も作らない。よく使う種目とメニューの例は、保存先を決めてから足りない分だけ入れる
  * - コマンド「保存先を設定」でやり直せる（保存先を変えたらノートを移すか聞く）
+ * - 初めてのときだけ、いちばん下に使い方の動画
  */
 export class SetupModal extends Modal {
 	constructor(
@@ -197,6 +199,9 @@ export class SetupModal extends Modal {
 			},
 			{ cta: true },
 		);
+
+		// 初めての人には、ボタンの下に使い方の動画（再生を押すまで読み込まない）
+		if (first) renderOnboardingVideo(contentEl);
 	}
 
 	onClose(): void {

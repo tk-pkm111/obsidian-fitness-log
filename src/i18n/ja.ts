@@ -484,6 +484,12 @@ export const ja = {
 	'setup.done': '保存先を設定しました。',
 	'setup.doneSeeded':
 		'準備ができました（種目 {exercises} 件・パッケージ {packages} 件を入れました）。',
+	'setup.video': '使い方の動画',
+	'setup.videoPlay': '再生 · 42 秒',
+	'setup.videoNote':
+		'再生すると、インターネットから読み込みます（約 3.5 MB）。',
+	'setup.videoError':
+		'動画を読み込めませんでした。インターネットにつながっているか確かめて、もう一度再生してください。',
 	'setup.welcome': 'Fitness Log へようこそ',
 	'setup.welcomeText': 'はじめに、記録を保存するフォルダを選びましょう。',
 	'setup.open': 'はじめる',

@@ -1482,6 +1482,92 @@ input.fitness-log-setup-input[type='text'] {
 	font-weight: var(--font-bold);
 }
 
+/* はじめの設定の下の、使い方の動画。表紙は動画の 1 コマ目に合わせて暗く（テーマによらない） */
+.fitness-log-video {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-6);
+	padding-top: var(--size-4-4);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.fitness-log-video-frame {
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border-radius: var(--radius-m);
+	background: #0c0b10;
+}
+
+.fitness-log-video-frame video {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.modal button.fitness-log-video-poster {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	border-radius: 0;
+	background:
+		radial-gradient(
+			ellipse at 85% 25%,
+			rgba(139, 108, 239, 0.22),
+			transparent 60%
+		),
+		#0c0b10;
+	box-shadow: none;
+	color: #ecebf2;
+	cursor: pointer;
+}
+
+.fitness-log-video-mark svg {
+	width: 36px;
+	height: 36px;
+	color: #8b6cef;
+	stroke-width: 2.5;
+}
+
+.fitness-log-video-name {
+	font-size: 1.6em;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+}
+
+.fitness-log-video-play {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: var(--size-4-1);
+	padding: 6px 14px 6px 10px;
+	border-radius: 999px;
+	background: #8b6cef;
+	color: #fff;
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+	transition: transform 120ms ease;
+}
+
+.fitness-log-video-play svg {
+	width: 14px;
+	height: 14px;
+	fill: currentColor;
+}
+
+.modal button.fitness-log-video-poster:hover .fitness-log-video-play {
+	transform: scale(1.04);
+}
+
+.fitness-log-video-error {
+	color: var(--text-error);
+}
+
 /* 種目ノートが見つからないときの案内（種目フォルダの名前を変えた・移したなど） */
 .fitness-log-callout {
 	display: flex;
