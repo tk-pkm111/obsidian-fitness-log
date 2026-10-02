@@ -5,15 +5,18 @@ import type { PageContext } from './page-context';
 /**
  * 種目を選ぶ（本名・別名で検索）。該当が無ければその場で新しい種目（ノート）を作る。
  * exclude の種目は候補から外す（既にパッケージ・セクションにあるもの）。
+ * pinned の種目は先頭に補足付きで出す（以前このパッケージから外した種目）。
  */
 export function chooseExercise(
 	ctx: PageContext,
 	onChoose: (exercise: Exercise) => void,
 	exclude?: ReadonlySet<string>,
+	pinned?: ReadonlyMap<string, string>,
 ): void {
 	new ExerciseSuggestModal(ctx.app, {
 		exercises: ctx.services.store.current.exercises,
 		exclude,
+		pinned,
 		// 種目ノートを作る（設定は frontmatter に。フォームやコツは後からノートに書ける）
 		onCreate: (name) =>
 			ctx.run(async () =>

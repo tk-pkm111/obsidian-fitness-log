@@ -146,6 +146,55 @@ describe('normalizePluginData', () => {
 		expect(data.dayOrders).toEqual({ '2026-10-01 pkg:pk_1': ['ex:a'] });
 		expect(normalizePluginData({}).settings.packageSections).toBe(false);
 	});
+
+	it('外した種目の設定を読む（種目ごとに 1 つ・今ある種目は捨てる）', () => {
+		const data = normalizePluginData({
+			packages: [
+				{
+					id: 'pk_1',
+					name: 'LEGS A',
+					items: [{ exerciseId: 'ex_a', targetSets: 2 }],
+					removedItems: [
+						{
+							exerciseId: 'ex_b',
+							targetSets: 3,
+							targetReps: '8-12',
+							restSec: 90,
+							removedAt: '2026-09-22T10:00:00.000Z',
+							after: 'ex_a',
+						},
+						{ exerciseId: 'ex_b', targetSets: 1, removedAt: 'x' },
+						{ exerciseId: 'ex_a', targetSets: 1 },
+						{
+							exerciseId: 'ex_c',
+							targetSets: 2,
+							targetReps: '6-9',
+						},
+						'x',
+					],
+				},
+				{ id: 'pk_2', name: 'B', items: [], removedItems: 'x' },
+			],
+		});
+		expect(data.packages[0]?.removedItems).toEqual([
+			{
+				exerciseId: 'ex_b',
+				targetSets: 3,
+				targetReps: '8-12',
+				restSec: 90,
+				removedAt: '2026-09-22T10:00:00.000Z',
+				after: 'ex_a',
+			},
+			{
+				exerciseId: 'ex_c',
+				targetSets: 2,
+				targetReps: '6-9',
+				removedAt: new Date(0).toISOString(),
+				after: null,
+			},
+		]);
+		expect(data.packages[1]?.removedItems).toBeUndefined();
+	});
 });
 
 describe('planSeed（初期データの計画）', () => {

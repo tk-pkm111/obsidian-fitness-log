@@ -3,6 +3,7 @@ import {
 	addPackageSection,
 	CatalogError,
 	createPackage,
+	forgetRemovedItem,
 	movePackage,
 	movePackageItemTo,
 	movePackageRow,
@@ -10,7 +11,9 @@ import {
 	removeExerciseFromPackages,
 	removePackageItem,
 	removePackageSection,
+	removedItemOf,
 	renamePackageSection,
+	restorePackageItem,
 	sectionOfItem,
 } from '../../../src/lib/model/catalog';
 import { createEmptyData } from '../../../src/lib/model/data';
@@ -67,7 +70,7 @@ describe('パッケージの区切り（セクション）', () => {
 		movePackageItemTo(data, pkg.id, 0, 2); // c を末尾へ（直前の種目 b の区切りに入る）
 		expect(layout(pkg)).toBe('a b c [腕]');
 		movePackageRow(data, pkg.id, 3, 1); // a [腕] b c
-		removePackageItem(data, pkg.id, 0);
+		removePackageItem(data, pkg.id, 0, NOW);
 		expect(layout(pkg)).toBe('[腕] b c');
 		pkg.items.push(item('d'));
 		removeExerciseFromPackages(data, 'c');
@@ -96,5 +99,68 @@ describe('パッケージの区切り（セクション）', () => {
 			'PULL',
 			'PUSH',
 		]);
+	});
+});
+
+describe('外した種目の設定を覚えて戻す', () => {
+	let data: PluginData;
+	let pkg: Package;
+	beforeEach(() => {
+		data = createEmptyData();
+		pkg = createPackage(data, 'LEGS A', NOW);
+		pkg.items = ['a', 'b', 'c'].map(item);
+	});
+
+	it('外すと設定と直前の種目を覚え、戻すと同じ位置に以前の設定で入る', () => {
+		pkg.items[1] = {
+			...item('b'),
+			targetSets: 3,
+			restSec: 150,
+			note: '60°',
+		};
+		removePackageItem(data, pkg.id, 1, NOW);
+		expect(layout(pkg)).toBe('a c');
+		expect(removedItemOf(pkg, 'b')).toMatchObject({
+			targetSets: 3,
+			restSec: 150,
+			note: '60°',
+			removedAt: NOW,
+			after: 'a',
+		});
+		const restored = restorePackageItem(data, pkg.id, 'b');
+		expect(restored).toEqual({
+			exerciseId: 'b',
+			targetSets: 3,
+			targetReps: '6-9',
+			restSec: 150,
+			note: '60°',
+		});
+		expect(layout(pkg)).toBe('a b c');
+		expect(pkg.removedItems).toBeUndefined();
+	});
+
+	it('先頭だった種目は先頭（区切りの後ろ）へ。直前の種目が無くなっていたら末尾へ', () => {
+		addPackageSection(data, pkg.id, '脚');
+		movePackageRow(data, pkg.id, 3, 0); // [脚] a b c
+		removePackageItem(data, pkg.id, 0, NOW);
+		restorePackageItem(data, pkg.id, 'a');
+		expect(layout(pkg)).toBe('[脚] a b c');
+		removePackageItem(data, pkg.id, 1, NOW); // b（直前は a）
+		removePackageItem(data, pkg.id, 0, NOW); // a
+		restorePackageItem(data, pkg.id, 'b');
+		expect(layout(pkg)).toBe('[脚] c b');
+	});
+
+	it('新しく追加すると覚えていた設定は捨てる。種目を消すと覚えも消す', () => {
+		removePackageItem(data, pkg.id, 0, NOW);
+		removePackageItem(data, pkg.id, 0, NOW);
+		expect(pkg.removedItems?.map((r) => r.exerciseId)).toEqual(['b', 'a']);
+		forgetRemovedItem(pkg, 'a');
+		expect(pkg.removedItems?.map((r) => r.exerciseId)).toEqual(['b']);
+		removeExerciseFromPackages(data, 'b');
+		expect(pkg.removedItems).toBeUndefined();
+		expect(() => restorePackageItem(data, pkg.id, 'b')).toThrow(
+			CatalogError,
+		);
 	});
 });

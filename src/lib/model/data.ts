@@ -18,6 +18,7 @@ import type {
 	Package,
 	PackageItem,
 	PackageSection,
+	RemovedPackageItem,
 	PluginData,
 	RecordType,
 	Routine,
@@ -198,7 +199,30 @@ function normalizePackage(raw: unknown): Package | null {
 	if (note) pkg.note = note;
 	const sections = normalizeSections(raw.sections, pkg.items.length);
 	if (sections.length > 0) pkg.sections = sections;
+	const removed = normalizeRemovedItems(raw.removedItems, pkg.items);
+	if (removed.length > 0) pkg.removedItems = removed;
 	return pkg;
+}
+
+/** 外した種目の設定: 種目ごとに 1 つ（先のものを残す）。今パッケージにある種目は捨てる */
+function normalizeRemovedItems(
+	raw: unknown,
+	items: readonly PackageItem[],
+): RemovedPackageItem[] {
+	if (!Array.isArray(raw)) return [];
+	const seen = new Set(items.map((i) => i.exerciseId));
+	const result: RemovedPackageItem[] = [];
+	for (const value of raw) {
+		const item = normalizePackageItem(value);
+		if (!item || !isObj(value) || seen.has(item.exerciseId)) continue;
+		seen.add(item.exerciseId);
+		result.push({
+			...item,
+			removedAt: str(value.removedAt) ?? new Date(0).toISOString(),
+			after: nonEmpty(value.after) ?? null,
+		});
+	}
+	return result;
 }
 
 /** 区切り: id・名前が無いものは捨て、位置は 0〜種目数に収める。id が重なれば 2 つ目以降を捨てる */

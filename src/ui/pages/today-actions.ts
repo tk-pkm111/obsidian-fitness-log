@@ -7,7 +7,7 @@ import {
 	lastPerformance,
 	type ExerciseOccurrence,
 } from '../../lib/history/carry-over';
-import type { SetLog } from '../../lib/model/types';
+import type { SetLog, WeightUnit } from '../../lib/model/types';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
 import { formatHm, formatMonthDay } from '../../lib/time/date';
 import { quickReps, quickWeights } from '../../lib/today/quick-values';
@@ -63,6 +63,11 @@ export function endSessionWithNotice(
 				8000,
 			);
 	});
+}
+
+/** ホイールで選べる重量の上限（それより重い記録があればそこまで広げる） */
+export function wheelMaxWeight(unit: WeightUnit): number {
+	return unit === 'lb' ? 500 : 250;
 }
 
 export function sectionRef(section: SectionModel): SessionRef {
@@ -166,6 +171,7 @@ export function startSet(
 			hint: hist.hint,
 			submitText: t('prompt.start'),
 			allowEmpty: true,
+			wheelMax: wheelMaxWeight(unit),
 			onSubmit: (value) =>
 				start(value === null ? null : fromDisplayWeight(value, unit)),
 		}).open();

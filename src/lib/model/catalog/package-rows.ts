@@ -9,6 +9,7 @@ import type {
 	PackageItem,
 	PackageSection,
 	PluginData,
+	RemovedPackageItem,
 } from '../types';
 import { CatalogError } from './errors';
 import { requirePackage } from './packages';
@@ -100,32 +101,121 @@ export function movePackageItemTo(
 }
 
 /** 種目を外す（区切りの位置を詰める） */
+/** 外した種目の設定をいくつまで覚えておくか（パッケージごと） */
+const MAX_REMOVED_ITEMS = 30;
+
+/**
+ * 種目をパッケージから外す。設定（目標・休憩・メモ）と位置は removedItems に覚えておき、
+ * もう一度追加するときに戻せるようにする（restorePackageItem）。
+ */
 export function removePackageItem(
 	data: PluginData,
 	packageId: string,
 	index: number,
+	removedAt: string,
 ): void {
 	const pkg = requirePackage(data, packageId);
+	const item = pkg.items[index];
+	if (!item) return;
+	const remembered: RemovedPackageItem = {
+		...structuredClone(item),
+		removedAt,
+		after: pkg.items[index - 1]?.exerciseId ?? null,
+	};
 	applyPackageRows(
 		pkg,
 		packageRows(pkg).filter(
 			(row) => !(row.kind === 'item' && row.index === index),
 		),
 	);
+	setRemovedItems(pkg, [
+		remembered,
+		...(pkg.removedItems ?? []).filter(
+			(r) => r.exerciseId !== item.exerciseId,
+		),
+	]);
 }
 
-/** 条件に合う種目をすべてのパッケージから外す（種目を消したとき） */
+function setRemovedItems(
+	pkg: Package,
+	removed: readonly RemovedPackageItem[],
+): void {
+	const kept = removed.slice(0, MAX_REMOVED_ITEMS);
+	if (kept.length > 0) pkg.removedItems = kept;
+	else delete pkg.removedItems;
+}
+
+/** 以前このパッケージから外した種目の設定（無ければ undefined） */
+export function removedItemOf(
+	pkg: Package,
+	exerciseId: string,
+): RemovedPackageItem | undefined {
+	return pkg.removedItems?.find((r) => r.exerciseId === exerciseId);
+}
+
+/** 覚えていた設定を捨てる（新しく設定し直すとき） */
+export function forgetRemovedItem(pkg: Package, exerciseId: string): void {
+	setRemovedItems(
+		pkg,
+		(pkg.removedItems ?? []).filter((r) => r.exerciseId !== exerciseId),
+	);
+}
+
+/**
+ * 外した種目を、以前の設定で戻す。位置は外したときに直前にあった種目の後ろ
+ * （その種目がもう無ければ末尾、先頭だったなら先頭）。覚えていた設定は消す。
+ */
+export function restorePackageItem(
+	data: PluginData,
+	packageId: string,
+	exerciseId: string,
+): PackageItem {
+	const pkg = requirePackage(data, packageId);
+	const removed = removedItemOf(pkg, exerciseId);
+	if (!removed) throw new CatalogError('以前の設定が見つかりません');
+	if (pkg.items.some((i) => i.exerciseId === exerciseId))
+		throw new CatalogError('この種目はもうパッケージにあります');
+	const item: PackageItem = {
+		exerciseId: removed.exerciseId,
+		targetSets: removed.targetSets,
+		targetReps: removed.targetReps,
+	};
+	if (removed.restSec !== undefined) item.restSec = removed.restSec;
+	if (removed.note) item.note = removed.note;
+	const rows = packageRows(pkg);
+	const isItem = (row: PackageRow, id?: string) =>
+		row.kind === 'item' && (id === undefined || row.item.exerciseId === id);
+	let at: number;
+	if (removed.after === null) {
+		const first = rows.findIndex((row) => isItem(row));
+		at = first < 0 ? rows.length : first;
+	} else {
+		const prev = rows.findIndex((row) => isItem(row, removed.after ?? ''));
+		at = prev < 0 ? rows.length : prev + 1;
+	}
+	rows.splice(at, 0, { kind: 'item', item, index: -1 });
+	applyPackageRows(pkg, rows);
+	forgetRemovedItem(pkg, exerciseId);
+	return item;
+}
+
+/** 条件に合う種目をすべてのパッケージから外す（種目を消したとき）。覚えていた設定も捨てる */
 export function removeItemsWhere(
 	data: PluginData,
 	predicate: (item: PackageItem) => boolean,
 ): void {
-	for (const pkg of data.packages)
+	for (const pkg of data.packages) {
 		applyPackageRows(
 			pkg,
 			packageRows(pkg).filter(
 				(row) => !(row.kind === 'item' && predicate(row.item)),
 			),
 		);
+		setRemovedItems(
+			pkg,
+			(pkg.removedItems ?? []).filter((r) => !predicate(r)),
+		);
+	}
 }
 
 function checkSectionName(name: string): string {

@@ -22,7 +22,11 @@ export class ConfirmModal extends Modal {
 	onOpen(): void {
 		const { contentEl, options } = this;
 		this.setTitle(options.title);
-		contentEl.createEl('p', { text: options.message });
+		// 改行で段落を分ける（2 段落目からは補足として控えめに）
+		options.message.split('\n').forEach((line, i) => {
+			const p = contentEl.createEl('p', { text: line });
+			if (i > 0) p.addClass('fitness-log-muted');
+		});
 		const buttons = contentEl.createDiv({
 			cls: 'fitness-log-modal-buttons',
 		});

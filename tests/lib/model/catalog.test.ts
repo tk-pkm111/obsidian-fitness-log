@@ -215,7 +215,7 @@ describe('パッケージ', () => {
 		expect(pkg.items.map((i) => i.exerciseId)).toEqual([other, exerciseId]);
 		movePackageItemTo(data, pkg.id, 1, 2); // 範囲外では何もしない
 		expect(pkg.items.map((i) => i.exerciseId)).toEqual([other, exerciseId]);
-		removePackageItem(data, pkg.id, 0);
+		removePackageItem(data, pkg.id, 0, NOW);
 		expect(pkg.items.map((i) => i.exerciseId)).toEqual([exerciseId]);
 		expect(() => addPackageItem(data, pkg.id, 'ex_none')).toThrow(
 			CatalogError,

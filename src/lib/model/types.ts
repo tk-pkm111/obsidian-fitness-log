@@ -62,6 +62,14 @@ export interface PackageSection {
 	at: number;
 }
 
+/** パッケージから外した種目の設定（もう一度追加するときに、前の設定と位置で戻せるように） */
+export interface RemovedPackageItem extends PackageItem {
+	/** 外した日時（ISO） */
+	removedAt: string;
+	/** 外したときに直前にあった種目の id（戻すときにその後ろへ。先頭だったら null） */
+	after: string | null;
+}
+
 export interface Package {
 	/** 'pk_' + ランダム 8 文字 */
 	id: string;
@@ -69,6 +77,8 @@ export interface Package {
 	items: PackageItem[];
 	/** 区切り（at の順。同じ at なら配列の順） */
 	sections?: PackageSection[];
+	/** 外した種目の設定（新しい順。今の items にある種目は持たない） */
+	removedItems?: RemovedPackageItem[];
 	/** 名前変更時の旧名（過去ノートのセッション名と繋がる） */
 	aliases: string[];
 	note?: string;

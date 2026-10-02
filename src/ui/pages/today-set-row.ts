@@ -18,11 +18,21 @@ import {
 	parseNumberInput,
 	toDisplayWeight,
 } from '../../lib/units';
+import {
+	nearestIndex,
+	repsChoices,
+	splitClock,
+	splitDuration,
+	stepRange,
+	weightChoices,
+} from '../../lib/picker';
 import { iconButton } from '../helpers';
 import { inlineInput } from '../inline-input';
 import { ConfirmModal } from '../modals/confirm-modal';
 import { TextPromptModal } from '../modals/text-prompt-modal';
+import { WheelPickerModal } from '../modals/wheel-picker-modal';
 import type { PageContext } from '../page-context';
+import { wheelMaxWeight } from './today-actions';
 
 /** 直したセットを日ノートに書く（描き直しで新しい値が出る）。true を返す */
 type SaveSet = (updated: SetLog) => boolean;
@@ -108,39 +118,75 @@ export function renderSetRow(
 	label.addEventListener('click', openMenu);
 	row.addEventListener('contextmenu', openMenu);
 
+	const title = `${card.name} ・ ${t('today.set', { n })}`;
+	const field = { ctx, set, key, save, title };
 	renderResult(
 		row.createSpan({ cls: 'fitness-log-set-result' }),
-		set,
+		field,
 		card,
 		unit,
-		key,
-		save,
 	);
 
 	const time = row.createSpan({ cls: 'fitness-log-set-time' });
-	timeField(time, set, 'start', key, save);
+	timeField(time, field, 'start');
 	time.appendText('–');
-	timeField(time, set, 'end', key, save);
+	timeField(time, field, 'end');
 	if (set.start && set.end)
 		time.appendText(` (${formatDuration(setDurationSec(set))})`);
 	const rest = card.rests[index];
 	if (rest) {
 		const restEl = time.createSpan({ cls: 'fitness-log-set-rest' });
 		restEl.appendText(`${t('today.restLabel')} `);
+		const commitRest = (text: string) => {
+			const sec = parseDurationInput(text);
+			const updated =
+				sec === null ? null : withRest(set, rest.prevEnd, sec);
+			if (!updated) {
+				new Notice(t('today.invalidRest'));
+				return false;
+			}
+			return save(updated);
+		};
 		inlineInput(restEl, {
 			value: formatDuration(rest.sec),
 			label: t('today.restBefore'),
 			focusKey: `${key}:rest`,
 			inputMode: 'decimal',
-			onCommit: (text) => {
-				const sec = parseDurationInput(text);
-				const updated =
-					sec === null ? null : withRest(set, rest.prevEnd, sec);
-				if (!updated) {
-					new Notice(t('today.invalidRest'));
-					return false;
-				}
-				return save(updated);
+			onCommit: commitRest,
+			onPick: () => {
+				const [m, sec] = splitDuration(rest.sec);
+				const minutes = stepRange(0, Math.max(59, m), 1);
+				new WheelPickerModal(ctx.app, {
+					title: t('today.restBefore'),
+					hint: title,
+					columns: [
+						{
+							items: minutes.map(String),
+							index: m,
+							label: t('wheel.minutes'),
+						},
+						{
+							items: twoDigits(60),
+							index: sec,
+							label: t('wheel.seconds'),
+						},
+					],
+					separators: [':'],
+					submitText: t('wheel.done'),
+					onSubmit: ([mi = 0, si = 0]) => {
+						const updated = withRest(
+							set,
+							rest.prevEnd,
+							mi * 60 + si,
+						);
+						if (updated) save(updated);
+					},
+					keyboard: {
+						value: formatDuration(rest.sec),
+						inputMode: 'decimal',
+						onSubmit: commitRest,
+					},
+				}).open();
 			},
 		});
 	}
@@ -179,41 +225,97 @@ function setAddress(
 	};
 }
 
-/** 「15 kg × 5 回」の数字を入力欄にする。時間だけの種目は長さ（開始・終了で直す） */
+/** 1 つのセットの値を直すのに要るもの */
+interface SetField {
+	ctx: PageContext;
+	set: SetLog;
+	key: string;
+	save: SaveSet;
+	/** ホイールの補足（「レッグカール ・ セット 2」） */
+	title: string;
+}
+
+/** '00'〜'(n-1)' の 2 桁の文字 */
+function twoDigits(n: number): string[] {
+	return Array.from({ length: n }, (_, i) => String(i).padStart(2, '0'));
+}
+
+/**
+ * 「15 kg × 5 回」の数字を入力欄にする（スマホはホイール）。時間だけの種目は長さ（開始・終了で直す）
+ */
 function renderResult(
 	el: HTMLElement,
-	set: SetLog,
+	field: SetField,
 	card: CardModel,
 	unit: WeightUnit,
-	key: string,
-	save: SaveSet,
 ): void {
+	const { ctx, set, key, save, title } = field;
 	if (card.recordType === 'duration') {
 		el.setText(formatSetResult(set, unit, card.recordType));
 		return;
 	}
-	const weightField = () =>
-		inlineInput(el, {
-			value:
-				set.weight === null
-					? ''
-					: String(toDisplayWeight(set.weight, unit)),
-			placeholder: '-',
-			label: t('setEdit.weight', { unit }),
-			focusKey: `${key}:weight`,
-			inputMode: 'decimal',
-			onCommit: (text) => {
-				const value = parseNumberInput(text);
-				if (value === undefined || (value !== null && value < 0)) {
-					new Notice(t('prompt.invalidNumber'));
-					return false;
-				}
-				return save({
+	const weightText =
+		set.weight === null ? '' : String(toDisplayWeight(set.weight, unit));
+	const commitWeight = (text: string) => {
+		const value = parseNumberInput(text);
+		if (value === undefined || (value !== null && value < 0)) {
+			new Notice(t('prompt.invalidNumber'));
+			return false;
+		}
+		return save({
+			...set,
+			weight: value === null ? null : fromDisplayWeight(value, unit),
+		});
+	};
+	const pickWeight = () => {
+		const current =
+			set.weight === null ? null : toDisplayWeight(set.weight, unit);
+		const choices = weightChoices(
+			current,
+			ctx.services.store.settings.weightStep,
+			wheelMaxWeight(unit),
+			true,
+		);
+		new WheelPickerModal(ctx.app, {
+			title: t('setEdit.weight', { unit }),
+			hint: title,
+			columns: [
+				{
+					items: choices.map((v) =>
+						v === null ? t('wheel.none') : String(v),
+					),
+					index: nearestIndex(choices, current),
+					label: t('setEdit.weight', { unit }),
+					width: 5,
+				},
+			],
+			unit,
+			submitText: t('wheel.done'),
+			onSubmit: ([i = 0]) => {
+				const value = choices[i] ?? null;
+				if (value === current) return;
+				save({
 					...set,
 					weight:
 						value === null ? null : fromDisplayWeight(value, unit),
 				});
 			},
+			keyboard: {
+				value: weightText,
+				inputMode: 'decimal',
+				onSubmit: commitWeight,
+			},
+		}).open();
+	};
+	const weightField = () =>
+		inlineInput(el, {
+			value: weightText,
+			placeholder: '-',
+			label: t('setEdit.weight', { unit }),
+			focusKey: `${key}:weight`,
+			inputMode: 'decimal',
+			onCommit: commitWeight,
+			onPick: pickWeight,
 		});
 	if (card.recordType === 'weight-reps') {
 		weightField();
@@ -224,51 +326,124 @@ function renderResult(
 		weightField();
 		el.appendText(` ${unit} × `);
 	}
+	const repsUnit = t('format.reps', { n: '' }).trim();
+	const commitReps = (text: string) => {
+		const value = parseNumberInput(text);
+		if (
+			value === undefined ||
+			(value !== null && (value < 0 || !Number.isInteger(value)))
+		) {
+			new Notice(t('prompt.invalidNumber'));
+			return false;
+		}
+		return save({ ...set, reps: value });
+	};
 	inlineInput(el, {
 		value: set.reps === null ? '' : String(set.reps),
 		placeholder: '-',
 		label: t('setEdit.reps'),
 		focusKey: `${key}:reps`,
 		inputMode: 'numeric',
-		onCommit: (text) => {
-			const value = parseNumberInput(text);
-			if (
-				value === undefined ||
-				(value !== null && (value < 0 || !Number.isInteger(value)))
-			) {
-				new Notice(t('prompt.invalidNumber'));
-				return false;
-			}
-			return save({ ...set, reps: value });
+		onCommit: commitReps,
+		onPick: () => {
+			const choices = repsChoices(set.reps);
+			new WheelPickerModal(ctx.app, {
+				title: t('setEdit.reps'),
+				hint: title,
+				columns: [
+					{
+						items: choices.map(String),
+						index: nearestIndex(choices, set.reps ?? 8),
+						label: t('setEdit.reps'),
+					},
+				],
+				unit: repsUnit,
+				submitText: t('wheel.done'),
+				onSubmit: ([i = 0]) => {
+					const value = choices[i] ?? null;
+					if (value !== set.reps) save({ ...set, reps: value });
+				},
+				keyboard: {
+					value: set.reps === null ? '' : String(set.reps),
+					inputMode: 'numeric',
+					onSubmit: commitReps,
+				},
+			}).open();
 		},
 	});
-	el.appendText(` ${t('format.reps', { n: '' }).trim()}`);
+	el.appendText(` ${repsUnit}`);
 }
 
-/** 開始・終了の時刻。普段は '22:40'、直すときは秒まで '22:40:01' */
+/** 開始・終了の時刻。普段は '22:40'、直すときは秒まで '22:40:01'（スマホは時・分・秒のホイール） */
 function timeField(
 	parent: HTMLElement,
-	set: SetLog,
-	field: 'start' | 'end',
-	key: string,
-	save: SaveSet,
+	field: SetField,
+	which: 'start' | 'end',
 ): void {
-	const value = set[field];
+	const { ctx, set, key, save, title } = field;
+	const value = set[which];
+	const label = which === 'start' ? t('setEdit.start') : t('setEdit.end');
+	const commit = (text: string) => {
+		if (text === '') return save({ ...set, [which]: null });
+		const seconds = parseClockInput(text);
+		if (seconds === null) {
+			new Notice(t('setEdit.invalidTime'));
+			return false;
+		}
+		return save({ ...set, [which]: secondsToTime(seconds) });
+	};
 	inlineInput(parent, {
 		value: value ? formatHm(value) : '',
 		editValue: value ?? '',
 		placeholder: '--:--',
-		label: field === 'start' ? t('setEdit.start') : t('setEdit.end'),
-		focusKey: `${key}:${field}`,
+		label,
+		focusKey: `${key}:${which}`,
 		inputMode: 'decimal',
-		onCommit: (text) => {
-			if (text === '') return save({ ...set, [field]: null });
-			const seconds = parseClockInput(text);
-			if (seconds === null) {
-				new Notice(t('setEdit.invalidTime'));
-				return false;
-			}
-			return save({ ...set, [field]: secondsToTime(seconds) });
+		onCommit: commit,
+		onPick: () => {
+			const now = new Date();
+			const seconds =
+				(value ? parseClockInput(value) : null) ??
+				now.getHours() * 3600 +
+					now.getMinutes() * 60 +
+					now.getSeconds();
+			const [h, m, sec] = splitClock(seconds);
+			new WheelPickerModal(ctx.app, {
+				title: label,
+				hint: title,
+				columns: [
+					{
+						items: twoDigits(24),
+						index: h,
+						label: t('wheel.hours'),
+						width: 3,
+					},
+					{
+						items: twoDigits(60),
+						index: m,
+						label: t('wheel.minutes'),
+						width: 3,
+					},
+					{
+						items: twoDigits(60),
+						index: sec,
+						label: t('wheel.seconds'),
+						width: 3,
+					},
+				],
+				separators: [':', ':'],
+				submitText: t('wheel.done'),
+				onSubmit: ([hi = 0, mi = 0, si = 0]) => {
+					const next = secondsToTime(hi * 3600 + mi * 60 + si);
+					if (next !== value) save({ ...set, [which]: next });
+				},
+				keyboard: {
+					value: value ?? '',
+					inputMode: 'decimal',
+					placeholder: '--:--:--',
+					onSubmit: commit,
+				},
+			}).open();
 		},
 	});
 }

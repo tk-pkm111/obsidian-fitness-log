@@ -956,6 +956,29 @@ input.fitness-log-inline-edit[type='text']::placeholder {
 	color: var(--text-faint);
 }
 
+/* スマホ: 押すとホイールを開くボタン（見た目は入力欄と同じ、下線で押せることを示す） */
+.fitness-log-page button.fitness-log-inline-edit.is-picker {
+	display: inline;
+	height: auto;
+	min-width: 1.4em;
+	margin: 0 -0.1em;
+	padding: 0 0.15em;
+	border: 0;
+	border-radius: var(--radius-s);
+	background: transparent;
+	box-shadow: none;
+	color: inherit;
+	font: inherit;
+	font-variant-numeric: tabular-nums;
+	text-decoration: underline dotted var(--text-faint);
+	text-underline-offset: 3px;
+	vertical-align: baseline;
+}
+
+.fitness-log-page button.fitness-log-inline-edit.is-picker.is-empty {
+	color: var(--text-faint);
+}
+
 .fitness-log-set-row > .fitness-log-icon-button {
 	grid-area: edit;
 	color: var(--text-faint);
@@ -1307,16 +1330,50 @@ button.fitness-log-chip.is-active {
 	color: var(--text-accent);
 }
 
+/* 目標（セット数・回数・休憩）: 名前を上、値を下に 3 列 */
 .fitness-log-item-targets {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--size-4-1) var(--size-4-2);
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--size-4-2);
 }
 
-input.fitness-log-small-input {
-	width: 4.5em;
+.fitness-log-target {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-1);
+	min-width: 0;
+}
+
+.fitness-log-target-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+}
+
+input.fitness-log-target-value[type='text'],
+.fitness-log-page button.fitness-log-target-value {
+	width: 100%;
+	min-width: 0;
+	height: auto;
+	min-height: 40px;
+	padding: var(--size-4-1) var(--size-4-2);
 	text-align: center;
+	font-size: var(--font-ui-medium);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-page button.fitness-log-target-value {
+	justify-content: center;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--input-radius, var(--radius-s));
+	background: var(--background-modifier-form-field);
+	box-shadow: none;
+	color: var(--text-normal);
+	font-weight: var(--font-normal);
+}
+
+.fitness-log-page button.fitness-log-target-value.is-empty {
+	color: var(--text-faint);
 }
 
 .fitness-log-item-note {
@@ -2684,6 +2741,164 @@ button.fitness-log-quick-value.is-current {
 	display: inline-flex;
 	margin-right: var(--size-4-1);
 	vertical-align: middle;
+}
+
+/* ---------------------------------------------------------------- スクロールで選ぶ数字（ホイール） */
+
+.fitness-log-wheels {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--size-4-1);
+	margin: var(--size-4-2) 0;
+}
+
+.fitness-log-wheel {
+	position: relative;
+	width: var(--fitness-log-wheel-width, 4em);
+	height: calc(var(--fitness-log-wheel-item) * var(--fitness-log-wheel-rows));
+	border-radius: var(--radius-m);
+	outline: none;
+}
+
+.fitness-log-wheel:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* 真ん中の帯（選ばれた値） */
+.fitness-log-wheel-band {
+	position: absolute;
+	inset-inline: 0;
+	top: 50%;
+	height: var(--fitness-log-wheel-item);
+	transform: translateY(-50%);
+	border-radius: var(--radius-m);
+	background: var(--background-modifier-hover);
+	pointer-events: none;
+}
+
+.fitness-log-wheel-scroll {
+	position: relative;
+	height: 100%;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scroll-snap-type: y mandatory;
+	scrollbar-width: none;
+	-webkit-mask-image: linear-gradient(
+		to bottom,
+		transparent,
+		#000 30%,
+		#000 70%,
+		transparent
+	);
+	mask-image: linear-gradient(
+		to bottom,
+		transparent,
+		#000 30%,
+		#000 70%,
+		transparent
+	);
+}
+
+.fitness-log-wheel-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+.fitness-log-wheel-pad {
+	height: calc(
+		var(--fitness-log-wheel-item) * (var(--fitness-log-wheel-rows) - 1) / 2
+	);
+}
+
+.fitness-log-wheel-item {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: var(--fitness-log-wheel-item);
+	scroll-snap-align: center;
+	color: var(--text-muted);
+	font-size: 20px;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.fitness-log-wheel-item.is-selected {
+	color: var(--text-normal);
+	font-size: 24px;
+	font-weight: var(--font-bold);
+}
+
+.fitness-log-wheel-separator,
+.fitness-log-wheel-unit {
+	color: var(--text-muted);
+	font-size: 20px;
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-wheel-unit {
+	margin-left: var(--size-4-1);
+	font-size: var(--font-ui-medium);
+}
+
+.modal button.fitness-log-keyboard-toggle {
+	display: block;
+	height: auto;
+	margin: 0 auto var(--size-4-2);
+	padding: var(--size-4-1) var(--size-4-2);
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-accent);
+	font-size: var(--font-ui-small);
+}
+
+.fitness-log-wheel-picker .fitness-log-wheel-typing {
+	display: block;
+	width: 100%;
+	margin: var(--size-4-2) 0;
+}
+
+/* 選んで決める（以前の設定で戻す／新しく設定する） */
+.fitness-log-choices {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.modal button.fitness-log-choice {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	width: 100%;
+	height: auto;
+	min-height: 52px;
+	padding: var(--size-4-2) var(--size-4-3);
+	text-align: left;
+	white-space: normal;
+}
+
+.fitness-log-choice-title {
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-choice-desc {
+	font-size: var(--font-ui-smaller);
+	opacity: 0.85;
+	font-weight: var(--font-normal);
+}
+
+.fitness-log-suggestion-note.is-pinned {
+	display: flex;
+	align-items: center;
+	color: var(--text-accent);
+}
+
+.fitness-log-suggestion-note.is-pinned svg {
+	width: 12px;
+	height: 12px;
 }
 
 /* ---------------------------------------------------------------- スマホ */

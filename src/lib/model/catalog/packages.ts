@@ -6,7 +6,13 @@ import { parseRepRange } from '../../rep-range';
 import { instantiateSession, PROGRAM_TEMPLATES } from '../defaults';
 import { newId } from '../ids';
 import { aliasesAfterRename, nameKey } from '../resolve';
-import type { Exercise, Package, PackageItem, PluginData } from '../types';
+import type {
+	Exercise,
+	Package,
+	PackageItem,
+	PluginData,
+	RecordType,
+} from '../types';
 import { CatalogError } from './errors';
 
 /** 日ノートで「パッケージ外」を表す見出しと同じ名前は使えない */
@@ -103,6 +109,8 @@ export function duplicatePackage(
 		aliases: [],
 		createdAt: now,
 	};
+	// 外した種目の覚えは元のパッケージのもの
+	delete copy.removedItems;
 	data.packages.splice(data.packages.indexOf(source) + 1, 0, copy);
 	return copy;
 }
@@ -115,6 +123,15 @@ export function deletePackage(data: PluginData, id: string): void {
 	if (data.activeSet?.packageId === id) data.activeSet.packageId = null;
 }
 
+/** 種目をパッケージに足すときの目標の初期値。時間だけの種目（有酸素・ストレッチ）は回数の目標を持たない */
+export function defaultTargets(
+	recordType: RecordType,
+): Pick<PackageItem, 'targetSets' | 'targetReps'> {
+	return recordType === 'duration'
+		? { targetSets: 1, targetReps: '' }
+		: { targetSets: 2, targetReps: '6-9' };
+}
+
 export function addPackageItem(
 	data: PluginData,
 	packageId: string,
@@ -124,16 +141,22 @@ export function addPackageItem(
 	const pkg = requirePackage(data, packageId);
 	const exercise = data.exercises.find((e) => e.id === exerciseId);
 	if (!exercise) throw new CatalogError('種目が見つかりません');
-	// 時間だけの種目（有酸素・ストレッチ）は回数の目標を持たない
-	const duration = exercise.recordType === 'duration';
+	const defaults = defaultTargets(exercise.recordType);
 	const created: PackageItem = {
 		exerciseId,
-		targetSets: item.targetSets ?? (duration ? 1 : 2),
-		targetReps: item.targetReps ?? (duration ? '' : '6-9'),
+		targetSets: item.targetSets ?? defaults.targetSets,
+		targetReps: item.targetReps ?? defaults.targetReps,
 	};
 	if (item.restSec !== undefined) created.restSec = item.restSec;
 	if (item.note) created.note = item.note;
 	pkg.items.push(created);
+	// 新しく設定したので、以前外したときの設定は捨てる
+	if (pkg.removedItems) {
+		pkg.removedItems = pkg.removedItems.filter(
+			(r) => r.exerciseId !== exerciseId,
+		);
+		if (pkg.removedItems.length === 0) delete pkg.removedItems;
+	}
 	return created;
 }
 

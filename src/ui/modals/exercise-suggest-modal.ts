@@ -20,6 +20,8 @@ export interface ExerciseSuggestOptions {
 	exclude?: ReadonlySet<string>;
 	/** false なら「新しい種目として作成」を出さない（ログの種目選択など）。既定は true */
 	allowCreate?: boolean;
+	/** 先頭に出す種目と、その補足（以前このパッケージから外した種目など） */
+	pinned?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -36,9 +38,20 @@ export class ExerciseSuggestModal extends FuzzySuggestModal<Choice> {
 	}
 
 	getItems(): Choice[] {
+		const pinned = this.options.pinned;
+		const pinOrder = [...(pinned?.keys() ?? [])];
+		const rank = (e: Exercise) => {
+			const i = pinOrder.indexOf(e.id);
+			return i < 0 ? pinOrder.length : i;
+		};
 		return this.options.exercises
 			.filter((e) => !e.archived && !this.options.exclude?.has(e.id))
-			.map((exercise) => ({ kind: 'exercise', exercise }));
+			.map((exercise, order) => ({ exercise, order }))
+			.sort(
+				(a, b) =>
+					rank(a.exercise) - rank(b.exercise) || a.order - b.order,
+			)
+			.map(({ exercise }) => ({ kind: 'exercise', exercise }));
 	}
 
 	getItemText(choice: Choice): string {
@@ -88,6 +101,17 @@ export class ExerciseSuggestModal extends FuzzySuggestModal<Choice> {
 			cls: 'fitness-log-suggestion-title',
 			text: exercise.name,
 		});
+		const pinned = this.options.pinned?.get(exercise.id);
+		if (pinned) {
+			const note = el.createDiv({
+				cls: 'fitness-log-suggestion-note is-pinned',
+			});
+			setIcon(
+				note.createSpan({ cls: 'fitness-log-suggestion-icon' }),
+				'history',
+			);
+			note.createSpan({ text: pinned });
+		}
 		const meta = [t(`category.${exercise.category}` as MessageKey)];
 		if (exercise.equipment)
 			meta.push(t(`equipment.${exercise.equipment}` as MessageKey));

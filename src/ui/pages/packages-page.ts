@@ -1,10 +1,11 @@
-import { Notice, setIcon } from 'obsidian';
+import { Notice, Platform, setIcon, type App } from 'obsidian';
 import { t } from '../../i18n';
 import {
 	planFromTemplate,
 	addPackageItem,
 	addPackageSection,
 	createPackage,
+	defaultTargets,
 	deletePackage,
 	duplicatePackage,
 	movePackage,
@@ -15,19 +16,38 @@ import {
 	removePackageItem,
 	removePackageSection,
 	renamePackageSection,
+	restorePackageItem,
 	updatePackage,
 	updatePackageItem,
 	type PackageRow,
 } from '../../lib/model/catalog';
+import { formatTarget } from '../../lib/format';
+import {
+	joinRepRange,
+	secondChoices,
+	splitDuration,
+	splitRepRange,
+	stepRange,
+} from '../../lib/picker';
 import type {
+	Exercise,
 	Package,
 	PackageItem,
 	PackageSection,
 } from '../../lib/model/types';
 import { describeRule } from '../../lib/schedule/routine';
-import { formatDuration } from '../../lib/time/date';
+import {
+	formatDuration,
+	formatMonthDay,
+	toDateString,
+} from '../../lib/time/date';
 import { iconButton, textButton } from '../helpers';
+import { ChoiceModal } from '../modals/choice-modal';
 import { ConfirmModal } from '../modals/confirm-modal';
+import {
+	WheelPickerModal,
+	type WheelPickerOptions,
+} from '../modals/wheel-picker-modal';
 import { TemplateSuggestModal } from '../modals/template-suggest-modal';
 import { TextPromptModal } from '../modals/text-prompt-modal';
 import type { PageContext } from '../page-context';
@@ -247,18 +267,9 @@ function renderPackageDetail(
 	);
 
 	const add = el.createDiv({ cls: 'fitness-log-section-footer' });
-	textButton(
-		add,
-		t('packages.addItem'),
-		() =>
-			chooseExercise(
-				ctx,
-				(exercise) =>
-					update((d) => void addPackageItem(d, pkg.id, exercise.id)),
-				new Set(pkg.items.map((i) => i.exerciseId)),
-			),
-		{ icon: 'plus' },
-	);
+	textButton(add, t('packages.addItem'), () => addItem(ctx, pkg), {
+		icon: 'plus',
+	});
 	if (sectionsOn)
 		textButton(
 			add,
@@ -316,6 +327,82 @@ function renderPackageDetail(
 		{ icon: 'trash-2' },
 	);
 	remove.addClass('mod-warning');
+}
+
+/** 目標の要約: '2 セット × 6-9 回 ・ 休憩 2:30 ・ ベンチ 60°' */
+function describeItem(item: PackageItem): string {
+	return [formatTarget(item), ...(item.note ? [item.note] : [])].join(' ・ ');
+}
+
+/**
+ * 種目を足す。以前このパッケージから外した種目は候補の先頭に出し、選んだら
+ * 「以前の設定で戻す（元の位置）」か「新しく設定する（初期値で末尾）」かを聞く。
+ */
+function addItem(ctx: PageContext, pkg: Package): void {
+	const { store } = ctx.services;
+	const removed = new Map(
+		(pkg.removedItems ?? []).map((r) => [r.exerciseId, r]),
+	);
+	const pinned = new Map(
+		[...removed.values()].map((r) => [
+			r.exerciseId,
+			t('packages.previouslyIn', { target: describeItem(r) }),
+		]),
+	);
+	const update = (mutate: Parameters<typeof store.update>[0]) =>
+		ctx.run(() => store.update(mutate));
+	const addFresh = (exercise: Exercise) =>
+		update((d) => void addPackageItem(d, pkg.id, exercise.id));
+	chooseExercise(
+		ctx,
+		(exercise) => {
+			const previous = removed.get(exercise.id);
+			if (!previous) {
+				addFresh(exercise);
+				return;
+			}
+			const fresh = {
+				exerciseId: exercise.id,
+				...defaultTargets(exercise.recordType),
+			};
+			new ChoiceModal(ctx.app, {
+				title: exercise.name,
+				message: t('packages.restoreMessage', {
+					date: formatMonthDay(
+						toDateString(new Date(previous.removedAt)),
+					),
+					package: pkg.name,
+				}),
+				choices: [
+					{
+						text: t('packages.restorePrevious'),
+						desc: t('packages.restorePreviousDesc', {
+							target: describeItem(previous),
+						}),
+						cta: true,
+						onChoose: () =>
+							update(
+								(d) =>
+									void restorePackageItem(
+										d,
+										pkg.id,
+										exercise.id,
+									),
+							),
+					},
+					{
+						text: t('packages.restoreFresh'),
+						desc: t('packages.restoreFreshDesc', {
+							target: formatTarget(fresh),
+						}),
+						onChoose: () => addFresh(exercise),
+					},
+				],
+			}).open();
+		},
+		new Set(pkg.items.map((i) => i.exerciseId)),
+		pinned,
+	);
 }
 
 /** 区切りの行: つかむ所・名前（その場で直す）・削除 */
@@ -407,8 +494,24 @@ function renderItemRow(
 		},
 	);
 	toggle.toggleClass('is-active', isOpen);
+	// 間違えて押しやすいので確かめる。設定は覚えておき、もう一度追加するときに戻せる
 	iconButton(buttons, 'x', t('packages.removeItem'), () =>
-		ctx.run(() => store.update((d) => removePackageItem(d, pkg.id, index))),
+		new ConfirmModal(ctx.app, {
+			title: exercise?.name ?? '?',
+			message: t('packages.removeItemConfirm', {
+				exercise: exercise?.name ?? '?',
+				package: pkg.name,
+				target: describeItem(item),
+			}),
+			confirmText: t('packages.removeItemOk'),
+			danger: true,
+			onConfirm: () =>
+				ctx.run(() =>
+					store.update((d) =>
+						removePackageItem(d, pkg.id, index, now()),
+					),
+				),
+		}).open(),
 	);
 
 	const entry = { el: row, handle };
@@ -418,60 +521,143 @@ function renderItemRow(
 		cls: 'fitness-log-muted',
 		text: t('packages.detailsDesc'),
 	});
+	// 目標: 名前を上に、値を下に（スマホは押すとスクロールで選ぶ）
 	const targets = details.createDiv({ cls: 'fitness-log-item-targets' });
-	const sets = targets.createEl('input', {
-		type: 'text',
-		cls: 'fitness-log-small-input',
-		value: String(item.targetSets),
-		attr: {
-			inputmode: 'numeric',
-			'aria-label': t('packages.sets'),
-			'data-focus-key': `sets-${key}`,
-		},
-	});
-	targets.createSpan({ text: t('packages.sets') });
-	targets.createSpan({ cls: 'fitness-log-muted', text: '×' });
-	const reps = targets.createEl('input', {
-		type: 'text',
-		cls: 'fitness-log-small-input',
-		value: item.targetReps,
-		attr: {
-			'aria-label': t('packages.reps'),
-			placeholder: '6-9',
-			'data-focus-key': `reps-${key}`,
-		},
-	});
-	targets.createSpan({ text: t('packages.reps') });
-	targets.createSpan({ cls: 'fitness-log-muted', text: '・' });
-	targets.createSpan({ text: t('packages.rest') });
-	const rest = targets.createEl('input', {
-		type: 'text',
-		cls: 'fitness-log-small-input',
-		value: item.restSec === undefined ? '' : formatDuration(item.restSec),
-		attr: {
-			'aria-label': t('packages.rest'),
-			placeholder: t('packages.restPlaceholder'),
-			'data-focus-key': `rest-${key}`,
-		},
-	});
-	sets.addEventListener('change', () =>
-		update({ targetSets: Number(sets.value.normalize('NFKC').trim()) }),
-	);
-	reps.addEventListener('change', () =>
-		update({ targetReps: reps.value.normalize('NFKC') }),
-	);
-	rest.addEventListener('change', () => {
-		const value = parseRestInput(rest.value);
+	const target = (label: string) => {
+		const box = targets.createDiv({ cls: 'fitness-log-target' });
+		box.createDiv({ cls: 'fitness-log-target-label', text: label });
+		return box;
+	};
+	const restText =
+		item.restSec === undefined ? '' : formatDuration(item.restSec);
+	const commitSets = (text: string) => {
+		const n = Number(text.normalize('NFKC').trim());
+		update({ targetSets: n });
+		return true;
+	};
+	const commitReps = (text: string) => {
+		update({ targetReps: text.normalize('NFKC') });
+		return true;
+	};
+	const commitRest = (text: string) => {
+		const value = parseRestInput(text);
 		if (value === undefined) {
 			new Notice(t('packages.invalidRest'));
-			rest.value =
-				item.restSec === undefined ? '' : formatDuration(item.restSec);
-			return;
+			return false;
 		}
 		update({ restSec: value });
+		return true;
+	};
+	const title = exercise?.name ?? '?';
+	targetControl(ctx.app, target(t('packages.targetSets')), {
+		value: String(item.targetSets),
+		label: t('packages.targetSets'),
+		focusKey: `sets-${key}`,
+		inputMode: 'numeric',
+		onCommit: commitSets,
+		wheel: () => {
+			const values = stepRange(1, Math.max(20, item.targetSets), 1);
+			return {
+				title: t('packages.targetSets'),
+				hint: title,
+				columns: [
+					{
+						items: values.map(String),
+						index: Math.max(0, values.indexOf(item.targetSets)),
+						label: t('packages.targetSets'),
+					},
+				],
+				unit: t('packages.sets'),
+				submitText: t('wheel.done'),
+				onSubmit: ([i = 0]) =>
+					update({ targetSets: values[i] ?? item.targetSets }),
+			};
+		},
+	});
+	targetControl(ctx.app, target(t('packages.targetReps')), {
+		value: item.targetReps,
+		placeholder: '6-9',
+		label: t('packages.targetReps'),
+		focusKey: `reps-${key}`,
+		inputMode: 'text',
+		onCommit: commitReps,
+		wheel: () => {
+			const [min, max] = splitRepRange(item.targetReps) ?? [6, 9];
+			const values = stepRange(1, Math.max(50, min, max ?? 0), 1);
+			return {
+				title: t('packages.targetReps'),
+				hint: title,
+				columns: [
+					{
+						items: values.map(String),
+						index: Math.max(0, values.indexOf(min)),
+						label: t('wheel.repsMin'),
+					},
+					{
+						items: ['—', ...values.map(String)],
+						index: max === null ? 0 : values.indexOf(max) + 1,
+						label: t('wheel.repsMax'),
+					},
+				],
+				separators: ['–'],
+				unit: t('packages.reps'),
+				submitText: t('wheel.done'),
+				onSubmit: ([lo = 0, hi = 0]) =>
+					update({
+						targetReps: joinRepRange(
+							values[lo] ?? min,
+							hi === 0 ? null : (values[hi - 1] ?? null),
+						),
+					}),
+			};
+		},
+	});
+	targetControl(ctx.app, target(t('packages.targetRest')), {
+		value: restText,
+		placeholder: t('packages.restPlaceholder'),
+		label: t('packages.targetRest'),
+		focusKey: `rest-${key}`,
+		inputMode: 'decimal',
+		onCommit: commitRest,
+		wheel: () => {
+			const [m, sec] = splitDuration(item.restSec ?? 150);
+			const minutes = stepRange(0, Math.max(10, m), 1);
+			const seconds = secondChoices(5, sec);
+			return {
+				title: t('packages.targetRest'),
+				hint: title,
+				columns: [
+					{
+						items: minutes.map(String),
+						index: m,
+						label: t('wheel.minutes'),
+					},
+					{
+						items: seconds.map((v) => String(v).padStart(2, '0')),
+						index: Math.max(0, seconds.indexOf(sec)),
+						label: t('wheel.seconds'),
+					},
+				],
+				separators: [':'],
+				submitText: t('wheel.done'),
+				onSubmit: ([mi = 0, si = 0]) =>
+					update({
+						restSec: (minutes[mi] ?? 0) * 60 + (seconds[si] ?? 0),
+					}),
+				clear: {
+					text: t('packages.noRest'),
+					onClear: () => update({ restSec: null }),
+				},
+			};
+		},
 	});
 
-	const note = details.createEl('input', {
+	const noteBox = details.createDiv({ cls: 'fitness-log-target' });
+	noteBox.createDiv({
+		cls: 'fitness-log-target-label',
+		text: t('packages.itemNoteLabel'),
+	});
+	const note = noteBox.createEl('input', {
 		type: 'text',
 		cls: 'fitness-log-input-wide fitness-log-item-note',
 		value: item.note ?? '',
@@ -482,6 +668,67 @@ function renderItemRow(
 	});
 	note.addEventListener('change', () => update({ note: note.value }));
 	return entry;
+}
+
+interface TargetControlOptions {
+	value: string;
+	placeholder?: string;
+	label: string;
+	focusKey: string;
+	inputMode: 'decimal' | 'numeric' | 'text';
+	/** 打ち込んだ値で確定（false なら入力し直し） */
+	onCommit: (text: string) => boolean;
+	/** スマホで開くホイール（キーボードでの入力は自動で足す） */
+	wheel: () => Omit<WheelPickerOptions, 'keyboard'>;
+}
+
+/**
+ * 目標の値の欄。デスクトップは入力欄（変えたら確定）、スマホは押すとスクロールで選ぶボタン
+ * （数字キーボードは打ちづらいので。「キーボードで入力」もできる）。
+ */
+function targetControl(
+	app: App,
+	parent: HTMLElement,
+	options: TargetControlOptions,
+): void {
+	if (Platform.isMobile) {
+		const button = parent.createEl('button', {
+			cls: 'fitness-log-target-value',
+			text: options.value || options.placeholder || '',
+			attr: {
+				type: 'button',
+				'aria-label': options.label,
+				'data-focus-key': options.focusKey,
+			},
+		});
+		button.toggleClass('is-empty', options.value === '');
+		button.addEventListener('click', () =>
+			new WheelPickerModal(app, {
+				...options.wheel(),
+				keyboard: {
+					value: options.value,
+					inputMode: options.inputMode,
+					placeholder: options.placeholder,
+					onSubmit: options.onCommit,
+				},
+			}).open(),
+		);
+		return;
+	}
+	const input = parent.createEl('input', {
+		type: 'text',
+		cls: 'fitness-log-target-value',
+		value: options.value,
+		attr: {
+			inputmode: options.inputMode,
+			'aria-label': options.label,
+			placeholder: options.placeholder ?? '',
+			'data-focus-key': options.focusKey,
+		},
+	});
+	input.addEventListener('change', () => {
+		if (!options.onCommit(input.value)) input.value = options.value;
+	});
 }
 
 /** ラベル付きの入力欄の行 */

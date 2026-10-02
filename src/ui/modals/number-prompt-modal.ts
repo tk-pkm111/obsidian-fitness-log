@@ -1,7 +1,10 @@
 import { Modal, Platform, type App } from 'obsidian';
 import { t } from '../../i18n';
+import { nearestIndex, repsChoices, weightChoices } from '../../lib/picker';
 import { parseNumberInput, stepValue } from '../../lib/units';
 import { iconButton, textButton } from '../helpers';
+import type { Wheel } from '../wheel';
+import { renderWheelRow } from './wheel-picker-modal';
 
 export interface NumberPromptOptions {
 	/** モーダルの見出し（種目名など） */
@@ -22,12 +25,15 @@ export interface NumberPromptOptions {
 	submitText: string;
 	/** 空欄で確定してよいか（null を返す） */
 	allowEmpty: boolean;
+	/** スマホのホイールの上限（重量。lb なら大きく）。回数は 50 */
+	wheelMax?: number;
 	onSubmit: (value: number | null) => void;
 }
 
 /**
  * 重量・回数の入力。ジムで片手で押せるよう、ワンタップの候補（6 7 8 9 10 など）と、
- * 大きな入力欄・＋／− ボタンにしている。スマホでは inputmode で数字キーボードを出す。Enter で確定。
+ * 大きな入力欄・＋／− ボタンにしている。Enter で確定。
+ * スマホでは入力欄の代わりにスクロールで選ぶホイールを出す（「キーボードで入力」で入力欄に切り替え）。
  */
 export class NumberPromptModal extends Modal {
 	private submitted = false;
@@ -96,6 +102,57 @@ export class NumberPromptModal extends Modal {
 			'fitness-log-step-button',
 		);
 
+		// スマホ: 入力欄の代わりにホイール（刻みは重量の刻み、回数は 1）
+		let wheel: Wheel | null = null;
+		const choices: (number | null)[] = options.decimal
+			? weightChoices(
+					options.initial,
+					options.step,
+					options.wheelMax ?? 250,
+					options.allowEmpty,
+				)
+			: repsChoices(options.initial);
+		if (Platform.isMobile) {
+			const wheels: Wheel[] = [];
+			const box = renderWheelRow(
+				contentEl,
+				{
+					columns: [
+						{
+							items: choices.map((v) =>
+								v === null ? t('wheel.none') : String(v),
+							),
+							index: nearestIndex(choices, options.initial),
+							label: options.question,
+							width: options.decimal ? 5 : 4,
+						},
+					],
+					unit: options.unit,
+				},
+				wheels,
+			);
+			contentEl.insertBefore(box, row);
+			wheel = wheels[0] ?? null;
+			row.hide();
+			const toggle = createEl('button', {
+				cls: 'fitness-log-keyboard-toggle',
+				text: t('wheel.keyboard'),
+				attr: { type: 'button' },
+			});
+			contentEl.insertAfter(toggle, box);
+			toggle.addEventListener('click', () => {
+				const value = wheel ? choices[wheel.index()] : null;
+				input.value =
+					value === null || value === undefined ? '' : String(value);
+				wheel = null;
+				box.hide();
+				toggle.hide();
+				row.show();
+				input.focus();
+				input.select();
+			});
+		}
+
 		const finish = (value: number | null) => {
 			if (this.submitted) return;
 			this.submitted = true;
@@ -119,12 +176,21 @@ export class NumberPromptModal extends Modal {
 			contentEl.insertAfter(
 				createDiv({
 					cls: 'fitness-log-quick-hint',
-					text: t('prompt.quickHint', { action: options.submitText }),
+					text: t(
+						Platform.isMobile
+							? 'prompt.quickHintWheel'
+							: 'prompt.quickHint',
+						{ action: options.submitText },
+					),
 				}),
 				chips,
 			);
 
 		const submit = () => {
+			if (wheel) {
+				finish(choices[wheel.index()] ?? null);
+				return;
+			}
 			const value = parseNumberInput(input.value);
 			if (
 				value === undefined ||
@@ -150,8 +216,8 @@ export class NumberPromptModal extends Modal {
 		textButton(buttons, t('prompt.cancel'), () => this.close());
 		textButton(buttons, options.submitText, submit, { cta: true });
 
-		// スマホで候補があるときは、キーボードで候補が隠れないよう入力欄にフォーカスしない
-		if (!(Platform.isMobile && chips))
+		// スマホはホイールで選ぶので、キーボードを出さない（入力欄にフォーカスしない）
+		if (!Platform.isMobile)
 			window.setTimeout(() => {
 				input.focus();
 				input.select();
