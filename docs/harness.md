@@ -102,6 +102,15 @@ ESLint の警告も「直す」運用にする（CLAUDE.md に明記）。
 
 `scripts/generate-dummy-logs.mjs`。PPL を回した日ノートを dev-vault に作る（既定 300 日のうち約 6 割、6 週ごとに +2.5 kg）。Markdown はプラグイン本体と同じコード（`src/lib`）を esbuild でその場で束ねて生成するので、書式がずれない。dev-vault の外には書かない・既存ノートは上書きしない。推移チャートの見た目と、履歴索引の性能（185 日分で 13 ms。目標 1 秒未満）の確認に使った。
 
+### 9. スマホで確認（BRAT）
+
+GitHub の非公開リポジトリ `tk-pkm111/obsidian-fitness-log` のリリースを、iPhone の Obsidian に BRAT で入れる（2026-10-02 に 0.1.0 を公開）。
+
+- リリース: タグを push すると `.github/workflows/release.yml` が `npm run build` して、`main.js` / `manifest.json` / `styles.css` を添付したリリースを作る（BRAT が読めるよう下書きにしない。ビルドの証明は非公開リポジトリでは使えないので飛ばす）。
+- 次の版を出す: `npm version patch`（`version-bump.mjs` が manifest.json・versions.json を合わせ、`.npmrc` の設定で `v` の付かないタグ `0.1.1` を作る）→ `git push --follow-tags`。
+- iPhone 側: テスト用の vault に BRAT を入れ、GitHub のトークン（このリポジトリの Contents を読み取りのみ）を BRAT の設定に入れて「Add beta plugin」に `tk-pkm111/obsidian-fitness-log`。更新は BRAT の「Check for updates」。
+- iPhone の Obsidian は 1.13.0 以上が必要（minAppVersion）。
+
 ## ワークフロー
 
 ```
