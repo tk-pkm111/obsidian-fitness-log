@@ -11,6 +11,7 @@ import {
 	type CardGroup,
 } from '../../lib/today/groups';
 import { sectionProgress } from '../../lib/today/progress';
+import type { RestState } from '../../lib/today/rest';
 import { formatDuration, formatHm, parseTime } from '../../lib/time/date';
 import { chooseExercise } from '../choose-exercise';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
@@ -31,6 +32,8 @@ export interface SectionEnv {
 	anotherRunning: boolean;
 	/** その日の日ノートのセッション */
 	session: SessionLog | undefined;
+	/** 休憩を出す種目（最後にセットを終えた種目。無ければ null） */
+	rest: RestState | null;
 }
 
 /**
@@ -39,7 +42,7 @@ export interface SectionEnv {
  * - 筋トレ中（in-progress）: 進みのバー、種目のリスト（やった順 → まだの種目）、「■ 筋トレを終了」
  * - 終了（finished）: 「お疲れ様でした」とまとめ（種目数・セット数）。「記録を見る」でやった種目だけを開いて修正
  * - その他（manual）: パッケージ外の種目。いつも開いていて、開始・終了は無い
- * いまの操作（実行中のセット・休憩・次の一手）は画面の下の帯（today-now.ts）に出す。
+ * 実行中のセットはその種目の行に、休憩は最後にセットを終えた種目のすぐ下に出す（today-card.ts）。
  */
 export function renderSection(
 	ctx: PageContext,
@@ -61,7 +64,14 @@ export function renderSection(
 	switch (status) {
 		case 'planned':
 			if (expanded.has(expandKey) && !env.isFuture) {
-				renderCards(ctx, box, section, section.cards, 'manual');
+				renderCards(
+					ctx,
+					box,
+					section,
+					section.cards,
+					'manual',
+					env.rest,
+				);
 				renderFooter(ctx, box, section, false);
 			} else renderPlanned(ctx, box, section, env, expanded, expandKey);
 			return;
@@ -72,6 +82,7 @@ export function renderSection(
 				section,
 				section.cards,
 				env.isToday ? 'timer' : 'manual',
+				env.rest,
 			);
 			renderFooter(ctx, box, section, true);
 			return;
@@ -84,7 +95,7 @@ export function renderSection(
 				: env.isToday
 					? 'timer'
 					: 'manual';
-			renderCards(ctx, box, section, section.cards, mode);
+			renderCards(ctx, box, section, section.cards, mode, env.rest);
 			if (mode !== 'readonly') renderFooter(ctx, box, section, false);
 			return;
 		}
@@ -431,6 +442,7 @@ function renderFinished(
 		section,
 		section.cards.filter((c) => c.sets.length > 0),
 		env.isFuture ? 'readonly' : 'manual',
+		env.rest,
 	);
 	if (!env.isFuture) renderFooter(ctx, box, section, false);
 }
@@ -442,8 +454,9 @@ function renderCards(
 	section: SectionModel,
 	cards: readonly CardModel[],
 	mode: CardEnv['mode'],
+	rest: RestState | null,
 ): void {
-	const cardEnv: CardEnv = { isToday: ctx.date === ctx.today, mode };
+	const cardEnv: CardEnv = { isToday: ctx.date === ctx.today, mode, rest };
 	const groups = cardGroups(ctx, section, cards);
 	for (const group of groups) {
 		if (group.cards.length === 0) continue;

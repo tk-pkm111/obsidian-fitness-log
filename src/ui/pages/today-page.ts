@@ -8,7 +8,7 @@ import {
 	type SectionModel,
 } from '../../lib/today/day-model';
 import { dayOrdersFor } from '../../lib/today/groups';
-import { nowState } from '../../lib/today/now';
+import { restState } from '../../lib/today/rest';
 import {
 	addDays,
 	formatMonthDay,
@@ -20,7 +20,6 @@ import { chooseExercise } from '../choose-exercise';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
 import { PackageSuggestModal } from '../modals/package-suggest-modal';
 import type { PageContext } from '../page-context';
-import { renderNowBar } from './today-now';
 import { renderSection } from './today-section';
 
 /** 今日ページ（実装計画 §5.2） */
@@ -88,21 +87,20 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 
 	const isToday = date === today;
 	const running = sections.filter((s) => s.status === 'in-progress');
+	// 休憩は最後にセットを終えた種目のすぐ下に出す（筋トレ中・その他のときだけ）
+	const rest = restState(
+		sections,
+		isToday ? latestFinishedSet(day) : null,
+		isToday,
+	);
 	for (const section of sections)
 		renderSection(ctx, list, section, {
 			isToday,
 			isFuture,
 			anotherRunning: running.some((s) => s !== section),
 			session: sessionOf(day, section),
+			rest,
 		});
-
-	// 画面の下の「いま」（実行中のセット・休憩・次の一手）。今日だけ
-	const now = nowState(
-		sections,
-		isToday ? latestFinishedSet(day) : null,
-		isToday,
-	);
-	if (now) renderNowBar(ctx, now);
 
 	// 「今日はスキップ」した予定（取り消せるように残す）
 	const skipped = data.routines.filter((r) => r.skipDates.includes(date));

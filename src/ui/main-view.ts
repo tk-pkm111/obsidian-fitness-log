@@ -198,8 +198,6 @@ export class MainView extends ItemView {
 		const page = body.createDiv({
 			cls: `fitness-log-page fitness-log-page-${this.viewState.page}`,
 		});
-		// 本文の下に固定する帯（今日ページの「いま」）。何も入れなければ出ない
-		const footer = contentEl.createDiv({ cls: 'fitness-log-dock' });
 		const ctx: PageContext = {
 			services: this.services,
 			app: this.app,
@@ -207,7 +205,6 @@ export class MainView extends ItemView {
 			date: this.viewState.date ?? this.renderedToday,
 			today: this.renderedToday,
 			header: { center, actions },
-			footer,
 			navigate: (patch) => this.navigate(patch),
 			addTicker: (tick) => {
 				this.tickers.push(tick);

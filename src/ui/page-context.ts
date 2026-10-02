@@ -36,8 +36,6 @@ export interface PageContext {
 	 * actions は右上の操作ボタン。
 	 */
 	header: { center: HTMLElement; actions: HTMLElement };
-	/** ビューの下に固定する帯の差し込み口（今日ページの「いま」）。空なら表示しない */
-	footer: HTMLElement;
 	navigate(patch: Partial<MainViewState>): void;
 	/** 1 秒ごとに呼ばれる（タイマー表示の更新。再描画のたびに登録し直す） */
 	addTicker(tick: (now: Date) => void): void;

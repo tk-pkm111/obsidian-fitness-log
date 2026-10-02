@@ -352,15 +352,6 @@ export const ja = {
 	'log.daySummary': '{sets} セット ・ {volume} ・ {minutes} 分',
 	'notice.basesCreated': '{path} を作成しました。',
 
-	'now.running': 'セット中',
-	'now.resting': '休憩',
-	'now.next': '次',
-	'now.allDone': 'すべての種目が終わりました',
-	'now.record': '記録',
-	'now.nextUp': '次: {exercise} ・ セット {n}',
-	'now.nextSet': 'セット {n}',
-	'now.start': '開始',
-
 	'session.start': '筋トレを開始',
 	'session.end': '筋トレを終了',
 	'session.resume': '再開する',

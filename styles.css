@@ -646,6 +646,7 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 /* セットの行・実行中の行は種目名の位置にそろえる */
 .fitness-log-card .fitness-log-set-rows,
 .fitness-log-card .fitness-log-active-row,
+.fitness-log-card .fitness-log-rest,
 .fitness-log-card .fitness-log-card-warning {
 	margin-left: calc(
 		var(--fitness-log-handle-offset, 0px) + var(--fitness-log-play-size) +
@@ -1501,160 +1502,78 @@ button.fitness-log-end-button {
 	font-weight: var(--font-semibold);
 }
 
-/* ---------------------------------------------------------------- いま（画面の下に固定する帯） */
+/* ---------------------------------------------------------------- 休憩（最後にセットを終えた種目のすぐ下） */
 
-.fitness-log-dock {
-	position: relative;
-	flex-shrink: 0;
-	padding: var(--size-4-3) var(--size-4-4);
-	border-top: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
+.fitness-log-rest {
+	margin-top: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3) var(--size-4-3);
+	border-radius: var(--radius-m);
+	background: var(--fitness-log-accent-soft);
+	color: var(--text-accent);
 }
 
-.fitness-log-dock:empty {
+.fitness-log-rest.is-hidden {
 	display: none;
 }
 
-.fitness-log-dock:has(.fitness-log-now.is-running) {
-	background:
-		linear-gradient(
-			var(--fitness-log-accent-soft),
-			var(--fitness-log-accent-soft)
-		),
-		var(--background-primary);
-}
-
-.fitness-log-now {
-	display: flex;
-	align-items: center;
-	gap: var(--size-4-4);
-}
-
-.fitness-log-now-info {
-	flex: 1;
-	min-width: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-}
-
-.fitness-log-now-label {
-	display: flex;
-	align-items: center;
-	gap: var(--size-2-2);
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-	font-weight: var(--font-semibold);
-	letter-spacing: 0.04em;
-}
-
-.fitness-log-now-icon {
-	display: inline-flex;
-}
-
-.fitness-log-now-icon svg {
-	width: 13px;
-	height: 13px;
-}
-
-.fitness-log-now-main {
+.fitness-log-rest-line {
 	display: flex;
 	align-items: baseline;
 	gap: var(--size-4-2);
-	min-width: 0;
+	font-variant-numeric: tabular-nums;
 }
 
-.fitness-log-now-name {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	font-size: var(--font-ui-medium);
+.fitness-log-rest-icon {
+	display: inline-flex;
+	align-self: center;
+}
+
+.fitness-log-rest-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.fitness-log-rest-label {
+	font-size: var(--font-ui-small);
 	font-weight: var(--font-semibold);
 }
 
-.fitness-log-now-timer {
-	font-size: 1.75em;
+.fitness-log-rest-timer {
+	font-size: 1.6em;
 	font-weight: var(--font-bold);
-	line-height: 1.1;
-	font-variant-numeric: tabular-nums;
+	line-height: 1.15;
 }
 
-.fitness-log-now-target {
-	color: var(--text-faint);
-	font-variant-numeric: tabular-nums;
-}
-
-.fitness-log-now-sub {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+.fitness-log-rest-target {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 }
 
-.fitness-log-now.is-running .fitness-log-now-label,
-.fitness-log-now.is-running .fitness-log-now-timer {
-	color: var(--text-accent);
+/* 目安に対する進み */
+.fitness-log-rest-progress {
+	height: 5px;
+	margin-top: var(--size-4-2);
+	border-radius: 3px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
 }
 
-.fitness-log-now.is-running .fitness-log-now-main {
-	flex-direction: row-reverse;
-	justify-content: flex-end;
-}
-
-/* 休憩: 目安に対する進みを帯の上端の線で。目安を過ぎたらオレンジ */
-.fitness-log-now-progress {
-	position: absolute;
-	top: -1px;
-	left: 0;
-	right: 0;
-	height: 3px;
-}
-
-.fitness-log-now-progress-fill {
+.fitness-log-rest-progress-fill {
 	height: 100%;
 	width: calc(var(--fitness-log-progress, 0) * 100%);
+	border-radius: inherit;
 	background: var(--interactive-accent);
 	transition: width 1s linear;
 }
 
-.fitness-log-now.is-over .fitness-log-now-progress-fill {
-	background: var(--color-orange);
-}
-
-.fitness-log-now.is-over .fitness-log-now-timer,
-.fitness-log-now.is-over .fitness-log-now-label {
+/* 目安を過ぎたらオレンジ */
+.fitness-log-rest.is-over {
+	background: rgba(var(--color-orange-rgb), 0.12);
 	color: var(--color-orange);
 }
 
-.fitness-log-now-progress.is-hidden,
-.fitness-log-now-target.is-hidden,
-.fitness-log-now.is-stale .fitness-log-now-progress,
-.fitness-log-now.is-stale .fitness-log-now-label,
-.fitness-log-now.is-stale .fitness-log-now-main {
-	display: none;
-}
-
-.fitness-log-now.is-stale .fitness-log-now-sub {
-	color: var(--text-normal);
-	font-size: var(--font-ui-medium);
-	font-weight: var(--font-semibold);
-}
-
-.fitness-log-now-actions {
-	display: flex;
-	flex-shrink: 0;
-	gap: var(--size-4-2);
-}
-
-button.fitness-log-now-primary {
-	min-height: 48px;
-	padding: 0 var(--size-4-5);
-	border-radius: var(--radius-l);
-	font-size: var(--font-ui-medium);
-	font-weight: var(--font-semibold);
+.fitness-log-rest.is-over .fitness-log-rest-progress-fill {
+	background: var(--color-orange);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1662,7 +1581,7 @@ button.fitness-log-now-primary {
 		animation: none;
 	}
 
-	.fitness-log-now-progress-fill,
+	.fitness-log-rest-progress-fill,
 	.fitness-log-section-progress-fill {
 		transition: none;
 	}
@@ -1841,18 +1760,6 @@ button.fitness-log-quick-value.is-current {
 
 .is-phone .fitness-log-date-label {
 	font-size: var(--font-ui-medium);
-}
-
-.is-phone .fitness-log-dock {
-	padding: var(--size-4-2) var(--size-4-3);
-}
-
-.is-phone .fitness-log-now {
-	gap: var(--size-4-2);
-}
-
-.is-phone .fitness-log-now-timer {
-	font-size: 1.5em;
 }
 
 /* ---------------------------------------------------------------- 並べ替え（ドラッグ） */

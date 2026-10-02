@@ -1,7 +1,8 @@
 import { setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
-import { elapsedSeconds, formatDuration } from '../../lib/time/date';
+import type { RestState } from '../../lib/today/rest';
+import { elapsedSeconds, formatDuration, parseTime } from '../../lib/time/date';
 import {
 	fromDisplayWeight,
 	parseNumberInput,
@@ -21,13 +22,18 @@ export interface CardEnv {
 	 * readonly: 見るだけ（未来の予定）
 	 */
 	mode: 'timer' | 'manual' | 'readonly';
+	/** 休憩を出す種目（このカードなら、セットの下に休憩の経過と進みを出す） */
+	rest?: RestState | null;
 }
+
+/** これより長く空いたら休憩とみなさない（休憩が延々と数え続けないように） */
+const STALE_REST_SEC = 60 * 60;
 
 /**
  * 種目カード（TaskChute と同じく、左にボタン、右に種目名だけ）。
  * 左のボタン: ▶ でセットを開始、実行中は ■ で終了（回数を聞いて記録）。手入力の日は ＋。
  * 下に、この欄で終えたセット（番号は種目ごとの通し。数字はその場で直せる）と実行中の行。
- * 休憩は画面の下の「いま」の帯に出す（カードには出さない。終えた筋トレで動き続けないように）。
+ * 最後にセットを終えた種目なら、その下に休憩（経過・目安・進みのバー）。筋トレ中だけ（restState）。
  */
 export function renderExerciseCard(
 	ctx: PageContext,
@@ -103,6 +109,7 @@ export function renderExerciseCard(
 	}
 
 	if (card.active && active) renderActiveRow(ctx, box, card);
+	if (env.rest?.card === card) renderRestRow(ctx, box, env.rest);
 
 	if (!card.exercise)
 		box.createDiv({
@@ -181,4 +188,49 @@ function renderActiveRow(
 			onConfirm: () => ctx.run(() => controller.cancelSet()),
 		}).open(),
 	);
+}
+
+/**
+ * 休憩: 「☕ 休憩 1:12 / 2:30」と、目安に対する進みのバー。目安を過ぎたらオレンジ。
+ * 目安が無い（パッケージ外など）ときは経過だけ。1 時間を超えたら出さない。
+ */
+function renderRestRow(
+	ctx: PageContext,
+	parent: HTMLElement,
+	rest: RestState,
+): void {
+	const endSec = parseTime(rest.lastEnd);
+	if (endSec === null) return;
+	const row = parent.createDiv({ cls: 'fitness-log-rest' });
+	const line = row.createDiv({ cls: 'fitness-log-rest-line' });
+	setIcon(line.createSpan({ cls: 'fitness-log-rest-icon' }), 'coffee');
+	line.createSpan({
+		cls: 'fitness-log-rest-label',
+		text: t('today.restLabel'),
+	});
+	const timer = line.createSpan({ cls: 'fitness-log-rest-timer' });
+	if (rest.restSec !== null)
+		line.createSpan({
+			cls: 'fitness-log-rest-target',
+			text: `/ ${formatDuration(rest.restSec)}`,
+		});
+	const fill =
+		rest.restSec === null
+			? null
+			: row
+					.createDiv({ cls: 'fitness-log-rest-progress' })
+					.createDiv({ cls: 'fitness-log-rest-progress-fill' });
+	ctx.addTicker((now) => {
+		const nowSec =
+			now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+		// 日付をまたいでも数える（23:58 に終えて 0:01 なら 3 分）
+		const sec = (nowSec - endSec + 86_400) % 86_400;
+		row.toggleClass('is-hidden', sec >= STALE_REST_SEC);
+		timer.setText(formatDuration(sec));
+		if (rest.restSec === null) return;
+		fill?.setCssProps({
+			'--fitness-log-progress': String(Math.min(1, sec / rest.restSec)),
+		});
+		row.toggleClass('is-over', sec >= rest.restSec);
+	});
 }
