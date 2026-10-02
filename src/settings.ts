@@ -5,11 +5,13 @@ import {
 	type App,
 	type SettingDefinitionItem,
 } from 'obsidian';
+import { FOLDER_KEYS, type FolderKey } from './data/folders';
 import { validateFileNameFormat } from './data/log-repository';
 import { t } from './i18n';
 import { DEFAULT_SETTINGS } from './lib/model/data';
 import type { FitnessLogSettings } from './lib/model/types';
 import type FitnessLogPlugin from './main';
+import { checkNoteFolders } from './ui/folder-check';
 
 type SettingsKey = keyof FitnessLogSettings;
 
@@ -70,16 +72,40 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 		super(app, plugin);
 	}
 
+	/** この画面を開いてから変えた保存先の、変える前の値（閉じたときにノートを移すか聞く） */
+	private foldersBefore: Partial<Record<FolderKey, string>> = {};
+
 	getControlValue(key: string): unknown {
 		return this.plugin.services.store.settings[key as SettingsKey];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
+		const folderKey = FOLDER_KEYS.find((k) => k === key);
+		if (folderKey && !(folderKey in this.foldersBefore))
+			this.foldersBefore[folderKey] =
+				this.plugin.services.store.settings[folderKey];
 		const patch = coerceSetting(key as SettingsKey, value);
 		if (Object.keys(patch).length === 0) return;
 		await this.plugin.services.store.update((data) => {
 			Object.assign(data.settings, patch);
 		});
+	}
+
+	/**
+	 * 閉じたとき: 保存先を変えていれば、今あるノートを新しい保存先へ移すか聞く。
+	 * 入力のたびに保存されるので、打っている途中のフォルダに移さないよう、閉じたときにまとめて聞く。
+	 */
+	hide(): void {
+		super.hide();
+		const { store } = this.plugin.services;
+		const changed = FOLDER_KEYS.filter(
+			(key) =>
+				this.foldersBefore[key] !== undefined &&
+				this.foldersBefore[key] !== store.settings[key],
+		);
+		this.foldersBefore = {};
+		if (changed.length > 0)
+			void checkNoteFolders(this.app, this.plugin.services, changed);
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem<SettingsKey>[] {

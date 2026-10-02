@@ -58,3 +58,51 @@ export function dominantFolder(
 	}
 	return best;
 }
+
+/** path が folder の中（サブフォルダを含む）にあるか。folder が '/' や空なら vault 全体 */
+export function isInside(path: string, folder: string): boolean {
+	const f = trimSlashes(folder);
+	return f === '' || trimSlashes(path).startsWith(`${f}/`);
+}
+
+/** source の中のノートを、同じ相対パスで target の中へ移したときのパス */
+export function movedPath(
+	path: string,
+	source: string,
+	target: string,
+): string {
+	const rel = trimSlashes(path).slice(trimSlashes(source).length + 1);
+	const to = trimSlashes(target);
+	return to === '' ? rel : `${to}/${rel}`;
+}
+
+export interface FolderMismatch {
+	/** ノートがまとまっている場所 */
+	source: string;
+	/** source の中にあって、設定のフォルダの外にあるノート */
+	paths: string[];
+	/** 設定のフォルダの中にすでにあるノートの数 */
+	inside: number;
+}
+
+/**
+ * 設定のフォルダと、実際にノートがある場所の食い違い。ノートの大半が設定のフォルダの外の
+ * 1 か所にまとまっていれば、その場所と移すノートを返す（設定を変えたのにノートを移していないなど）。
+ * 設定のフォルダの中に大半があれば（紛れたノートが外に少しあるだけなら）null。
+ */
+export function folderMismatch(
+	configured: string,
+	notePaths: readonly string[],
+): FolderMismatch | null {
+	const inside = notePaths.filter((p) => isInside(p, configured));
+	const outside = notePaths.filter((p) => !isInside(p, configured));
+	if (outside.length === 0 || inside.length >= outside.length) return null;
+	const source = dominantFolder(outside);
+	if (source === null || trimSlashes(source) === trimSlashes(configured))
+		return null;
+	return {
+		source,
+		paths: outside.filter((p) => isInside(p, source)),
+		inside: inside.length,
+	};
+}

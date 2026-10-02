@@ -1,19 +1,22 @@
 import { Notice, TFolder, type App, type Component } from 'obsidian';
 import { t } from '../i18n';
-import { dominantFolder, followRename } from '../lib/folders';
+import { followRename, movedPath } from '../lib/folders';
 import { LOG_TAG } from '../lib/log/summary';
 import { EXERCISE_KEYS, EXERCISE_TAG } from '../lib/model/exercise-note';
 import type { DataStore } from './data-store';
 
 /**
- * 種目ノート・日ノートのフォルダの設定を、vault の中のフォルダの変更に合わせる。
+ * 種目ノート・日ノートのフォルダの設定と、ノートの実際の場所をそろえる。
  * - フォルダ（またはその親）の名前を変えた・移したら、設定も追いかける（registerFolderFollow）
- * - 起動時に設定のフォルダが無ければ、ノートのある場所を探して合わせる（relocateFolders）
- *   （追いかける前の版でフォルダの名前を変えた vault を直すため）
+ * - 設定のフォルダを変えたのにノートが前の場所にあるときは、移すか設定を戻すかを聞く
+ *   （聞くのは src/ui/folder-check.ts。ここはノートを探す・移す）
  */
 
-type FolderKey = 'exerciseFolder' | 'logFolder';
-const FOLDER_KEYS: readonly FolderKey[] = ['exerciseFolder', 'logFolder'];
+export type FolderKey = 'exerciseFolder' | 'logFolder';
+export const FOLDER_KEYS: readonly FolderKey[] = [
+	'exerciseFolder',
+	'logFolder',
+];
 
 function hasTag(value: unknown, tag: string): boolean {
 	const list: unknown[] = Array.isArray(value)
@@ -27,7 +30,7 @@ function hasTag(value: unknown, tag: string): boolean {
 }
 
 /** vault の中の種目ノート・日ノート（frontmatter のタグと id で見分ける） */
-function notePaths(app: App, key: FolderKey): string[] {
+export function findNotePaths(app: App, key: FolderKey): string[] {
 	return app.vault
 		.getMarkdownFiles()
 		.filter((file) => {
@@ -59,31 +62,51 @@ function notify(patch: Partial<Record<FolderKey, string>>): void {
 	}
 }
 
+/** 移したノートの数と、移した先に同じ名前のノートがあって移さなかったノート */
+export interface MoveResult {
+	moved: number;
+	skipped: string[];
+}
+
+async function ensureFolder(app: App, path: string): Promise<void> {
+	let current = '';
+	for (const part of path.split('/')) {
+		if (!part) continue;
+		current = current ? `${current}/${part}` : part;
+		if (app.vault.getFolderByPath(current)) continue;
+		try {
+			await app.vault.createFolder(current);
+		} catch (error) {
+			if (!app.vault.getFolderByPath(current)) throw error;
+		}
+	}
+}
+
 /**
- * 設定のフォルダが vault に無ければ、ノートのある場所に合わせる。
- * force なら、フォルダがあってもその中にノートが 1 つも無いときに合わせる（「種目ノートを探す」）。
- * 合わせたフォルダを返す。
+ * ノートを source から target へ、同じ相対パスで移す（FileManager.renameFile なのでリンクも直る）。
+ * 移した先に同じ名前のノートがあれば上書きせずに残す。
  */
-export async function relocateFolders(
+export async function moveNotes(
 	app: App,
-	store: DataStore,
-	force = false,
-): Promise<Partial<Record<FolderKey, string>>> {
-	const patch: Partial<Record<FolderKey, string>> = {};
-	for (const key of FOLDER_KEYS) {
-		const current = store.settings[key];
-		const exists = app.vault.getFolderByPath(current) !== null;
-		if (exists && !force) continue;
-		const paths = notePaths(app, key);
-		if (exists && paths.some((p) => p.startsWith(`${current}/`))) continue;
-		const folder = dominantFolder(paths);
-		if (folder !== null && folder !== current) patch[key] = folder;
+	paths: readonly string[],
+	source: string,
+	target: string,
+): Promise<MoveResult> {
+	const result: MoveResult = { moved: 0, skipped: [] };
+	for (const path of paths) {
+		const file = app.vault.getFileByPath(path);
+		if (!file) continue;
+		const dest = movedPath(path, source, target);
+		if (app.vault.getAbstractFileByPath(dest)) {
+			result.skipped.push(path);
+			continue;
+		}
+		const slash = dest.lastIndexOf('/');
+		if (slash > 0) await ensureFolder(app, dest.slice(0, slash));
+		await app.fileManager.renameFile(file, dest);
+		result.moved++;
 	}
-	if (Object.keys(patch).length > 0) {
-		await store.update((d) => Object.assign(d.settings, patch));
-		notify(patch);
-	}
-	return patch;
+	return result;
 }
 
 /** フォルダ（またはその親）の名前を変えた・移したら、設定のフォルダも追いかける */

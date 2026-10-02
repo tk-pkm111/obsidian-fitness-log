@@ -56,7 +56,7 @@ import type { PageContext } from '../page-context';
 import { chooseExercise } from '../choose-exercise';
 import { dragHandle, makeSortable, type SortableEntry } from '../sortable';
 import { openPackageLog } from './log-page';
-import { relocateFolders } from '../../data/folders';
+import { checkNoteFolders } from '../folder-check';
 
 const now = () => new Date().toISOString();
 
@@ -364,9 +364,10 @@ function renderMissingHint(
 		t('packages.findNotes'),
 		() =>
 			ctx.run(async () => {
-				const patch = await relocateFolders(ctx.app, store, true);
-				if (patch.exerciseFolder === undefined)
-					new Notice(t('packages.notesNotFound'), 8000);
+				const found = await checkNoteFolders(ctx.app, ctx.services, [
+					'exerciseFolder',
+				]);
+				if (!found) new Notice(t('packages.notesNotFound'), 8000);
 			}),
 		{ icon: 'search' },
 	);

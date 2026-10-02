@@ -198,11 +198,11 @@ export const ja = {
 
 	'settings.logFolder.name': 'ログの保存先',
 	'settings.logFolder.desc':
-		'トレーニングの日ノートを保存する vault 内のフォルダ。',
+		'トレーニングの日ノートを保存する vault 内のフォルダ。変えたら、設定を閉じるときに今あるノートを新しいフォルダへ移すか聞きます。',
 	'settings.logFolder.empty': 'フォルダを指定してください。',
 	'settings.exerciseFolder.name': '種目ノートの保存先',
 	'settings.exerciseFolder.desc':
-		'1 種目 1 ノートを置く vault 内のフォルダ。種目の設定は各ノートの frontmatter に、フォームやコツは本文に書きます。変えても既存のノートは移動しません。',
+		'1 種目 1 ノートを置く vault 内のフォルダ。種目の設定は各ノートの frontmatter に、フォームやコツは本文に書きます。変えたら、設定を閉じるときに今あるノートを新しいフォルダへ移すか聞きます。',
 	'settings.fileNameFormat.name': 'ノート名の形式',
 	'settings.fileNameFormat.desc':
 		'日ノートのファイル名（moment の書式）。/ を含めるとサブフォルダに分けます。既存のノートの名前は変わりません。',
@@ -282,7 +282,7 @@ export const ja = {
 	'packages.saveItem': '変更を保存',
 	'packages.missingExercise': '（種目ノートが見つかりません）',
 	'packages.missingHint':
-		'種目ノートが見つからない種目があります（{n}）。種目ノートのフォルダ（設定: {folder}）の名前を変えた・移したときは「種目ノートを探す」で合わせられます。',
+		'種目ノートが見つからない種目があります（{n}）。種目ノートの保存先（設定: {folder}）を変えた・フォルダの名前を変えたときは、「種目ノートを探す」でノートを保存先へ移すか、保存先を戻せます。',
 	'packages.findNotes': '種目ノートを探す',
 	'packages.notesNotFound':
 		'種目ノートが見つかりませんでした。設定の「種目ノートの保存先」を確認してください。',
@@ -450,6 +450,20 @@ export const ja = {
 	'notice.folderFollowed': '{name}のフォルダを「{folder}」に合わせました。',
 	'folders.exercise': '種目ノート',
 	'folders.log': '日ノート（ログ）',
+	'folders.checkTitle': '{name}の保存先',
+	'folders.checkMessage':
+		'設定の保存先「{target}」に{name}がありません。「{source}」に {n} 件あります。',
+	'folders.checkMessageFew':
+		'設定の保存先「{target}」には{name}が {inside} 件しかありません。「{source}」に {n} 件あります。',
+	'folders.moveNotes': '「{target}」へ移す',
+	'folders.moveNotesDesc':
+		'{n} 件のノートを設定の保存先へ移します（フォルダの中の並びはそのまま。リンクも直ります）。',
+	'folders.useSource': '保存先を「{source}」にする',
+	'folders.useSourceDesc':
+		'ノートは動かさず、設定の保存先を今ノートがある場所に戻します。',
+	'folders.moved': '{n} 件のノートを「{target}」へ移しました。',
+	'folders.movedWithSkips':
+		'{n} 件のノートを「{target}」へ移しました。{skipped} 件は移した先に同じ名前のノートがあるため、「{source}」に残しています。',
 
 	'session.start': '筋トレを開始',
 	'session.end': '筋トレを終了',

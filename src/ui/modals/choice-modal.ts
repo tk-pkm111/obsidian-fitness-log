@@ -15,10 +15,14 @@ export interface ChoiceOptions {
 	title: string;
 	message: string;
 	choices: readonly ChoiceItem[];
+	/** どれも選ばずに閉じたとき */
+	onDismiss?: () => void;
 }
 
 /** いくつかの選択肢から 1 つを選ぶ（大きなボタンに説明を添える）。キャンセルもできる */
 export class ChoiceModal extends Modal {
+	private chosen = false;
+
 	constructor(
 		app: App,
 		private readonly options: ChoiceOptions,
@@ -47,6 +51,7 @@ export class ChoiceModal extends Modal {
 					text: choice.desc,
 				});
 			button.addEventListener('click', () => {
+				this.chosen = true;
 				this.close();
 				choice.onChoose();
 			});
@@ -59,5 +64,6 @@ export class ChoiceModal extends Modal {
 
 	onClose(): void {
 		this.contentEl.empty();
+		if (!this.chosen) this.options.onDismiss?.();
 	}
 }
