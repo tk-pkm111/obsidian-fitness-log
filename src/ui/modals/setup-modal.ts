@@ -38,7 +38,7 @@ function join(parent: string, child: string): string {
  * - 入れ直したときなど vault に既に記録・種目のノートがあれば、その場所をそのまま使う（別々の欄に入れておく）
  * - 「はじめる」までは何も作らない。よく使う種目とメニューの例は、保存先を決めてから足りない分だけ入れる
  * - コマンド「保存先を設定」でやり直せる（保存先を変えたらノートを移すか聞く）
- * - 初めてのときだけ、いちばん下に使い方の動画
+ * - いちばん下に使い方の動画（コマンド「保存先を設定」から見直せる）
  */
 export class SetupModal extends Modal {
 	constructor(
@@ -200,8 +200,8 @@ export class SetupModal extends Modal {
 			{ cta: true },
 		);
 
-		// 初めての人には、ボタンの下に使い方の動画（再生を押すまで読み込まない）
-		if (first) renderOnboardingVideo(contentEl);
+		// ボタンの下に使い方の動画（再生を押すまで読み込まない）。やり直しのときも出して、あとから見直せるように
+		renderOnboardingVideo(contentEl);
 	}
 
 	onClose(): void {
