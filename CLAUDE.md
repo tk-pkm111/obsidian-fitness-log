@@ -51,7 +51,7 @@ docs/              設計メモ
 2. ロジックは `src/lib/` に置いてテストを書く。Obsidian API に触る層（コマンド・ビュー・設定）は薄く保つ。
 3. 終わる前に `npm run check` を通す。ESLint の警告（`obsidianmd/*`）も直す。
 4. UI の変更は `npm run build` の後に `npm run e2e` で隔離した Obsidian を操作して確かめる（スクリーンショットを見る・`window.__errs` が空か確認する）。そのうえで、`npm run dev` を動かした状態で dev-vault を開いて目視してもらうよう、確認手順を具体的に書いて依頼する（実機・手触りは自動では分からない）。
-5. commit / push は頼まれたときだけ。リポジトリは GitHub の非公開リポジトリ `tk-pkm111/obsidian-fitness-log`。スマホ確認用の版は `npm version patch` → `git push --follow-tags` で出す（`docs/harness.md` の「スマホで確認（BRAT）」）。
+5. commit / push は頼まれたときだけ。リポジトリは GitHub の公開リポジトリ `tk-pkm111/obsidian-fitness-log`（コミットしたものは誰でも見られる。個人的なデータを入れない）。スマホ確認用の版は `npm version patch` → `git push --follow-tags` で出す（`docs/harness.md` の「スマホで確認（BRAT）」）。
 
 ## 守ること
 
