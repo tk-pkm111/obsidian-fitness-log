@@ -22,6 +22,7 @@ import {
 	type PackageRow,
 } from '../../lib/model/catalog';
 import { formatTarget } from '../../lib/format';
+import { buildLogData, packageLog } from '../../lib/history/package-log';
 import {
 	joinRepRange,
 	secondChoices,
@@ -34,6 +35,7 @@ import type {
 	Package,
 	PackageItem,
 	PackageSection,
+	RemovedPackageItem,
 } from '../../lib/model/types';
 import { describeRule } from '../../lib/schedule/routine';
 import {
@@ -53,6 +55,7 @@ import { TextPromptModal } from '../modals/text-prompt-modal';
 import type { PageContext } from '../page-context';
 import { chooseExercise } from '../choose-exercise';
 import { dragHandle, makeSortable, type SortableEntry } from '../sortable';
+import { openPackageLog } from './log-page';
 
 const now = () => new Date().toISOString();
 
@@ -286,6 +289,8 @@ function renderPackageDetail(
 				}).open(),
 			{ icon: 'separator-horizontal' },
 		);
+
+	renderRemovedItems(ctx, el, pkg);
 
 	const actions = el.createDiv({ cls: 'fitness-log-footer' });
 	textButton(
@@ -549,7 +554,7 @@ function renderItemRow(
 		return true;
 	};
 	const title = exercise?.name ?? '?';
-	targetControl(ctx.app, target(t('packages.targetSets')), {
+	const setsInput = targetControl(ctx.app, target(t('packages.targetSets')), {
 		value: String(item.targetSets),
 		label: t('packages.targetSets'),
 		focusKey: `sets-${key}`,
@@ -574,7 +579,7 @@ function renderItemRow(
 			};
 		},
 	});
-	targetControl(ctx.app, target(t('packages.targetReps')), {
+	const repsInput = targetControl(ctx.app, target(t('packages.targetReps')), {
 		value: item.targetReps,
 		placeholder: '6-9',
 		label: t('packages.targetReps'),
@@ -612,7 +617,7 @@ function renderItemRow(
 			};
 		},
 	});
-	targetControl(ctx.app, target(t('packages.targetRest')), {
+	const restInput = targetControl(ctx.app, target(t('packages.targetRest')), {
 		value: restText,
 		placeholder: t('packages.restPlaceholder'),
 		label: t('packages.targetRest'),
@@ -667,7 +672,170 @@ function renderItemRow(
 		},
 	});
 	note.addEventListener('change', () => update({ note: note.value }));
+
+	// 「変更を保存」: 欄の値をまとめて保存して閉じる（保存されたことが分かるように）。
+	// 値は欄を離れたときにも保存しているが、押す場所が無いと × で保存するのかと迷うため
+	const footer = details.createDiv({
+		cls: 'fitness-log-item-details-footer',
+	});
+	const save = textButton(
+		footer,
+		t('packages.saveItem'),
+		() => {
+			const patch: Parameters<typeof updatePackageItem>[3] = {
+				note: note.value,
+			};
+			if (setsInput)
+				patch.targetSets = Number(
+					setsInput.value.normalize('NFKC').trim(),
+				);
+			if (repsInput) patch.targetReps = repsInput.value.normalize('NFKC');
+			if (restInput) {
+				const rest = parseRestInput(restInput.value);
+				if (rest === undefined) {
+					new Notice(t('packages.invalidRest'));
+					return;
+				}
+				patch.restSec = rest;
+			}
+			ctx.run(async () => {
+				await store.update((d) =>
+					updatePackageItem(d, pkg.id, index, patch),
+				);
+				openDetails.delete(detailsKey);
+				ctx.refresh();
+				new Notice(t('packages.itemSaved', { exercise: title }));
+			});
+		},
+		{ icon: 'check', cta: true },
+	);
+	// 押したときに入力欄からフォーカスを外さない（外すと change の保存と描き直しが先に走り、click が届かない）
+	save.addEventListener('mousedown', (event) => event.preventDefault());
 	return entry;
+}
+
+/**
+ * 外した種目（たたむ）: 覚えている設定（目標・休憩・メモ）と、このパッケージでの記録の事実を並べ、
+ * 「戻す」で入れ直せる。設定を覚える前に外した種目も、このパッケージで記録があれば出す（初期値で戻す）。
+ */
+function renderRemovedItems(
+	ctx: PageContext,
+	el: HTMLElement,
+	pkg: Package,
+): void {
+	const { store, index } = ctx.services;
+	const exercises = store.current.exercises;
+	const byId = new Map(exercises.map((e) => [e.id, e]));
+	const log = packageLog(
+		buildLogData(index.allDays(), store.current.packages, exercises),
+		pkg.id,
+		exercises,
+	);
+	const history = new Map(
+		(log?.others ?? []).map((row) => [row.exercise.key, row.trend]),
+	);
+	const rows: Array<{ exercise: Exercise; removed?: RemovedPackageItem }> =
+		[];
+	for (const removed of pkg.removedItems ?? []) {
+		const exercise = byId.get(removed.exerciseId);
+		if (exercise) rows.push({ exercise, removed });
+	}
+	for (const row of log?.others ?? []) {
+		const exercise = byId.get(row.exercise.key);
+		if (exercise && !rows.some((r) => r.exercise.id === exercise.id))
+			rows.push({ exercise });
+	}
+	if (rows.length === 0) return;
+
+	const opened = ctx.pageState('packageRemovedOpen', () => new Set<string>());
+	const fold = el.createEl('details', {
+		cls: 'fitness-log-fold fitness-log-removed',
+	});
+	fold.open = opened.has(pkg.id);
+	fold.addEventListener('toggle', () => {
+		if (fold.open) opened.add(pkg.id);
+		else opened.delete(pkg.id);
+	});
+	const summary = fold.createEl('summary');
+	summary.createSpan({
+		text: t('packages.removedTitle', { n: rows.length }),
+	});
+	setIcon(
+		summary.createSpan({ cls: 'fitness-log-fold-chevron' }),
+		'chevron-right',
+	);
+	const list = fold.createDiv({ cls: 'fitness-log-removed-list' });
+	for (const { exercise, removed } of rows) {
+		const trend = history.get(exercise.id) ?? null;
+		const fresh: PackageItem = {
+			exerciseId: exercise.id,
+			...defaultTargets(exercise.recordType),
+		};
+		const row = list.createDiv({ cls: 'fitness-log-removed-row' });
+		const body = row.createDiv({ cls: 'fitness-log-removed-body' });
+		body.createDiv({
+			cls: 'fitness-log-removed-name',
+			text: exercise.name,
+		});
+		body.createDiv({
+			cls: 'fitness-log-muted',
+			text: removed
+				? describeItem(removed)
+				: t('packages.noSavedTargets', { target: formatTarget(fresh) }),
+		});
+		const facts: string[] = [];
+		if (removed)
+			facts.push(
+				t('packages.removedAt', {
+					date: formatMonthDay(
+						toDateString(new Date(removed.removedAt)),
+					),
+				}),
+			);
+		facts.push(
+			trend
+				? t('packages.lastDone', {
+						date: formatMonthDay(trend.last.date),
+						n: trend.entries.length,
+					})
+				: t('packages.noRecordsHere'),
+		);
+		body.createDiv({
+			cls: 'fitness-log-removed-facts',
+			text: facts.join(' ・ '),
+		});
+
+		const buttons = row.createDiv({ cls: 'fitness-log-removed-buttons' });
+		if (trend)
+			textButton(
+				buttons,
+				t('packages.viewLog'),
+				() => openPackageLog(ctx, pkg.id, exercise.id),
+				{ icon: 'line-chart' },
+			);
+		textButton(
+			buttons,
+			t('packages.restore'),
+			() =>
+				ctx.run(async () => {
+					await store.update((d) => {
+						if (removed) restorePackageItem(d, pkg.id, exercise.id);
+						else addPackageItem(d, pkg.id, exercise.id);
+					});
+					new Notice(
+						t('packages.restored', {
+							exercise: exercise.name,
+							target: describeItem(removed ?? fresh),
+						}),
+					);
+				}),
+			{ icon: 'undo-2' },
+		);
+	}
+	fold.createDiv({
+		cls: 'fitness-log-fold-note',
+		text: t('packages.removedNote'),
+	});
 }
 
 interface TargetControlOptions {
@@ -690,7 +858,7 @@ function targetControl(
 	app: App,
 	parent: HTMLElement,
 	options: TargetControlOptions,
-): void {
+): HTMLInputElement | null {
 	if (Platform.isMobile) {
 		const button = parent.createEl('button', {
 			cls: 'fitness-log-target-value',
@@ -713,7 +881,7 @@ function targetControl(
 				},
 			}).open(),
 		);
-		return;
+		return null;
 	}
 	const input = parent.createEl('input', {
 		type: 'text',
@@ -729,6 +897,7 @@ function targetControl(
 	input.addEventListener('change', () => {
 		if (!options.onCommit(input.value)) input.value = options.value;
 	});
+	return input;
 }
 
 /** ラベル付きの入力欄の行 */

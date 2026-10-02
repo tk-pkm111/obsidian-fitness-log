@@ -1380,6 +1380,59 @@ input.fitness-log-target-value[type='text'],
 	font-size: var(--font-ui-small);
 }
 
+/* 詳細設定の「変更を保存」（押すと保存して閉じる） */
+.fitness-log-item-details-footer {
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* 外した種目（パッケージの編集の下。たたむ） */
+.fitness-log-removed {
+	margin-top: var(--size-4-4);
+}
+
+.fitness-log-removed-list {
+	display: flex;
+	flex-direction: column;
+}
+
+.fitness-log-removed-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-4-2) var(--size-4-3);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.fitness-log-removed-row:first-child {
+	border-top: 0;
+}
+
+.fitness-log-removed-body {
+	flex: 1 1 14em;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.fitness-log-removed-name {
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-removed-facts {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-removed-buttons {
+	display: flex;
+	gap: var(--size-4-1);
+	margin-left: auto;
+}
+
 .fitness-log-exercise-edit textarea {
 	width: 100%;
 }

@@ -8,12 +8,8 @@ import type { LogEnv, LogMode, LogPageState } from './log-shared';
 
 const MODES: readonly LogMode[] = ['package', 'exercise', 'month'];
 
-/**
- * ログページ: パッケージ（パッケージの中での伸び）／種目（パッケージごとの線）／月ごと。
- * 同じ種目でもパッケージで扱える重量が変わるので、まずはパッケージの中どうしで比べる。
- */
-export function renderLogPage(ctx: PageContext, el: HTMLElement): void {
-	const state = ctx.pageState<LogPageState>('log', () => ({
+function logPageState(ctx: PageContext): LogPageState {
+	return ctx.pageState<LogPageState>('log', () => ({
 		mode: 'package',
 		group: null,
 		detail: null,
@@ -23,6 +19,28 @@ export function renderLogPage(ctx: PageContext, el: HTMLElement): void {
 		hidden: new Set(),
 		othersOpen: false,
 	}));
+}
+
+/** ログのパッケージのタブで、そのパッケージでのその種目の推移を開く（パッケージの画面から） */
+export function openPackageLog(
+	ctx: PageContext,
+	groupKey: string,
+	exerciseKey: string,
+): void {
+	const state = logPageState(ctx);
+	state.mode = 'package';
+	state.group = groupKey;
+	state.detail = exerciseKey;
+	state.compare = false;
+	ctx.navigate({ page: 'log', selectedId: null });
+}
+
+/**
+ * ログページ: パッケージ（パッケージの中での伸び）／種目（パッケージごとの線）／月ごと。
+ * 同じ種目でもパッケージで扱える重量が変わるので、まずはパッケージの中どうしで比べる。
+ */
+export function renderLogPage(ctx: PageContext, el: HTMLElement): void {
+	const state = logPageState(ctx);
 	const tabs = el.createDiv({
 		cls: 'fitness-log-seg',
 		attr: { role: 'tablist' },
