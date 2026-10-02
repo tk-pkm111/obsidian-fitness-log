@@ -206,6 +206,7 @@ export class MainView extends ItemView {
 			today: this.renderedToday,
 			header: { center, actions },
 			navigate: (patch) => this.navigate(patch),
+			refresh: () => this.requestRender(),
 			addTicker: (tick) => {
 				this.tickers.push(tick);
 				tick(new Date());

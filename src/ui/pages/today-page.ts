@@ -88,11 +88,8 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 	const isToday = date === today;
 	const running = sections.filter((s) => s.status === 'in-progress');
 	// 休憩は最後にセットを終えた種目のすぐ下に出す（筋トレ中・その他のときだけ）
-	const rest = restState(
-		sections,
-		isToday ? latestFinishedSet(day) : null,
-		isToday,
-	);
+	const lastSet = isToday ? latestFinishedSet(day) : null;
+	const rest = restState(sections, lastSet, isToday);
 	for (const section of sections)
 		renderSection(ctx, list, section, {
 			isToday,
@@ -100,6 +97,7 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 			anotherRunning: running.some((s) => s !== section),
 			session: sessionOf(day, section),
 			rest,
+			lastSet,
 		});
 
 	// 「今日はスキップ」した予定（取り消せるように残す）

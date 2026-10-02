@@ -339,6 +339,13 @@ body {
 	--fitness-log-accent-soft: hsla(var(--color-accent-hsl), 0.1);
 	--fitness-log-accent-line: hsla(var(--color-accent-hsl), 0.45);
 	--fitness-log-green-soft: rgba(var(--color-green-rgb), 0.12);
+	/* いまの種目の背景（線の上に乗る丸やボタンも同じ色で塗る） */
+	--fitness-log-current-bg:
+		linear-gradient(
+			var(--fitness-log-accent-soft),
+			var(--fitness-log-accent-soft)
+		),
+		var(--background-primary);
 }
 
 .fitness-log-sections {
@@ -382,6 +389,35 @@ body {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 	font-variant-numeric: tabular-nums;
+}
+
+/* パッケージ名（押すとパッケージの編集画面へ） */
+a.fitness-log-section-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	color: inherit;
+	text-decoration: none;
+}
+
+a.fitness-log-section-link:hover {
+	color: var(--text-accent);
+}
+
+.fitness-log-section-link-icon {
+	display: inline-flex;
+	color: var(--text-faint);
+}
+
+.fitness-log-section-link-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.fitness-log-back-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-1);
 }
 
 /* 状態の札 */
@@ -534,13 +570,131 @@ body {
 }
 
 .is-mobile .fitness-log-card {
-	--fitness-log-play-size: 42px;
+	/* スマホのボタンの最小サイズ（44px）と同じにして、丸が楕円にならないように */
+	--fitness-log-play-size: 44px;
 }
 
-/* 実行中の種目: 薄い色と左の線 */
-.fitness-log-card.is-active {
-	background: var(--fitness-log-accent-soft);
+/* いまの種目: 薄い色と左の線（「いま」の文字は出さない） */
+.fitness-log-card.is-current {
+	background: var(--fitness-log-current-bg);
 	box-shadow: inset 3px 0 0 var(--interactive-accent);
+	padding-bottom: var(--size-4-2);
+}
+
+.fitness-log-card.is-current .fitness-log-card-title {
+	font-weight: var(--font-bold);
+}
+
+.fitness-log-card-count {
+	flex-shrink: 0;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* 左の列（状態と操作）。▶・セット数の丸・番号の丸・■ がこの列にそろう */
+.fitness-log-slot {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--fitness-log-play-size);
+	min-width: var(--fitness-log-play-size);
+}
+
+/* 終わった種目（1 行。押すといまの種目として開く） */
+.fitness-log-card.is-done .fitness-log-card-header {
+	cursor: pointer;
+	border-radius: var(--radius-m);
+}
+
+.fitness-log-card.is-done .fitness-log-card-title {
+	color: var(--text-muted);
+	font-weight: var(--font-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.fitness-log-card.is-done:hover {
+	background: var(--background-modifier-hover);
+}
+
+.fitness-log-done-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-card-summary {
+	flex-shrink: 1;
+	min-width: 0;
+	max-width: 50%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-card-chevron {
+	display: inline-flex;
+	flex-shrink: 0;
+	color: var(--text-faint);
+}
+
+.fitness-log-card-chevron svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* 終わった種目にたたまれた休憩 */
+.fitness-log-rest-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: 1px var(--size-4-2);
+	border-radius: 999px;
+	background: var(--fitness-log-accent-soft);
+	color: var(--text-accent);
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-rest-chip.is-over {
+	background: rgba(var(--color-orange-rgb), 0.12);
+	color: var(--color-orange);
+}
+
+.fitness-log-rest-chip.is-hidden {
+	display: none;
+}
+
+/* 「次」の印（いまの種目が目標のセット数に届いたとき） */
+.fitness-log-next-chip {
+	flex-shrink: 0;
+	padding: 0 var(--size-4-2);
+	border: 1px solid var(--fitness-log-accent-line);
+	border-radius: 999px;
+	color: var(--text-accent);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	line-height: 1.6;
+}
+
+button.fitness-log-play.fitness-log-icon-button.is-filled {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
 }
 
 .fitness-log-card-header {
@@ -550,8 +704,13 @@ body {
 	min-height: var(--fitness-log-play-size);
 }
 
+/* 丸いボタン。Obsidian 1.14 はボタンを少し角ばらせる（corner-shape: superellipse）ので丸に戻す */
 button.fitness-log-play.fitness-log-icon-button,
-.fitness-log-play-placeholder {
+.fitness-log-slot button.fitness-log-set-dot {
+	corner-shape: round;
+}
+
+button.fitness-log-play.fitness-log-icon-button {
 	flex-shrink: 0;
 	width: var(--fitness-log-play-size);
 	height: var(--fitness-log-play-size);
@@ -643,15 +802,22 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 	opacity: 1;
 }
 
-/* セットの行・実行中の行は種目名の位置にそろえる */
+/* セットの行は左の列（▶ の列）から、休憩・注意は種目名の位置から */
 .fitness-log-card .fitness-log-set-rows,
-.fitness-log-card .fitness-log-active-row,
-.fitness-log-card .fitness-log-rest,
+.fitness-log-card .fitness-log-subtasks {
+	margin-left: var(--fitness-log-handle-offset, 0px);
+}
+
+.fitness-log-card > .fitness-log-rest,
 .fitness-log-card .fitness-log-card-warning {
 	margin-left: calc(
 		var(--fitness-log-handle-offset, 0px) + var(--fitness-log-play-size) +
 			var(--size-4-3)
 	);
+}
+
+.fitness-log-subtasks .fitness-log-rest {
+	margin-left: calc(var(--fitness-log-play-size) + var(--size-4-3));
 }
 
 .fitness-log-button:disabled {
@@ -662,17 +828,17 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 /* ---------------------------------------------------------------- セットの行 */
 
 .fitness-log-set-rows {
-	margin-top: var(--size-4-2);
+	margin-top: var(--size-4-1);
 	display: flex;
 	flex-direction: column;
 }
 
-/* セット番号 | 結果 | 時刻 | コメント。コメントの文は次の行。狭いと時刻も次の行に回す */
+/* 番号の丸（左の列）| 結果 | 時刻 | コメント。コメントの文は次の行。狭いと時刻も次の行に回す */
 .fitness-log-set-row {
 	display: grid;
-	grid-template-columns: minmax(4.5em, max-content) auto 1fr auto;
+	grid-template-columns: var(--fitness-log-play-size) auto 1fr auto;
 	grid-template-areas:
-		'label result time edit'
+		'slot result time edit'
 		'. note note note';
 	align-items: center;
 	column-gap: var(--size-4-3);
@@ -681,29 +847,44 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 	font-variant-numeric: tabular-nums;
 }
 
-.fitness-log-set-label {
-	grid-area: label;
-	color: var(--text-muted);
-	font-size: var(--font-ui-small);
-	white-space: nowrap;
+.fitness-log-set-row > .fitness-log-slot {
+	grid-area: slot;
 }
 
-/* 押すとメニュー（コメント・削除）。見た目は文字のまま */
-.fitness-log-set-row button.fitness-log-set-label {
-	justify-self: start;
-	height: auto;
+/* セット番号の丸。押すとメニュー（コメント・削除） */
+.fitness-log-set-dot {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-slot button.fitness-log-set-dot {
+	height: 26px;
 	min-height: 0;
-	margin-left: calc(-1 * var(--size-2-2));
-	padding: var(--size-2-1) var(--size-2-2);
-	border-radius: var(--radius-s);
-	background: transparent;
+	padding: 0;
+	border: 0;
 	box-shadow: none;
-	font-weight: inherit;
 	cursor: pointer;
 }
 
-.fitness-log-set-row button.fitness-log-set-label:hover {
-	background: var(--background-modifier-hover);
+.fitness-log-card.is-current .fitness-log-set-dot {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+/* まだのセット（目標のセット数までの残り） */
+.fitness-log-card.is-current .fitness-log-set-dot.is-ghost {
+	background: var(--fitness-log-current-bg);
+	border: 1.5px dashed var(--text-faint);
+	color: var(--text-faint);
 }
 
 .fitness-log-set-result {
@@ -781,32 +962,115 @@ input.fitness-log-inline-edit[type='text']::placeholder {
 }
 
 .is-phone .fitness-log-set-row {
-	grid-template-columns: minmax(4em, max-content) 1fr auto;
+	grid-template-columns: var(--fitness-log-play-size) 1fr auto;
 	grid-template-areas:
-		'label result edit'
+		'slot result edit'
 		'. time edit'
 		'. note note';
-	column-gap: var(--size-4-2);
 }
 
 @container fitness-log-card (max-width: 520px) {
 	.fitness-log-set-row {
-		grid-template-columns: minmax(4em, max-content) 1fr auto;
+		grid-template-columns: var(--fitness-log-play-size) 1fr auto;
 		grid-template-areas:
-			'label result edit'
+			'slot result edit'
 			'. time edit'
 			'. note note';
-		column-gap: var(--size-4-2);
 	}
 }
 
-.fitness-log-set-row.fitness-log-active-row {
+/* ---------------------------------------------------------------- いまの種目のセット（サブタスク） */
+
+/* 左の列を縦の線でつなぎ、「この種目のセット」とひと目でわかるように */
+.fitness-log-subtasks {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	margin-top: var(--size-4-1);
+}
+
+.fitness-log-subtasks::before {
+	content: '';
+	position: absolute;
+	left: calc(var(--fitness-log-play-size) / 2 - 1px);
+	top: var(--size-4-2);
+	bottom: var(--size-4-5);
+	border-left: 2px solid var(--fitness-log-accent-line);
+	opacity: 0.5;
+}
+
+.fitness-log-subtasks .fitness-log-set-row {
+	position: relative;
+	border-top: none;
+}
+
+.fitness-log-subtask {
+	position: relative;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--size-4-2) var(--size-4-3);
-	margin-top: var(--size-4-2);
-	border-top: 1px solid var(--interactive-accent);
+	gap: var(--size-4-1) var(--size-4-3);
+	min-height: 46px;
+	padding: var(--size-2-2) 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-subtask-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	white-space: nowrap;
+}
+
+.fitness-log-subtask.is-next .fitness-log-subtask-label,
+.fitness-log-active-row .fitness-log-subtask-label {
+	color: var(--text-normal);
+	font-weight: var(--font-bold);
+}
+
+.fitness-log-subtask.is-planned .fitness-log-subtask-label {
+	color: var(--text-faint);
+}
+
+.fitness-log-subtask-hint {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+/* 線の上に乗るボタンは、いまの種目の背景で塗って線を隠す */
+.fitness-log-subtasks
+	button.fitness-log-play.fitness-log-icon-button:not(.is-filled):not(
+		.is-running
+	) {
+	background: var(--fitness-log-current-bg);
+}
+
+button.fitness-log-add-set {
+	height: auto;
+	min-height: 32px;
+	padding: 0 var(--size-4-3);
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+button.fitness-log-add-set:hover {
+	color: var(--text-normal);
+	border-color: var(--interactive-accent);
+}
+
+.fitness-log-active-row .fitness-log-timer {
+	flex: 0 1 auto;
+}
+
+.fitness-log-active-row .fitness-log-active-buttons {
+	margin-left: auto;
 }
 
 .fitness-log-inline-weight {

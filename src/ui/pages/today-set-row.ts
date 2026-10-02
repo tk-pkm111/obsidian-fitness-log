@@ -28,9 +28,9 @@ import type { PageContext } from '../page-context';
 type SaveSet = (updated: SetLog) => boolean;
 
 /**
- * 終えたセットの 1 行: 「セット 1 ｜ 15 kg × 5 回 ｜ 22:40–22:40 (0:22) 休憩 2:33 ｜ 💬」。
- * 重量・回数・開始・終了・休憩の数字は押せばその場で直せる。右のアイコンでコメント（感じたこと）を書く。
- * 「セット 1」を押す（右クリック）とメニュー（コメント・削除）。
+ * 終えたセットの 1 行: 「① ｜ 15 kg × 5 回 ｜ 22:40–22:40 (0:22) 休憩 2:33 ｜ 💬」。
+ * 左の列（種目の ▶ と同じ列）にセット番号の丸。数字は押せばその場で直せる。右のアイコンでコメント（感じたこと）を書く。
+ * 番号の丸を押す（右クリック）とメニュー（コメント・削除）。
  */
 export function renderSetRow(
 	ctx: PageContext,
@@ -48,9 +48,10 @@ export function renderSetRow(
 	const address = editable ? setAddress(section, card, index) : null;
 
 	if (!address) {
-		row.createSpan({
-			cls: 'fitness-log-set-label',
-			text: t('today.set', { n }),
+		row.createDiv({ cls: 'fitness-log-slot' }).createSpan({
+			cls: 'fitness-log-set-dot',
+			text: String(n),
+			attr: { 'aria-label': t('today.set', { n }) },
 		});
 		row.createSpan({
 			cls: 'fitness-log-set-result',
@@ -75,11 +76,13 @@ export function renderSetRow(
 	const key = `set:${address.sessionIndex}:${address.exerciseIndex}:${index}`;
 	const comment = () => editComment(ctx, card, set, n, save);
 
-	const label = row.createEl('button', {
-		cls: 'fitness-log-set-label',
-		text: t('today.set', { n }),
-		attr: { type: 'button', 'aria-label': t('today.setMenu', { n }) },
-	});
+	const label = row
+		.createDiv({ cls: 'fitness-log-slot' })
+		.createEl('button', {
+			cls: 'fitness-log-set-dot',
+			text: String(n),
+			attr: { type: 'button', 'aria-label': t('today.setMenu', { n }) },
+		});
 	const openMenu = (event: MouseEvent) => {
 		event.preventDefault();
 		const menu = new Menu();

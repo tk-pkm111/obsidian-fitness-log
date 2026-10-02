@@ -3,7 +3,12 @@ import { t } from '../../i18n';
 import { sessionSpan, summarizeSession } from '../../lib/log/summary';
 import type { SessionLog } from '../../lib/model/types';
 import { describeRule } from '../../lib/schedule/routine';
-import type { CardModel, SectionModel } from '../../lib/today/day-model';
+import type {
+	CardModel,
+	LastSet,
+	SectionModel,
+} from '../../lib/today/day-model';
+import { cardLayout, cardRole, totalSets } from '../../lib/today/focus';
 import {
 	groupCards,
 	isReorderable,
@@ -34,6 +39,8 @@ export interface SectionEnv {
 	session: SessionLog | undefined;
 	/** 休憩を出す種目（最後にセットを終えた種目。無ければ null） */
 	rest: RestState | null;
+	/** その日に最後に終えたセット（今日だけ。いまの種目を決める） */
+	lastSet: LastSet | null;
 }
 
 /**
@@ -64,14 +71,7 @@ export function renderSection(
 	switch (status) {
 		case 'planned':
 			if (expanded.has(expandKey) && !env.isFuture) {
-				renderCards(
-					ctx,
-					box,
-					section,
-					section.cards,
-					'manual',
-					env.rest,
-				);
+				renderCards(ctx, box, section, section.cards, 'manual', env);
 				renderFooter(ctx, box, section, false);
 			} else renderPlanned(ctx, box, section, env, expanded, expandKey);
 			return;
@@ -82,7 +82,7 @@ export function renderSection(
 				section,
 				section.cards,
 				env.isToday ? 'timer' : 'manual',
-				env.rest,
+				env,
 			);
 			renderFooter(ctx, box, section, true);
 			return;
@@ -95,7 +95,7 @@ export function renderSection(
 				: env.isToday
 					? 'timer'
 					: 'manual';
-			renderCards(ctx, box, section, section.cards, mode, env.rest);
+			renderCards(ctx, box, section, section.cards, mode, env);
 			if (mode !== 'readonly') renderFooter(ctx, box, section, false);
 			return;
 		}
@@ -127,10 +127,25 @@ function renderHeader(
 	const titleWrap = header.createDiv({
 		cls: 'fitness-log-section-title-wrap',
 	});
-	titleWrap.createDiv({
-		cls: 'fitness-log-section-title',
-		text: section.isOther ? t('today.other') : section.title,
-	});
+	const title = titleWrap.createDiv({ cls: 'fitness-log-section-title' });
+	const pkg = section.pkg;
+	if (pkg) {
+		// パッケージ名を押すと、そのパッケージの編集画面へ（筋トレ中にすぐ直せるように）
+		const link = title.createEl('a', {
+			cls: 'fitness-log-section-link',
+			href: '#',
+			attr: { 'aria-label': t('today.editPackage') },
+		});
+		link.createSpan({ text: section.title });
+		setIcon(
+			link.createSpan({ cls: 'fitness-log-section-link-icon' }),
+			'chevron-right',
+		);
+		link.addEventListener('click', (event) => {
+			event.preventDefault();
+			openPackageEditor(ctx, pkg.id);
+		});
+	} else title.setText(section.isOther ? t('today.other') : section.title);
 	const meta = titleWrap.createDiv({ cls: 'fitness-log-section-meta' });
 	const item = (text: string, cls?: string) =>
 		meta.createSpan({
@@ -248,6 +263,14 @@ function openSectionMenu(
 			.setIcon('message-square')
 			.onClick(() => editMemo(ctx, section)),
 	);
+	const pkg = section.pkg;
+	if (pkg)
+		menu.addItem((item) =>
+			item
+				.setTitle(t('today.editPackage'))
+				.setIcon('sliders-horizontal')
+				.onClick(() => openPackageEditor(ctx, pkg.id)),
+		);
 	const hasSets = section.cards.some((c) => c.sets.length > 0);
 	const hasActive = section.cards.some((c) => c.active);
 	// 再開は今日だけ（過去の日はタイマーで続きのセットを計れない）
@@ -442,7 +465,7 @@ function renderFinished(
 		section,
 		section.cards.filter((c) => c.sets.length > 0),
 		env.isFuture ? 'readonly' : 'manual',
-		env.rest,
+		env,
 	);
 	if (!env.isFuture) renderFooter(ctx, box, section, false);
 }
@@ -454,9 +477,35 @@ function renderCards(
 	section: SectionModel,
 	cards: readonly CardModel[],
 	mode: CardEnv['mode'],
-	rest: RestState | null,
+	env: SectionEnv,
 ): void {
-	const cardEnv: CardEnv = { isToday: ctx.date === ctx.today, mode, rest };
+	const baseEnv: CardEnv = {
+		isToday: ctx.date === ctx.today,
+		mode,
+		rest: env.rest,
+	};
+	// 筋トレ中（今日）は、いまの種目だけを開いてセットをサブタスクに。終わった種目は 1 行、まだの種目は ▶ だけ
+	const focus = ctx.pageState('todayFocus', () => new Map<string, string>());
+	const focusKey = `${ctx.date}:${section.key}`;
+	const layout =
+		mode === 'timer'
+			? cardLayout(section, env.lastSet, focus.get(focusKey) ?? null)
+			: null;
+	const envFor = (card: CardModel): CardEnv =>
+		layout
+			? {
+					...baseEnv,
+					role: cardRole(card, layout),
+					suggested: layout.suggestedKey === card.key,
+					total: card.exercise
+						? totalSets(section, card.exercise.id)
+						: card.sets.length,
+					onFocus: () => {
+						focus.set(focusKey, card.key);
+						ctx.refresh();
+					},
+				}
+			: baseEnv;
 	const groups = cardGroups(ctx, section, cards);
 	for (const group of groups) {
 		if (group.cards.length === 0) continue;
@@ -475,7 +524,7 @@ function renderCards(
 				list,
 				section,
 				card,
-				cardEnv,
+				envFor(card),
 			);
 			if (!sortable) continue;
 			if (isReorderable(card)) {
@@ -531,6 +580,14 @@ function renderFooter(
 			() => endSessionWithNotice(ctx, section),
 			{ icon: 'square', cls: 'fitness-log-end-button' },
 		);
+}
+
+/** パッケージの編集画面へ（編集画面から「今日の画面に戻る」で戻れる） */
+function openPackageEditor(ctx: PageContext, packageId: string): void {
+	ctx.pageState('packageReturn', () => ({
+		date: null as string | null,
+	})).date = ctx.date;
+	ctx.navigate({ page: 'packages', selectedId: packageId });
 }
 
 /** パッケージのセクション（区切り）ごとのカード。設定で使わないときは 1 つ */

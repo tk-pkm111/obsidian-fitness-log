@@ -47,8 +47,16 @@ export function renderPackagesPage(ctx: PageContext, el: HTMLElement): void {
 	else renderPackageList(ctx, el);
 }
 
+/** 今日の画面から編集に来たときの戻り先（今日の画面の日付） */
+function packageReturn(ctx: PageContext): { date: string | null } {
+	return ctx.pageState('packageReturn', () => ({
+		date: null as string | null,
+	}));
+}
+
 function renderPackageList(ctx: PageContext, el: HTMLElement): void {
 	const { store } = ctx.services;
+	packageReturn(ctx).date = null;
 	const data = store.current;
 	const toolbar = el.createDiv({ cls: 'fitness-log-toolbar' });
 	textButton(
@@ -149,12 +157,33 @@ function renderPackageDetail(
 	const update = (mutate: Parameters<typeof store.update>[0]) =>
 		ctx.run(() => store.update(mutate));
 
+	// 今日の画面のパッケージ名から来たときは、今日の画面に戻れるように
+	const back = el.createDiv({ cls: 'fitness-log-back-row' });
+	const ret = packageReturn(ctx);
+	const returnDate = ret.date;
+	if (returnDate !== null)
+		textButton(
+			back,
+			t('packages.backToToday'),
+			() => {
+				ret.date = null;
+				ctx.navigate({
+					page: 'today',
+					selectedId: null,
+					date: returnDate === ctx.today ? null : returnDate,
+				});
+			},
+			{ icon: 'chevron-left', cls: 'mod-quiet fitness-log-back' },
+		);
 	textButton(
-		el,
+		back,
 		t('packages.back'),
-		() => ctx.navigate({ selectedId: null }),
+		() => {
+			ret.date = null;
+			ctx.navigate({ selectedId: null });
+		},
 		{
-			icon: 'chevron-left',
+			icon: returnDate === null ? 'chevron-left' : 'list',
 			cls: 'mod-quiet fitness-log-back',
 		},
 	);

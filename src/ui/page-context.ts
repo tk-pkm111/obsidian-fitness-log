@@ -37,6 +37,8 @@ export interface PageContext {
 	 */
 	header: { center: HTMLElement; actions: HTMLElement };
 	navigate(patch: Partial<MainViewState>): void;
+	/** 同じページを描き直す（スクロール位置はそのまま。開閉など、ページの一時的な状態を変えたとき） */
+	refresh(): void;
 	/** 1 秒ごとに呼ばれる（タイマー表示の更新。再描画のたびに登録し直す） */
 	addTicker(tick: (now: Date) => void): void;
 	/** 操作を実行し、失敗は Notice で知らせる */

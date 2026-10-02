@@ -129,6 +129,10 @@ export function startSet(
 	if (!exercise) return;
 	const { controller, store } = ctx.services;
 	const unit = store.settings.weightUnit;
+	// セットを始めたら、その種目がいまの種目（終わった種目を開いていても戻す）
+	ctx.pageState('todayFocus', () => new Map<string, string>()).delete(
+		`${ctx.date}:${section.key}`,
+	);
 	const hist = cardHistory(ctx, section, card);
 	const carry = carryOver({
 		occurrences: hist.occurrences,
