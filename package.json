@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-fitness-log",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Obsidian plugin for logging strength-training workouts.",
 	"private": true,
 	"main": "main.js",
