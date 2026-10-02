@@ -1386,31 +1386,6 @@ button.fitness-log-weekday.is-active {
 	cursor: pointer;
 }
 
-.fitness-log-upcoming {
-	display: flex;
-	flex-direction: column;
-}
-
-button.fitness-log-upcoming-row {
-	display: flex;
-	justify-content: flex-start;
-	gap: var(--size-4-3);
-	width: 100%;
-	height: auto;
-	min-height: 36px;
-	padding: var(--size-4-1) var(--size-4-2);
-	background: transparent;
-	box-shadow: none;
-	border-bottom: 1px solid var(--background-modifier-border);
-	border-radius: 0;
-	text-align: left;
-	font-weight: var(--font-normal);
-}
-
-button.fitness-log-upcoming-row:hover {
-	background: var(--background-modifier-hover);
-}
-
 .fitness-log-upcoming-date {
 	min-width: 6.5em;
 	color: var(--text-muted);
@@ -2137,4 +2112,291 @@ input.fitness-log-section-name-input[type='text']:focus {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--size-4-1);
+}
+
+/* ---------------------------------------------------------------- ルーチンのカレンダー */
+
+/* パッケージの色（作った順に決まる。並べ替えても変わらない）。8 色を超えたら繰り返す */
+.fitness-log-pkg-color-0 {
+	--fitness-log-pkg-rgb: var(--color-blue-rgb);
+}
+.fitness-log-pkg-color-1 {
+	--fitness-log-pkg-rgb: var(--color-orange-rgb);
+}
+.fitness-log-pkg-color-2 {
+	--fitness-log-pkg-rgb: var(--color-green-rgb);
+}
+.fitness-log-pkg-color-3 {
+	--fitness-log-pkg-rgb: var(--color-purple-rgb);
+}
+.fitness-log-pkg-color-4 {
+	--fitness-log-pkg-rgb: var(--color-red-rgb);
+}
+.fitness-log-pkg-color-5 {
+	--fitness-log-pkg-rgb: var(--color-cyan-rgb);
+}
+.fitness-log-pkg-color-6 {
+	--fitness-log-pkg-rgb: var(--color-yellow-rgb);
+}
+.fitness-log-pkg-color-7 {
+	--fitness-log-pkg-rgb: var(--color-pink-rgb);
+}
+.fitness-log-pkg-color-none {
+	--fitness-log-pkg-rgb: 128, 128, 128;
+}
+
+.fitness-log-calendar {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-4);
+}
+
+.fitness-log-cal-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
+}
+
+.fitness-log-cal-title {
+	min-width: 7.5em;
+	text-align: center;
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-bold);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-cal-head .fitness-log-cal-today {
+	margin-left: auto;
+}
+
+/* 7 列（月曜始まり） */
+.fitness-log-cal-grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 2px;
+}
+
+.fitness-log-cal-weekday {
+	padding: var(--size-2-2) 0;
+	text-align: center;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-cal-weekday.is-sat,
+.fitness-log-cal-day.is-sat .fitness-log-cal-date {
+	color: var(--color-blue);
+}
+
+.fitness-log-cal-weekday.is-sun,
+.fitness-log-cal-day.is-sun .fitness-log-cal-date {
+	color: var(--color-red);
+}
+
+/* （スマホの Obsidian はボタンに左右 20px の余白を付けるので、マスでは打ち消す） */
+.fitness-log-cal-grid button.fitness-log-cal-day {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+	gap: 3px;
+	height: auto;
+	min-height: 76px;
+	min-width: 0;
+	padding: var(--size-2-2);
+	border: 1px solid transparent;
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	box-shadow: none;
+	text-align: left;
+	white-space: normal;
+	overflow: hidden;
+}
+
+.fitness-log-cal-grid button.fitness-log-cal-day:hover {
+	background: var(--background-modifier-hover);
+}
+
+.fitness-log-cal-grid button.fitness-log-cal-day.is-other-month {
+	background: transparent;
+	opacity: 0.45;
+}
+
+.fitness-log-cal-grid button.fitness-log-cal-day.is-selected {
+	border-color: var(--interactive-accent);
+}
+
+.fitness-log-cal-date {
+	align-self: flex-start;
+	min-width: 1.6em;
+	padding: 0 3px;
+	border-radius: 999px;
+	color: var(--text-normal);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	line-height: 1.6;
+}
+
+/* 今日: 日付を丸で */
+button.fitness-log-cal-day.is-today .fitness-log-cal-date {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.fitness-log-cal-chips {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+/* パッケージ名: やった＝塗り、予定＝枠、スキップ＝取り消し線 */
+.fitness-log-cal-chip {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	padding: 0 4px;
+	border-radius: var(--radius-s);
+	font-size: 10.5px;
+	line-height: 1.6;
+}
+
+.fitness-log-cal-chip.is-done {
+	background: rgba(var(--fitness-log-pkg-rgb), 0.28);
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-cal-chip.is-planned {
+	border: 1px solid rgba(var(--fitness-log-pkg-rgb), 0.7);
+	color: var(--text-muted);
+}
+
+.fitness-log-cal-chip.is-skipped {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+.fitness-log-cal-more {
+	color: var(--text-faint);
+	font-size: 10px;
+}
+
+/* 凡例（パッケージの色・塗りと枠） */
+.fitness-log-cal-legend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-2-2) var(--size-4-3);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.fitness-log-cal-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.fitness-log-cal-legend-note {
+	margin-left: auto;
+	color: var(--text-faint);
+}
+
+/* 選んだ日の中身 */
+.fitness-log-cal-detail {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+	margin-top: var(--size-4-2);
+	padding: var(--size-4-3) var(--size-4-4);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-l);
+}
+
+.fitness-log-cal-detail-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+}
+
+.fitness-log-cal-detail-title {
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-bold);
+}
+
+.fitness-log-cal-entry {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	padding-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.fitness-log-cal-entry-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.fitness-log-cal-dot {
+	width: 10px;
+	height: 10px;
+	flex-shrink: 0;
+	border-radius: 50%;
+	background: rgb(var(--fitness-log-pkg-rgb));
+}
+
+.fitness-log-cal-entry.is-planned .fitness-log-cal-dot {
+	background: transparent;
+	border: 2px solid rgb(var(--fitness-log-pkg-rgb));
+}
+
+.fitness-log-cal-entry-name {
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-cal-entry.is-skipped .fitness-log-cal-entry-name {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+.fitness-log-cal-entry-kind {
+	padding: 0 var(--size-4-2);
+	border-radius: 999px;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.6;
+}
+
+.fitness-log-cal-entry .fitness-log-planned-list {
+	padding-left: var(--size-4-1);
+}
+
+.fitness-log-cal-entry-actions {
+	display: flex;
+	gap: var(--size-4-1);
+}
+
+/* スマホ: マスを詰め、パッケージ名は 2 つまで */
+.is-phone .fitness-log-cal-grid button.fitness-log-cal-day {
+	min-height: 58px;
+	padding: 3px 2px;
+}
+
+.is-phone .fitness-log-cal-chip {
+	padding: 0 2px;
+	font-size: 9.5px;
+}
+
+.is-phone .fitness-log-cal-chip:nth-child(n + 3) {
+	display: none;
 }
