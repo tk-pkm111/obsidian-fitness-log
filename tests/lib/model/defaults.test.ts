@@ -93,10 +93,10 @@ describe('PROGRAM_TEMPLATES', () => {
 		expect(
 			PROGRAM_TEMPLATES.map((p) => [p.name, p.sessions.length]),
 		).toEqual([
-			['PPL（三分割）', 6],
-			['UPPER-LOWER（上半身-下半身）', 4],
-			['PPL×U-L', 5],
-			['全身法', 3],
+			['3 分割（プッシュ・プル・脚）', 6],
+			['2 分割（上半身・下半身）', 4],
+			['5 分割（プッシュ・プル・脚＋上半身・下半身）', 5],
+			['全身（3 パターン）', 3],
 		]);
 	});
 
@@ -152,7 +152,6 @@ describe('instantiateSession', () => {
 	it('テンプレートからパッケージを作る（種目は id で参照・目標値を変換）', () => {
 		const { pkg, createdExercises } = instantiateSession(
 			pushA,
-			program,
 			exercises,
 			[],
 			NOW,
@@ -189,7 +188,6 @@ describe('instantiateSession', () => {
 					['未知の種目', '1', '8', ''],
 				],
 			},
-			program,
 			exercises,
 			[],
 			NOW,
@@ -206,16 +204,11 @@ describe('instantiateSession', () => {
 		]);
 	});
 
-	it('同名のパッケージがあれば名前にプログラム名を添える', () => {
-		expect(uniquePackageName('PUSH A', 'PPL×U-L', ['PUSH A'])).toBe(
-			'PUSH A（PPL×U-L）',
+	it('同名のパッケージがあれば番号を添える', () => {
+		expect(uniquePackageName('PUSH A', ['PUSH A'])).toBe('PUSH A 2');
+		expect(uniquePackageName('PUSH A', ['PUSH A', 'PUSH A 2'])).toBe(
+			'PUSH A 3',
 		);
-		expect(
-			uniquePackageName('PUSH A', 'PPL×U-L', [
-				'PUSH A',
-				'PUSH A（PPL×U-L）',
-			]),
-		).toBe('PUSH A（PPL×U-L）2');
-		expect(uniquePackageName('PUSH A', 'PPL×U-L', [])).toBe('PUSH A');
+		expect(uniquePackageName('PUSH A', [])).toBe('PUSH A');
 	});
 });

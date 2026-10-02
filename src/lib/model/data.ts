@@ -415,15 +415,15 @@ export function planSeed(data: Readonly<PluginData>, now: string): CatalogPlan {
 	for (const session of program?.sessions ?? []) {
 		if (!program) break;
 		// 名前を変えたパッケージ（旧名が別名に残る）も「ある」とみなす
+		const labels = [session.name, ...(session.aliases ?? [])].map(nameKey);
 		const exists = allPackages.some((p) =>
-			[p.name, ...p.aliases].some(
-				(label) => nameKey(label) === nameKey(session.name),
+			[p.name, ...p.aliases].some((label) =>
+				labels.includes(nameKey(label)),
 			),
 		);
 		if (exists) continue;
 		const { pkg, createdExercises } = instantiateSession(
 			session,
-			program,
 			allExercises,
 			allPackages,
 			now,

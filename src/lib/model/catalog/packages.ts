@@ -219,7 +219,6 @@ export function planFromTemplate(
 	for (const session of sessions) {
 		const { pkg, createdExercises } = instantiateSession(
 			session,
-			program,
 			allExercises,
 			allPackages,
 			now,

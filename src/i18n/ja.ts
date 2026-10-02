@@ -111,9 +111,9 @@ export const ja = {
 	'today.activeElsewhere': '進行中のセットがあります: {exercise}（{date}）',
 	'today.goToActive': 'その日を表示',
 	'today.noteError':
-		'この日のノートの記録ブロックを読めません（{reason}）。ノートを開いて表を直してください。',
+		'この日のノートの記録を読めません（{reason}）。ノートを開いて表を直してください。',
 	'today.unknownExercise':
-		'種目一覧に無い名前です。種目のページで追加するか別名に登録すると記録を続けられます。',
+		'種目に無い名前です。種目のページで追加すると、続けて記録できます。',
 	'today.futureHint': '未来の日付です。予定だけを表示しています。',
 	'today.complete': '目標セット数に到達',
 	'today.cancelSet': '取り消す',
@@ -131,8 +131,7 @@ export const ja = {
 	'prompt.record': '記録',
 	'prompt.invalidNumber': '数値を入力してください。',
 	'prompt.quickHint': 'タップで{action}（ほかの数は下で入力）',
-	'prompt.quickHintWheel':
-		'タップで{action}（ほかの数は下をスクロールして選ぶ）',
+	'prompt.quickHintWheel': 'タップで{action}（ほかの数は下で選ぶ）',
 	'prompt.cancel': 'キャンセル',
 	'prompt.decrease': '減らす',
 	'prompt.increase': '増やす',
@@ -177,63 +176,61 @@ export const ja = {
 	'suggest.archived': 'アーカイブ済み',
 
 	'notice.noteError':
-		'{path} の記録ブロックを読めないため、書き込みませんでした（{reason}）。',
+		'{path} の記録を読めないため、書き込みませんでした（{reason}）。',
 	'notice.openNote': 'ノートを開く',
 	'notice.frontmatterError':
-		'{path} に記録は保存しましたが、frontmatter（集計）を更新できませんでした（{reason}）。YAML を直すと次の記録で更新されます。',
+		'{path} に記録は保存しましたが、ノートのプロパティ（集計）を更新できませんでした（{reason}）。プロパティを直すと、次の記録で更新されます。',
 	'notice.unexpected': 'エラーが発生しました: {message}',
 	'notice.seeded':
-		'初期データを追加しました（種目 {exercises} 件・パッケージ {packages} 件）。',
+		'種目 {exercises} 件・パッケージ {packages} 件を追加しました。',
 	'notice.logFolderMigrated':
-		'日ノート {count} 件を {folder} に移しました（リンクは Obsidian の設定に従って更新されます）。',
+		'記録のノート {count} 件を {folder} に移しました。',
 	'notice.exercisesMigrated':
-		'種目を {count} 件のノートにしました（{folder}）。種目のノートにフォームやコツを書けます。',
+		'種目を {count} 件のノートにしました（{folder}）。種目のノートにフォームのコツなどを書けます。',
 	'notice.settingsUnavailable':
 		'設定 → コミュニティプラグイン → Fitness Log から開いてください。',
 
 	'ribbon.openToday': '今日のトレーニング',
 	'command.openToday': '今日のトレーニングを開く',
 	'command.openLog': 'トレーニングログを開く',
-	'command.createBases': 'ログの Bases ファイルを作成',
-	'command.setup': '保存先と初期データを設定',
+	'command.createBases': '記録の一覧表（Bases）を作る',
+	'command.setup': '保存先を設定',
 
-	'settings.logFolder.name': 'ログの保存先',
+	'settings.logFolder.name': '記録の保存先',
 	'settings.logFolder.desc':
-		'トレーニングの日ノートを保存する vault 内のフォルダ。変えたら、設定を閉じるときに今あるノートを新しいフォルダへ移すか聞きます。',
+		'トレーニングの記録（1 日 1 ノート）を保存するフォルダ。変えると、設定を閉じるときに今あるノートを移すか聞きます。',
 	'settings.logFolder.empty': 'フォルダを指定してください。',
-	'settings.folderOverlap':
-		'日ノートと種目ノートは別のフォルダにしてください（一方をもう一方の中にもできません）。',
-	'settings.exerciseFolder.name': '種目ノートの保存先',
+	'settings.folderOverlap': '記録と種目は別々のフォルダにしてください。',
+	'settings.exerciseFolder.name': '種目の保存先',
 	'settings.exerciseFolder.desc':
-		'1 種目 1 ノートを置く vault 内のフォルダ。種目の設定は各ノートの frontmatter に、フォームやコツは本文に書きます。変えたら、設定を閉じるときに今あるノートを新しいフォルダへ移すか聞きます。',
-	'settings.fileNameFormat.name': 'ノート名の形式',
+		'種目のノート（1 種目 1 ノート）を保存するフォルダ。変えると、設定を閉じるときに今あるノートを移すか聞きます。',
+	'settings.fileNameFormat.name': '記録ノートの名前',
 	'settings.fileNameFormat.desc':
-		'日ノートのファイル名（moment の書式）。/ を含めるとサブフォルダに分けます。既存のノートの名前は変わりません。',
+		'日付の書式。YYYY-MM-DD なら 2026-10-02、YYYY/MM-DD なら年ごとのフォルダに分けます。今あるノートの名前は変わりません。',
 	'settings.weightUnit.name': '重量の単位',
 	'settings.weightUnit.desc':
-		'表示と入力の単位。ノートには常に kg で保存します。',
+		'表示と入力の単位（ノートには kg で保存します）。',
 	'settings.weightStep.name': '重量の刻み',
-	'settings.weightStep.desc':
-		'重量入力の ＋／− ボタンで増減する量（表示の単位で）。',
+	'settings.weightStep.desc': '重量を選ぶときの刻み（例: 2.5）。',
 	'settings.weightStep.invalid': '0 より大きい数値を入力してください。',
 	'settings.showRestTimer.name': '休憩タイマーを表示',
 	'settings.showRestTimer.desc':
-		'セットを終えてからの経過時間を表示します。目標の休憩時間を過ぎると色が変わります。',
+		'セットの後の経過時間を表示します。休憩の目安を過ぎると色が変わります。',
 	'settings.openOnStartup.name': '起動時に今日の画面を開く',
 	'settings.openOnStartup.desc':
 		'Obsidian を開いたときに今日のトレーニングを表示します。',
 	'settings.group.data': 'データ',
 	'settings.packageSections.name': 'パッケージのセクションを使う',
 	'settings.packageSections.desc':
-		'パッケージの種目を「背中」「腕」のように区切れるようにします。区切りは今日の画面にも見出しとして出ます。',
+		'パッケージの種目を「背中」「腕」のように区切れます。区切りは今日の画面にも出ます。',
 
 	'drag.handle': 'ドラッグで並べ替え（↑↓ キーでも動かせます）',
-	'settings.reseed.name': '初期データを再投入',
+	'settings.reseed.name': 'よく使う種目とパッケージの例を入れる',
 	'settings.reseed.desc':
-		'足りない種目（ノート）と PPL（三分割）のパッケージだけを追加します。既存のものは変更しません。',
-	'settings.bases.name': 'ログの Bases ファイルを作成',
+		'足りないものだけを追加します。今あるものは変えません。',
+	'settings.bases.name': '記録の一覧表（Bases）を作る',
 	'settings.bases.desc':
-		'ログフォルダに、日ノートを表で一覧する .base ファイルを作ります。',
+		'記録を表で見られる .base ファイルを、記録の保存先に作ります。',
 
 	'packages.new': '新しいパッケージ',
 	'packages.newTitle': '新しいパッケージ',
@@ -248,12 +245,12 @@ export const ja = {
 	'packages.back': 'パッケージ一覧',
 	'packages.backToToday': '今日の画面に戻る',
 	'packages.name': '名前',
-	'packages.nameDesc': '変えると旧名を別名として残し、過去の記録と繋げます。',
+	'packages.nameDesc': '名前を変えても、過去の記録とはつながったままです。',
 	'packages.note': 'メモ',
 	'packages.items': '種目',
-	'packages.details': '詳細設定（目標・休憩・メモ）',
+	'packages.details': '目標と休憩',
 	'packages.detailsDesc':
-		'目標のセット数・回数と休憩の目安（Notion のメニューから取り込んだ値）。今日の画面には出しません。休憩の目安を過ぎると休憩タイマーの色が変わります。',
+		'休憩の目安を過ぎると、休憩タイマーの色が変わります。',
 	'packages.noItems': '種目がありません。',
 	'packages.sets': 'セット',
 	'packages.reps': '回',
@@ -283,16 +280,16 @@ export const ja = {
 	'packages.noRest': '目安なし',
 	'packages.itemNoteLabel': 'メモ',
 	'packages.saveItem': '変更を保存',
-	'packages.missingExercise': '（種目ノートが見つかりません）',
+	'packages.missingExercise': '（種目のノートが見つかりません）',
 	'packages.missingHint':
-		'種目ノートが見つからない種目があります（{n}）。種目ノートの保存先（設定: {folder}）を変えた・フォルダの名前を変えたときは、「種目ノートを探す」でノートを保存先へ移すか、保存先を戻せます。',
-	'packages.findNotes': '種目ノートを探す',
+		'種目のノートが見つからない種目があります（{n}）。保存先を変えたときは「種目のノートを探す」で直せます。',
+	'packages.findNotes': '種目のノートを探す',
 	'packages.notesNotFound':
-		'種目ノートが見つかりませんでした。設定の「種目ノートの保存先」を確認してください。',
+		'種目のノートが見つかりませんでした。設定の「種目の保存先」を確かめてください。',
 	'packages.itemSaved': '「{exercise}」の目標を保存しました。',
 	'packages.removedTitle': '外した種目（{n}）',
 	'packages.removedNote':
-		'このパッケージから外した種目と、このパッケージで記録があって今は入っていない種目です。「戻す」でもう一度入れられます。記録は消えません。',
+		'このパッケージから外した種目と、記録はあるけれど今は入っていない種目です。記録は消えません。',
 	'packages.removedAt': '{date} に外した',
 	'packages.lastDone': '最後 {date} ・ {n} 回',
 	'packages.noRecordsHere': 'このパッケージでの記録なし',
@@ -322,7 +319,8 @@ export const ja = {
 	'exerciseEdit.newTitle': '新しい種目',
 	'exerciseEdit.title': '種目を編集',
 	'exerciseEdit.name': '名前',
-	'exerciseEdit.nameDesc': '変えると旧名を別名に残し、過去の記録と繋げます。',
+	'exerciseEdit.nameDesc':
+		'名前を変えても、過去の記録とはつながったままです。',
 	'exerciseEdit.category': 'カテゴリ',
 	'exerciseEdit.equipment': '器具',
 	'exerciseEdit.equipmentNone': '未設定',
@@ -330,11 +328,10 @@ export const ja = {
 	'exerciseEdit.recordTypeDesc':
 		'回数のみは重量を聞かず、時間のみは重量も回数も聞きません。',
 	'exerciseEdit.unilateral': '片側種目',
-	'exerciseEdit.unilateralDesc':
-		'左右で行う種目（今は印だけ。左右別の記録は今後対応）。',
+	'exerciseEdit.unilateralDesc': '左右それぞれ行う種目。',
 	'exerciseEdit.aliases': '別名',
 	'exerciseEdit.aliasesDesc':
-		'表記ゆれ・略称（1 行に 1 つ）。日ノートの名前の照合と検索に使います。',
+		'略称や別の呼び方（1 行に 1 つ）。検索と記録の照合に使います。',
 	'exerciseEdit.note': 'メモ',
 	'exerciseEdit.archived': 'アーカイブ',
 	'exerciseEdit.archivedDesc':
@@ -343,7 +340,7 @@ export const ja = {
 	'exerciseEdit.delete': '削除',
 	'exerciseEdit.openNote': 'ノートを開く',
 	'exerciseEdit.noteHint':
-		'フォーム・コツ・参考動画などは種目のノートに書けます（この画面の内容はノートの frontmatter に保存されます）。',
+		'フォームのコツや参考動画などは、種目のノートに書けます。',
 	'exerciseEdit.deleteConfirm':
 		'「{name}」を削除しますか？過去の記録（日ノート）は残ります。',
 	'exerciseEdit.deleteConfirmUsed':
@@ -450,53 +447,60 @@ export const ja = {
 	'log.monthSummary': '{days} 日 ・ {sets} セット ・ {volume}',
 	'log.daySummary': '{sets} セット ・ {volume} ・ {minutes} 分',
 	'notice.basesCreated': '{path} を作成しました。',
-	'notice.folderFollowed': '{name}のフォルダを「{folder}」に合わせました。',
-	'folders.exercise': '種目ノート',
-	'folders.log': '日ノート（ログ）',
+	'notice.folderFollowed': '{name}の保存先を「{folder}」にしました。',
+	'folders.exercise': '種目',
+	'folders.log': '記録',
 	'setup.title': 'Fitness Log をはじめる',
-	'setup.titleAgain': '保存先と初期データ',
+	'setup.titleAgain': '保存先',
 	'setup.intro':
-		'トレーニングの記録は、この vault の中にふつうの Markdown ノートとして残ります。まず、ノートを置くフォルダを決めましょう。無ければ作ります（あとから設定でも変えられます）。',
-	'setup.logLabel': '日ノート（ログ）の保存先',
+		'記録は、この vault の中にノートとして保存されます。保存するフォルダを選んでください（無ければ作ります）。',
+	'setup.logLabel': '記録の保存先',
 	'setup.logDesc':
 		'1 日 1 ノート（例: 2026-10-02.md）に、その日のセットを書きます。',
-	'setup.exerciseLabel': '種目ノートの保存先',
+	'setup.exerciseLabel': '種目の保存先',
 	'setup.exerciseDesc':
 		'1 種目 1 ノート。フォームやコツはノートの本文に書けます。日ノートとは別のフォルダにします。',
-	'setup.found': '見つかったノート:',
-	'setup.foundFolder': '{folder}（{n} 件）',
+	'setup.introFound':
+		'これまでの記録が見つかりました。保存先はそのままで始められます。',
+	'setup.folderLabel': '保存するフォルダ',
+	'setup.folderPreview':
+		'「{log}」に記録、「{exercise}」に種目を保存します。',
+	'setup.chooseSeparately': '記録と種目のフォルダを別々に選ぶ',
+	'setup.useOneFolder': '1 つのフォルダにまとめる',
+	'setup.foundLogs': '{folder}（記録 {n} 件）',
+	'setup.foundExercises': '{folder}（種目 {n} 件）',
+	'setup.found': '見つかった場所:',
 	'setup.foreignNotes':
-		'このフォルダには種目ノートではないノートが {n} 件あります。種目ノートとして読まれ、frontmatter に fitness_id が足されます。種目ノート専用のフォルダをおすすめします。',
-	'setup.seed': 'よく使う種目と PPL のパッケージを入れる',
+		'このフォルダには種目以外のノートがあります（{n} 件）。種目専用のフォルダを選んでください。',
+	'setup.seed': 'よく使う種目とパッケージの例を入れる',
 	'setup.seedDesc':
-		'Notion のメニューから作った {n} 種目と、PUSH・PULL・LEGS（A/B）の 6 パッケージ。すでにある種目・パッケージは足しません。あとから設定の「初期データを入れる」でも入れられます。',
-	'setup.empty': '保存先のフォルダを入力してください。',
-	'setup.overlap':
-		'日ノートと種目ノートは別のフォルダにしてください（一方をもう一方の中にもできません）。',
+		'{n} 種目と、プッシュ・プル・脚に分けたパッケージの例。あとで編集・削除できます。',
+	'setup.seedDescExisting': 'すでにある種目・パッケージは足しません。',
+	'setup.empty': '保存するフォルダを入力してください。',
+	'setup.overlap': '記録と種目は別々のフォルダにしてください。',
 	'setup.later': 'あとで',
 	'setup.start': 'はじめる',
 	'setup.save': '保存',
 	'setup.done': '保存先を設定しました。',
 	'setup.doneSeeded':
-		'準備ができました。種目 {exercises} ・ パッケージ {packages} を入れました。',
+		'準備ができました（種目 {exercises} 件・パッケージ {packages} 件を入れました）。',
 	'setup.welcome': 'Fitness Log へようこそ',
-	'setup.welcomeText':
-		'記録をはじめる前に、ノートの保存先（日ノートと種目ノートのフォルダ）を決めましょう。',
-	'setup.open': '保存先を選んではじめる',
+	'setup.welcomeText': 'はじめに、記録を保存するフォルダを選びましょう。',
+	'setup.open': 'はじめる',
 	'folders.checkTitle': '{name}の保存先',
 	'folders.checkMessage':
-		'設定の保存先「{target}」に{name}がありません。「{source}」に {n} 件あります。',
+		'「{target}」に{name}のノートがありません。「{source}」に {n} 件あります。',
 	'folders.checkMessageFew':
-		'設定の保存先「{target}」には{name}が {inside} 件しかありません。「{source}」に {n} 件あります。',
+		'「{target}」には{name}のノートが {inside} 件しかありません。「{source}」に {n} 件あります。',
 	'folders.moveNotes': '「{target}」へ移す',
 	'folders.moveNotesDesc':
-		'{n} 件のノートを設定の保存先へ移します（フォルダの中の並びはそのまま。リンクも直ります）。',
+		'{n} 件のノートを移します（中のフォルダ分けはそのまま。リンクも直ります）。',
 	'folders.useSource': '保存先を「{source}」にする',
 	'folders.useSourceDesc':
-		'ノートは動かさず、設定の保存先を今ノートがある場所に戻します。',
+		'ノートは動かさず、保存先を今ノートがある場所にします。',
 	'folders.moved': '{n} 件のノートを「{target}」へ移しました。',
 	'folders.movedWithSkips':
-		'{n} 件のノートを「{target}」へ移しました。{skipped} 件は移した先に同じ名前のノートがあるため、「{source}」に残しています。',
+		'{n} 件のノートを「{target}」へ移しました。{skipped} 件は同じ名前のノートがあるため「{source}」に残しています。',
 
 	'session.start': '筋トレを開始',
 	'session.end': '筋トレを終了',

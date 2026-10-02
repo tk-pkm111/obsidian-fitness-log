@@ -1,6 +1,6 @@
 /**
- * Notion のトレーニングプログラム 4 種（PPL／UPPER-LOWER／PPL×U-L／全身法）のテンプレート。
- * 出典: context/notion/01_training-programs/
+ * パッケージの例（テンプレート）4 種: 3 分割・2 分割・5 分割・全身。
+ * 出典: context/notion/01_training-programs/（作者のメニュー。画面には出典を出さない）
  * 種目名はプログラム表の表記のまま書き、種目マスターの本名・別名で解決する（テストで全件を保証）。
  */
 /** [種目名（プログラム表の表記）, SETS, REPS, インターバル(分), メモ] */
@@ -8,6 +8,8 @@ type TemplateRow = [string, string, string, string, string?];
 
 export interface SessionTemplate {
 	name: string;
+	/** 以前の名前（その名前で書いた記録も、このパッケージにつながる） */
+	aliases?: string[];
 	note?: string;
 	rows: TemplateRow[];
 }
@@ -22,7 +24,7 @@ export interface ProgramTemplate {
 export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [
 	{
 		id: 'ppl',
-		name: 'PPL（三分割）',
+		name: '3 分割（プッシュ・プル・脚）',
 		sessions: [
 			{
 				name: 'LEGS A',
@@ -85,7 +87,8 @@ export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [
 				],
 			},
 			{
-				name: 'LEG B',
+				name: 'LEGS B',
+				aliases: ['LEG B'],
 				rows: [
 					['マシンアブクランチ', '2', 'AMRAP', '1-2'],
 					['SLDL', '2', '4-8', '3-5'],
@@ -170,7 +173,7 @@ export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [
 	},
 	{
 		id: 'upper-lower',
-		name: 'UPPER-LOWER（上半身-下半身）',
+		name: '2 分割（上半身・下半身）',
 		sessions: [
 			{
 				name: 'UPPER A',
@@ -270,7 +273,7 @@ export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [
 	},
 	{
 		id: 'ppl-ul',
-		name: 'PPL×U-L',
+		name: '5 分割（プッシュ・プル・脚＋上半身・下半身）',
 		sessions: [
 			{
 				name: 'LEGS A',
@@ -385,7 +388,7 @@ export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [
 	},
 	{
 		id: 'full-body',
-		name: '全身法',
+		name: '全身（3 パターン）',
 		sessions: [
 			{
 				name: 'FULL BODY A',

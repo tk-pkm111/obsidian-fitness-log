@@ -245,7 +245,7 @@ describe('LogRepository（レビューで見つかった不具合の再発防止
 		await expect(
 			repo.updateDay('2026-10-01', pushA(set(10, 8))),
 		).resolves.toBeDefined();
-		expect(Notice.shown.some((m) => m.includes('frontmatter'))).toBe(true);
+		expect(Notice.shown.some((m) => m.includes('プロパティ'))).toBe(true);
 		const day = await repo.readDay('2026-10-01');
 		expect(day.sessions[0]?.exercises[0]?.sets.map((s) => s.reps)).toEqual([
 			9, 8,

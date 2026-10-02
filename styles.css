@@ -1433,6 +1433,29 @@ input.fitness-log-setup-input[type='text'] {
 	display: none;
 }
 
+.modal button.fitness-log-setup-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	height: auto;
+	margin: calc(var(--size-4-2) * -1) 0 var(--size-4-4);
+	padding: 2px 0;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-accent);
+	font-size: var(--font-ui-small);
+}
+
+.modal button.fitness-log-setup-toggle svg {
+	width: 14px;
+	height: 14px;
+}
+
+.fitness-log-setup-separate {
+	display: flex;
+	flex-direction: column;
+}
+
 .fitness-log-setup-seed {
 	display: flex;
 	align-items: flex-start;

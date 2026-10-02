@@ -206,7 +206,7 @@ describe('planSeed（初期データの計画）', () => {
 			'LEGS A',
 			'PUSH A',
 			'PULL A',
-			'LEG B',
+			'LEGS B',
 			'PUSH B',
 			'PULL B',
 		]);
@@ -255,5 +255,22 @@ describe('planSeed（初期データの計画）', () => {
 				(e) => e.name === 'スティフレッグデッドリフト',
 			),
 		).toHaveLength(0);
+	});
+});
+
+describe('パッケージの例の名前', () => {
+	it('以前の名前（LEG B）のパッケージがあれば足さない。新しく作るときは以前の名前を別名に持つ', () => {
+		const data = createEmptyData();
+		const fresh = planSeed(data, NOW);
+		const legsB = fresh.packages.find((p) => p.name === 'LEGS B');
+		expect(legsB?.aliases).toEqual(['LEG B']);
+		// 以前の版で作った「LEG B」（別名なし）がある
+		data.exercises.push(...fresh.exercises);
+		data.packages.push(
+			...fresh.packages.map((p) =>
+				p.name === 'LEGS B' ? { ...p, name: 'LEG B', aliases: [] } : p,
+			),
+		);
+		expect(planSeed(data, NOW).packages).toHaveLength(0);
 	});
 });

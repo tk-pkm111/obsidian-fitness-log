@@ -262,7 +262,7 @@ describe('パッケージ', () => {
 		expect(data.activeSet?.packageId).toBeNull();
 	});
 
-	it('テンプレートから 1 セッション・プログラム全体を追加する計画（名前が重なればプログラム名を添える）', () => {
+	it('テンプレートから 1 セッション・プログラム全体を追加する計画（名前が重なれば番号を添える）', () => {
 		const empty = createEmptyData();
 		const one = planFromTemplate(empty, 'ppl', 'PUSH A', NOW);
 		expect(one.packages.map((p) => p.name)).toEqual(['PUSH A']);
@@ -272,7 +272,7 @@ describe('パッケージ', () => {
 		const all = planFromTemplate(empty, 'ppl-ul', null, NOW);
 		expect(all.packages.map((p) => p.name)).toEqual([
 			'LEGS A',
-			'PUSH A（PPL×U-L）',
+			'PUSH A 2',
 			'PULL A',
 			'LOWER',
 			'UPPER',
@@ -399,6 +399,6 @@ describe('パッケージ名と旧名（レビューで見つかった不具合�
 		updatePackage(data, legs.id, { name: '脚の日' });
 		expect(planSeed(data, NOW).packages).toHaveLength(0);
 		const [added] = planFromTemplate(data, 'ppl', 'LEGS A', NOW).packages;
-		expect(added?.name).toBe('LEGS A（PPL（三分割））');
+		expect(added?.name).toBe('LEGS A 2');
 	});
 });

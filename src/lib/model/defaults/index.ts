@@ -8,7 +8,7 @@ import { exerciseFileName } from '../exercise-note';
 import { createResolver, nameKey } from '../resolve';
 import type { Exercise, Package, PackageItem } from '../types';
 import { DEFAULT_EXERCISES } from './exercises';
-import type { ProgramTemplate, SessionTemplate } from './programs';
+import type { SessionTemplate } from './programs';
 
 export { DEFAULT_EXERCISES, type ExerciseSeed } from './exercises';
 export {
@@ -63,15 +63,12 @@ export function createDefaultExercises(
 /** 既存のパッケージ名と重ならない名前（'PUSH A' → 'PUSH A（PPL×U-L）' → 'PUSH A（PPL×U-L）2'） */
 export function uniquePackageName(
 	name: string,
-	programName: string,
 	existing: readonly string[],
 ): string {
 	const keys = new Set(existing.map(nameKey));
 	if (!keys.has(nameKey(name))) return name;
-	const withProgram = `${name}（${programName}）`;
-	if (!keys.has(nameKey(withProgram))) return withProgram;
 	for (let n = 2; ; n++) {
-		const candidate = `${withProgram}${n}`;
+		const candidate = `${name} ${n}`;
 		if (!keys.has(nameKey(candidate))) return candidate;
 	}
 }
@@ -88,7 +85,6 @@ export interface InstantiateResult {
  */
 export function instantiateSession(
 	session: SessionTemplate,
-	program: ProgramTemplate,
 	exercises: readonly Exercise[],
 	existingPackages: readonly Package[],
 	now: string,
@@ -128,11 +124,18 @@ export function instantiateSession(
 		// 旧名（別名）とも重ねない（重なると過去のセッションが新しいパッケージに結び付いてしまう）
 		name: uniquePackageName(
 			session.name,
-			program.name,
 			existingPackages.flatMap((p) => [p.name, ...p.aliases]),
 		),
 		items,
-		aliases: [],
+		// 以前の名前も別名に（その名前の記録がつながる）。ほかのパッケージの名前・別名と重なるものは除く
+		aliases: (session.aliases ?? []).filter(
+			(alias) =>
+				!existingPackages.some((p) =>
+					[p.name, ...p.aliases].some(
+						(label) => nameKey(label) === nameKey(alias),
+					),
+				),
+		),
 		createdAt: now,
 	};
 	if (session.note) pkg.note = session.note;
