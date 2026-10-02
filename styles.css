@@ -600,9 +600,41 @@ button.fitness-log-play.fitness-log-icon-button:disabled {
 	margin-top: var(--size-4-1);
 }
 
-/* デスクトップでは ⋮⋮ を行に乗せたときだけ出す（スマホはいつも薄く出す） */
+/* ⋮⋮（並べ替え）は行の左端、開始ボタンの左。細く縦に長くして指でつかみやすく */
+.fitness-log-cards.has-handles .fitness-log-card {
+	--fitness-log-handle-size: 20px;
+	--fitness-log-handle-offset: calc(
+		var(--fitness-log-handle-size) + var(--size-2-2)
+	);
+	padding-left: var(--size-2-2);
+}
+
+.is-mobile .fitness-log-cards.has-handles .fitness-log-card {
+	--fitness-log-handle-size: 28px;
+}
+
+/* （スマホの ⋮⋮ の最小幅 40px より強く） */
+.fitness-log-cards.has-handles
+	.fitness-log-card
+	.fitness-log-drag-handle.clickable-icon,
+.fitness-log-drag-spacer {
+	flex-shrink: 0;
+	width: var(--fitness-log-handle-size);
+	min-width: var(--fitness-log-handle-size);
+	min-height: var(--fitness-log-play-size);
+	/* 開始ボタンとの間は詰める（行の gap より狭く） */
+	margin-right: calc(var(--size-2-2) - var(--size-4-3));
+	padding: 0;
+}
+
+.fitness-log-card .fitness-log-drag-handle svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* デスクトップでは薄く出し、行に乗せると濃く */
 body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle {
-	opacity: 0;
+	opacity: 0.45;
 	transition: opacity 120ms ease;
 }
 
@@ -615,7 +647,10 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 .fitness-log-card .fitness-log-set-rows,
 .fitness-log-card .fitness-log-active-row,
 .fitness-log-card .fitness-log-card-warning {
-	margin-left: calc(var(--fitness-log-play-size) + var(--size-4-3));
+	margin-left: calc(
+		var(--fitness-log-handle-offset, 0px) + var(--fitness-log-play-size) +
+			var(--size-4-3)
+	);
 }
 
 .fitness-log-button:disabled {

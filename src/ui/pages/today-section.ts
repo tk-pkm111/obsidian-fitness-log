@@ -451,6 +451,10 @@ function renderCards(
 		if (label)
 			box.createDiv({ cls: 'fitness-log-card-group-title', text: label });
 		const list = box.createDiv({ cls: 'fitness-log-cards' });
+		// ⋮⋮ は開始ボタンの左（行の左端）。並べ替えられない行（やった・実行中）は同じ幅を空けて揃える
+		const sortable =
+			mode === 'timer' && group.cards.some((c) => isReorderable(c));
+		list.toggleClass('has-handles', sortable);
 		const entries: SortableEntry[] = [];
 		for (const card of group.cards) {
 			const { box: cardEl, header } = renderExerciseCard(
@@ -460,15 +464,17 @@ function renderCards(
 				card,
 				cardEnv,
 			);
-			if (mode === 'timer' && isReorderable(card))
-				entries.push({
-					el: cardEl,
-					handle: dragHandle(
-						header,
-						t('drag.handle'),
-						`drag-card-${section.key}-${card.key}`,
-					),
-				});
+			if (!sortable) continue;
+			if (isReorderable(card)) {
+				const handle = dragHandle(
+					header,
+					t('drag.handle'),
+					`drag-card-${section.key}-${card.key}`,
+				);
+				header.prepend(handle);
+				entries.push({ el: cardEl, handle });
+			} else
+				header.prepend(createSpan({ cls: 'fitness-log-drag-spacer' }));
 		}
 		makeSortable(entries, (from, to) =>
 			ctx.run(() =>
