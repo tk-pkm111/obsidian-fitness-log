@@ -15,6 +15,28 @@ describe('DataStore', () => {
 		});
 	});
 
+	it('最初の設定: data.json が無ければ保存先を聞く。以前の版（seededAt あり）・済み（setupAt）なら聞かない', async () => {
+		const fresh = new DataStore(new Plugin());
+		await fresh.load();
+		expect(fresh.needsSetup).toBe(true);
+		await fresh.update((d) => {
+			d.setupAt = '2026-10-02T00:00:00.000Z';
+		});
+		expect(fresh.needsSetup).toBe(false);
+
+		const old = new Plugin();
+		await old.saveData({ seededAt: '2026-10-01T00:00:00.000Z' });
+		const existing = new DataStore(old);
+		await existing.load();
+		expect(existing.needsSetup).toBe(false);
+
+		const done = new Plugin();
+		await done.saveData({ setupAt: '2026-10-02T00:00:00.000Z' });
+		const reloaded = new DataStore(done);
+		await reloaded.load();
+		expect(reloaded.needsSetup).toBe(false);
+	});
+
 	it('update は保存して change を発火する', async () => {
 		const plugin = new Plugin();
 		const store = new DataStore(plugin);

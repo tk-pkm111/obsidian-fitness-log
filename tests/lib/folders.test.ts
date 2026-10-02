@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
 	dominantFolder,
+	folderCounts,
 	folderMismatch,
+	foldersOverlap,
 	followRename,
 	isInside,
 	movedPath,
@@ -95,5 +97,30 @@ describe('folderMismatch', () => {
 		expect(isInside('Fitness/種目/a.md', 'Fitness')).toBe(true);
 		expect(isInside('Fitness2/a.md', 'Fitness')).toBe(false);
 		expect(isInside('a.md', '/')).toBe(true);
+	});
+});
+
+describe('最初の設定', () => {
+	it('種目ノートと日ノートのフォルダが重なるか', () => {
+		expect(foldersOverlap('Fitness/種目', 'Fitness/ログ')).toBe(false);
+		expect(foldersOverlap('Fitness', 'Fitness/ログ')).toBe(true);
+		expect(foldersOverlap('Fitness/ログ', 'Fitness/ログ/')).toBe(true);
+		expect(foldersOverlap('/', 'Fitness')).toBe(true);
+		expect(foldersOverlap('Fit', 'Fitness')).toBe(false);
+	});
+
+	it('ノートのある場所ごとの数（多い順）', () => {
+		expect(
+			folderCounts([
+				'02_Config/Fitness/exercise/a.md',
+				'Fitness/種目/a.md',
+				'02_Config/Fitness/exercise/b.md',
+				'top.md',
+			]),
+		).toEqual([
+			{ folder: '02_Config/Fitness/exercise', count: 2 },
+			{ folder: '/', count: 1 },
+			{ folder: 'Fitness/種目', count: 1 },
+		]);
 	});
 });

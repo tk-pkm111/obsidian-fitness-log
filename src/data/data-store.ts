@@ -38,6 +38,11 @@ export class DataStore extends Events {
 		return this.data.settings;
 	}
 
+	/** 最初の設定（保存先を聞く）がまだか。入れ直した直後（data.json が無い）も含む。以前の版の利用者は seededAt がある */
+	get needsSetup(): boolean {
+		return !this.data.setupAt && !this.data.seededAt;
+	}
+
 	async load(): Promise<void> {
 		const exercises = this.data.exercises;
 		this.data = normalizeStoredData(await this.persistence.loadData());

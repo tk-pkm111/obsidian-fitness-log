@@ -7,7 +7,8 @@ import {
 import { t, type MessageKey } from '../i18n';
 import { isDateString, todayString } from '../lib/time/date';
 import type { FitnessServices } from '../services';
-import { iconButton, runAction } from './helpers';
+import { iconButton, runAction, textButton } from './helpers';
+import { openSetup } from './modals/setup-modal';
 import {
 	PAGE_IDS,
 	type MainViewState,
@@ -53,6 +54,19 @@ export function parseViewState(raw: unknown): MainViewState {
 		exerciseId: typeof obj.exerciseId === 'string' ? obj.exerciseId : null,
 		selectedId: typeof obj.selectedId === 'string' ? obj.selectedId : null,
 	};
+}
+
+/** 最初の設定の案内（保存先を選ぶまで、ページの代わりに出す） */
+function renderSetupPrompt(el: HTMLElement, open: () => void): void {
+	const box = el.createDiv({
+		cls: 'fitness-log-empty fitness-log-setup-prompt',
+	});
+	box.createDiv({
+		cls: 'fitness-log-setup-welcome',
+		text: t('setup.welcome'),
+	});
+	box.createDiv({ text: t('setup.welcomeText') });
+	textButton(box, t('setup.open'), open, { icon: 'folder-plus', cta: true });
 }
 
 /**
@@ -223,7 +237,12 @@ export class MainView extends ItemView {
 		};
 		const renderer = PAGES[this.viewState.page];
 		try {
-			if (renderer) renderer(ctx, page);
+			// 最初の設定がまだなら、保存先を選ぶ案内だけを出す
+			if (this.services.store.needsSetup)
+				renderSetupPrompt(page, () =>
+					openSetup(this.app, this.services),
+				);
+			else if (renderer) renderer(ctx, page);
 			else
 				page.createDiv({
 					cls: 'fitness-log-empty',

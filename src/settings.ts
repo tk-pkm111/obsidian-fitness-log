@@ -6,6 +6,7 @@ import {
 	type SettingDefinitionItem,
 } from 'obsidian';
 import { FOLDER_KEYS, type FolderKey } from './data/folders';
+import { foldersOverlap } from './lib/folders';
 import { validateFileNameFormat } from './data/log-repository';
 import { t } from './i18n';
 import { DEFAULT_SETTINGS } from './lib/model/data';
@@ -120,9 +121,14 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 					placeholder: DEFAULT_SETTINGS.logFolder,
 					defaultValue: DEFAULT_SETTINGS.logFolder,
 					validate: (value) =>
-						value.trim().length > 0
-							? undefined
-							: t('settings.logFolder.empty'),
+						value.trim().length === 0
+							? t('settings.logFolder.empty')
+							: foldersOverlap(
+										normalizePath(value.trim()),
+										services.store.settings.exerciseFolder,
+								  )
+								? t('settings.folderOverlap')
+								: undefined,
 				},
 			},
 			{
@@ -134,9 +140,14 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 					placeholder: DEFAULT_SETTINGS.exerciseFolder,
 					defaultValue: DEFAULT_SETTINGS.exerciseFolder,
 					validate: (value) =>
-						value.trim().length > 0
-							? undefined
-							: t('settings.logFolder.empty'),
+						value.trim().length === 0
+							? t('settings.logFolder.empty')
+							: foldersOverlap(
+										normalizePath(value.trim()),
+										services.store.settings.logFolder,
+								  )
+								? t('settings.folderOverlap')
+								: undefined,
 				},
 			},
 			{

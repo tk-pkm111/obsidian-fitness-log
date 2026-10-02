@@ -62,13 +62,28 @@ function notify(patch: Partial<Record<FolderKey, string>>): void {
 	}
 }
 
+/**
+ * フォルダの中の、種目ノートではない Markdown ノートの数（種目ノートの保存先にすると、
+ * 種目として読まれて fitness_id が足されてしまうので、最初の設定で知らせる）
+ */
+export function countForeignNotes(app: App, folder: string): number {
+	return app.vault
+		.getMarkdownFiles()
+		.filter((file) => file.path.startsWith(`${folder}/`))
+		.filter((file) => {
+			const fm = app.metadataCache.getFileCache(file)?.frontmatter;
+			return !fm || typeof fm[EXERCISE_KEYS.id] !== 'string';
+		}).length;
+}
+
 /** 移したノートの数と、移した先に同じ名前のノートがあって移さなかったノート */
 export interface MoveResult {
 	moved: number;
 	skipped: string[];
 }
 
-async function ensureFolder(app: App, path: string): Promise<void> {
+/** フォルダを（親から順に）作る。あれば何もしない */
+export async function ensureFolder(app: App, path: string): Promise<void> {
 	let current = '';
 	for (const part of path.split('/')) {
 		if (!part) continue;

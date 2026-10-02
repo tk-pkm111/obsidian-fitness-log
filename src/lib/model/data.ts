@@ -382,6 +382,8 @@ export function normalizePluginData(raw: unknown): PluginData {
 	if (dayOrders) data.dayOrders = dayOrders;
 	const seededAt = str(obj.seededAt);
 	if (seededAt) data.seededAt = seededAt;
+	const setupAt = str(obj.setupAt);
+	if (setupAt) data.setupAt = setupAt;
 	return data;
 }
 

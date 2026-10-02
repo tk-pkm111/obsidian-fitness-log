@@ -106,3 +106,31 @@ export function folderMismatch(
 		inside: inside.length,
 	};
 }
+
+/** 2 つのフォルダが同じか、一方がもう一方の中にあるか（種目ノートと日ノートを混ぜないため） */
+export function foldersOverlap(a: string, b: string): boolean {
+	const x = trimSlashes(a);
+	const y = trimSlashes(b);
+	return (
+		x === y ||
+		x === '' ||
+		y === '' ||
+		x.startsWith(`${y}/`) ||
+		y.startsWith(`${x}/`)
+	);
+}
+
+/** ノートのある場所（ノートのすぐ上のフォルダ）ごとの数（多い順。同数なら名前順）。vault の直下は '/' */
+export function folderCounts(
+	paths: readonly string[],
+): Array<{ folder: string; count: number }> {
+	const counts = new Map<string, number>();
+	for (const path of paths) {
+		const parts = trimSlashes(path).split('/');
+		const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '/';
+		counts.set(folder, (counts.get(folder) ?? 0) + 1);
+	}
+	return [...counts]
+		.map(([folder, count]) => ({ folder, count }))
+		.sort((a, b) => b.count - a.count || a.folder.localeCompare(b.folder));
+}

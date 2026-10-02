@@ -147,6 +147,8 @@ export interface PluginData {
 	activeSet: ActiveSet | null;
 	/** 初期データ投入済みの印（ISO 8601） */
 	seededAt?: string;
+	/** 最初の設定（保存先のフォルダ）を済ませた印（ISO 8601）。無く seededAt も無ければ、最初に保存先を聞く */
+	setupAt?: string;
 	/** 済ませた一度きりの移行（'log-folder-v2' など） */
 	migrations: string[];
 	/**

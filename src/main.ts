@@ -13,6 +13,7 @@ import { SessionController } from './session/session-controller';
 import { FitnessLogSettingTab } from './settings';
 import { activateMainView } from './ui/activate';
 import { checkNoteFolders } from './ui/folder-check';
+import { openSetup } from './ui/modals/setup-modal';
 import { openNoteInNewTab, runAction } from './ui/helpers';
 import { MainView, VIEW_TYPE_MAIN } from './ui/main-view';
 
@@ -77,8 +78,10 @@ export default class FitnessLogPlugin extends Plugin {
 		const { store, index, library } = this.services;
 		// フォルダの名前を変えた・移したら設定も追いかける
 		registerFolderFollow(this, this.app, store);
+		// 最初の起動（入れ直した直後を含む）: 保存先を聞くまでは何も作らない・動かさない
+		const setup = store.needsSetup;
 		// 以前の版（日ノートを Fitness/ の直下に保存）からの移行 → Fitness/ログ/ へ
-		const movedNotes = await migrateLogFolder(this.app, store);
+		const movedNotes = setup ? 0 : await migrateLogFolder(this.app, store);
 		if (movedNotes > 0)
 			new Notice(
 				t('notice.logFolderMigrated', {
@@ -98,6 +101,11 @@ export default class FitnessLogPlugin extends Plugin {
 					folder: library.folderPath,
 				}),
 			);
+		if (setup) {
+			// 保存先を決めてから初期データを入れる（最初の設定）
+			openSetup(this.app, this.services);
+			return;
+		}
 		if (!store.current.seededAt) await library.seed();
 		// 設定の保存先とノートの場所が食い違っていれば（設定を変えたのにノートが前の場所にあるなど）聞く
 		this.checkNoteFolders();

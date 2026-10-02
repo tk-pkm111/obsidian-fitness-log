@@ -1380,6 +1380,85 @@ input.fitness-log-target-value[type='text'],
 	font-size: var(--font-ui-small);
 }
 
+/* 最初の設定（保存先を選ぶ） */
+.fitness-log-setup p {
+	margin-top: 0;
+	color: var(--text-muted);
+}
+
+.fitness-log-setup-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-1);
+	margin-bottom: var(--size-4-4);
+}
+
+.fitness-log-setup-label {
+	font-weight: var(--font-semibold);
+}
+
+input.fitness-log-setup-input[type='text'] {
+	width: 100%;
+	margin-top: var(--size-4-1);
+}
+
+.fitness-log-setup-found {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-4-1);
+}
+
+.modal .fitness-log-setup-found button.fitness-log-chip {
+	height: auto;
+	min-height: 30px;
+	padding: 2px var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	white-space: normal;
+	text-align: left;
+}
+
+.modal .fitness-log-setup-found button.fitness-log-chip:hover {
+	border-color: var(--interactive-accent);
+}
+
+.fitness-log-setup-warning {
+	color: var(--text-warning);
+	font-size: var(--font-ui-smaller);
+}
+
+.fitness-log-setup-warning:empty {
+	display: none;
+}
+
+.fitness-log-setup-seed {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+	cursor: pointer;
+}
+
+.fitness-log-setup-seed input[type='checkbox'] {
+	margin-top: 3px;
+	flex-shrink: 0;
+}
+
+.fitness-log-setup-prompt {
+	align-items: center;
+	gap: var(--size-4-3);
+	max-width: 32em;
+	margin: var(--size-4-12) auto 0;
+}
+
+.fitness-log-setup-welcome {
+	color: var(--text-normal);
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-bold);
+}
+
 /* 種目ノートが見つからないときの案内（種目フォルダの名前を変えた・移したなど） */
 .fitness-log-callout {
 	display: flex;

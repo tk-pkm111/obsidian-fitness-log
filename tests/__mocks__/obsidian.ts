@@ -239,6 +239,20 @@ export abstract class FuzzySuggestModal<T> extends SuggestModal<{
 	}
 }
 
+/** 入力欄の候補（読み込めるだけのスタブ） */
+export abstract class AbstractInputSuggest<T> {
+	constructor(
+		public app: unknown,
+		public inputEl: unknown,
+	) {}
+	setValue(_value: string): void {}
+	getValue(): string {
+		return '';
+	}
+	close(): void {}
+	protected abstract getSuggestions(query: string): T[];
+}
+
 /** ビューは DOM を使うので自動テストしない（読み込めるだけのスタブ） */
 export class ItemView extends Component {
 	navigation = true;

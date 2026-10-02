@@ -195,11 +195,14 @@ export const ja = {
 	'command.openToday': '今日のトレーニングを開く',
 	'command.openLog': 'トレーニングログを開く',
 	'command.createBases': 'ログの Bases ファイルを作成',
+	'command.setup': '保存先と初期データを設定',
 
 	'settings.logFolder.name': 'ログの保存先',
 	'settings.logFolder.desc':
 		'トレーニングの日ノートを保存する vault 内のフォルダ。変えたら、設定を閉じるときに今あるノートを新しいフォルダへ移すか聞きます。',
 	'settings.logFolder.empty': 'フォルダを指定してください。',
+	'settings.folderOverlap':
+		'日ノートと種目ノートは別のフォルダにしてください（一方をもう一方の中にもできません）。',
 	'settings.exerciseFolder.name': '種目ノートの保存先',
 	'settings.exerciseFolder.desc':
 		'1 種目 1 ノートを置く vault 内のフォルダ。種目の設定は各ノートの frontmatter に、フォームやコツは本文に書きます。変えたら、設定を閉じるときに今あるノートを新しいフォルダへ移すか聞きます。',
@@ -450,6 +453,36 @@ export const ja = {
 	'notice.folderFollowed': '{name}のフォルダを「{folder}」に合わせました。',
 	'folders.exercise': '種目ノート',
 	'folders.log': '日ノート（ログ）',
+	'setup.title': 'Fitness Log をはじめる',
+	'setup.titleAgain': '保存先と初期データ',
+	'setup.intro':
+		'トレーニングの記録は、この vault の中にふつうの Markdown ノートとして残ります。まず、ノートを置くフォルダを決めましょう。無ければ作ります（あとから設定でも変えられます）。',
+	'setup.logLabel': '日ノート（ログ）の保存先',
+	'setup.logDesc':
+		'1 日 1 ノート（例: 2026-10-02.md）に、その日のセットを書きます。',
+	'setup.exerciseLabel': '種目ノートの保存先',
+	'setup.exerciseDesc':
+		'1 種目 1 ノート。フォームやコツはノートの本文に書けます。日ノートとは別のフォルダにします。',
+	'setup.found': '見つかったノート:',
+	'setup.foundFolder': '{folder}（{n} 件）',
+	'setup.foreignNotes':
+		'このフォルダには種目ノートではないノートが {n} 件あります。種目ノートとして読まれ、frontmatter に fitness_id が足されます。種目ノート専用のフォルダをおすすめします。',
+	'setup.seed': 'よく使う種目と PPL のパッケージを入れる',
+	'setup.seedDesc':
+		'Notion のメニューから作った {n} 種目と、PUSH・PULL・LEGS（A/B）の 6 パッケージ。すでにある種目・パッケージは足しません。あとから設定の「初期データを入れる」でも入れられます。',
+	'setup.empty': '保存先のフォルダを入力してください。',
+	'setup.overlap':
+		'日ノートと種目ノートは別のフォルダにしてください（一方をもう一方の中にもできません）。',
+	'setup.later': 'あとで',
+	'setup.start': 'はじめる',
+	'setup.save': '保存',
+	'setup.done': '保存先を設定しました。',
+	'setup.doneSeeded':
+		'準備ができました。種目 {exercises} ・ パッケージ {packages} を入れました。',
+	'setup.welcome': 'Fitness Log へようこそ',
+	'setup.welcomeText':
+		'記録をはじめる前に、ノートの保存先（日ノートと種目ノートのフォルダ）を決めましょう。',
+	'setup.open': '保存先を選んではじめる',
 	'folders.checkTitle': '{name}の保存先',
 	'folders.checkMessage':
 		'設定の保存先「{target}」に{name}がありません。「{source}」に {n} 件あります。',
