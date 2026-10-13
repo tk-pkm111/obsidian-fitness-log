@@ -69,9 +69,10 @@ export const ja = {
 	'today.emptyHint':
 		'パッケージを追加するか、ルーチンを設定すると、ここに表示されます。',
 	'today.addPackage': 'パッケージを追加',
-	'today.addOtherExercise': 'パッケージ外の種目を追加',
+	'today.addAnotherPackage': '別のパッケージを追加',
+	'today.addOtherExercise': '単発の種目を追加',
 	'today.addExercise': '種目を追加',
-	'today.other': 'その他',
+	'today.other': '単発の種目',
 	'today.planned': '予定',
 	'today.notStarted': '未開始',
 	'today.startPackage': 'このパッケージを始める',
@@ -97,6 +98,8 @@ export const ja = {
 	'today.invalidRest':
 		'休憩は 2:30 や 2.30 の形（分:秒）で入力してください。',
 	'today.removeFromDay': 'この日から外す',
+	'today.removePackage': 'パッケージを外す',
+	'today.removeShort': '外す',
 	'today.removeExerciseConfirm':
 		'この日の一覧から外します。パッケージの内容は変わりません。戻すときは「種目を追加」から選びます。',
 	'today.removeExerciseOk': '外す',
@@ -399,7 +402,7 @@ export const ja = {
 	'log.mode.month': '月ごと',
 	'log.noHistory':
 		'まだ記録がありません。今日の画面でセットを記録すると、ここに推移が表示されます。',
-	'log.outside': 'パッケージ外',
+	'log.outside': '単発の種目',
 	'log.noGroupRecords': '{name} の記録はまだありません。',
 	'log.meta.count': '{n} 回',
 	'log.meta.recent': '最近 4 週 {n} 回',

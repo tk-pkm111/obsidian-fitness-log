@@ -308,13 +308,13 @@ function openSectionMenu(
 	if (section.inNote && !hasSets && !hasActive)
 		menu.addItem((item) =>
 			item
-				.setTitle(t('today.removeFromDay'))
+				.setTitle(
+					section.isOther
+						? t('today.removeFromDay')
+						: t('today.removePackage'),
+				)
 				.setIcon('x')
-				.onClick(() =>
-					ctx.run(() =>
-						services.controller.removeSessionFromDay(date, ref),
-					),
-				),
+				.onClick(() => removeSection(ctx, section)),
 		);
 	if (plannedBy && section.status === 'planned')
 		menu.addItem((item) =>
@@ -340,7 +340,10 @@ function openSectionMenu(
 	menu.showAtMouseEvent(event);
 }
 
-/** 予定: やる順の種目の一覧（区切りごと）と「▶ 筋トレを開始」 */
+/**
+ * 予定: やる順の種目の一覧（区切りごと）と「▶ 筋トレを開始」。
+ * 横に、ルーチンの予定なら「今日はスキップ」、自分で足したパッケージなら「外す」（記録が無いので確認しない。また足せる）
+ */
 function renderPlanned(
 	ctx: PageContext,
 	box: HTMLElement,
@@ -370,8 +373,13 @@ function renderPlanned(
 			number += group.cards.length;
 		}
 	}
-	if (env.isFuture) return;
+	if (env.isFuture && !section.inNote) return;
 	const actions = box.createDiv({ cls: 'fitness-log-session-actions' });
+	if (env.isFuture) {
+		// 未来の日に足したパッケージは外すだけ（開始・記録はその日になってから）
+		renderRemoveButton(ctx, actions, section);
+		return;
+	}
 	const pkg = section.pkg;
 	if (env.isToday && pkg) {
 		const start = textButton(
@@ -413,6 +421,34 @@ function renderPlanned(
 				),
 			{ cls: 'mod-quiet' },
 		);
+	else if (section.inNote) renderRemoveButton(ctx, actions, section);
+}
+
+/** 自分で足したパッケージ（まだ記録が無い）の「外す」 */
+function renderRemoveButton(
+	ctx: PageContext,
+	actions: HTMLElement,
+	section: SectionModel,
+): void {
+	textButton(
+		actions,
+		t('today.removeShort'),
+		() => removeSection(ctx, section),
+		{
+			icon: 'x',
+			cls: 'mod-quiet',
+		},
+	);
+}
+
+/** セクションをこの日から外す（記録が無いときだけ。ノートの見出しを消す） */
+function removeSection(ctx: PageContext, section: SectionModel): void {
+	ctx.run(() =>
+		ctx.services.controller.removeSessionFromDay(
+			ctx.date,
+			sectionRef(section),
+		),
+	);
 }
 
 /** 終了: 「お疲れ様でした」とまとめ。「記録を見る」でやった種目だけを開いて修正できる */

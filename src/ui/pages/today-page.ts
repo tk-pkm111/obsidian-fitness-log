@@ -133,7 +133,7 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 		if (isEmpty) footer.addClass('is-empty-actions');
 		textButton(
 			footer,
-			t('today.addPackage'),
+			addPackageLabel(sections),
 			() => chooseAndAddPackage(ctx, sections),
 			{ icon: 'plus', cta: isEmpty },
 		);
@@ -204,7 +204,14 @@ function renderDateBar(ctx: PageContext): void {
 		});
 }
 
-/** 右上の ＋: パッケージ・パッケージ外の種目を追加 */
+/** その日にもうパッケージがあれば「別のパッケージを追加」（同じ日に 2 つ目をこなす） */
+function addPackageLabel(sections: readonly SectionModel[]): string {
+	return sections.some((s) => !s.isOther)
+		? t('today.addAnotherPackage')
+		: t('today.addPackage');
+}
+
+/** 右上の ＋: パッケージ・単発の種目を追加 */
 function renderAddMenu(
 	ctx: PageContext,
 	sections: readonly SectionModel[],
@@ -213,7 +220,7 @@ function renderAddMenu(
 		const menu = new Menu();
 		menu.addItem((item) =>
 			item
-				.setTitle(t('today.addPackage'))
+				.setTitle(addPackageLabel(sections))
 				.setIcon('package')
 				.onClick(() => chooseAndAddPackage(ctx, sections)),
 		);
@@ -257,7 +264,7 @@ function chooseAndAddPackage(
 		// スマホは検索せず一覧から押す（検索の欄にキーボードが出て一覧が半分隠れる。パッケージは数が少ない）
 		const names = new Map(exercises.map((e) => [e.id, e.name]));
 		new ChoiceModal(ctx.app, {
-			title: t('today.addPackage'),
+			title: addPackageLabel(sections),
 			message: packages.length === 0 ? t('suggest.noPackages') : '',
 			choices: packages.map((pkg) => ({
 				text: pkg.name,
