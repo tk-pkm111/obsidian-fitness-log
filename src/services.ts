@@ -3,6 +3,7 @@ import type { DataStore } from './data/data-store';
 import type { ExerciseLibrary } from './data/exercise-library';
 import type { LogIndex } from './data/log-index';
 import type { LogRepository } from './data/log-repository';
+import type { PackageLibrary } from './data/package-library';
 import type { SessionController } from './session/session-controller';
 
 /** 画面やコマンドに渡す、プラグインの状態と手続きのまとまり */
@@ -11,6 +12,8 @@ export interface FitnessServices {
 	store: DataStore;
 	/** 種目ノート（1 種目 1 ノート）の一覧と読み書き */
 	library: ExerciseLibrary;
+	/** パッケージノート（1 パッケージ 1 ノート。ルーチンも）の一覧と読み書き */
+	packages: PackageLibrary;
 	repository: LogRepository;
 	index: LogIndex;
 	controller: SessionController;

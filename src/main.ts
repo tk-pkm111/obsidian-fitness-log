@@ -6,6 +6,7 @@ import { ExerciseLibrary } from './data/exercise-library';
 import { registerFolderFollow } from './data/folders';
 import { LogIndex } from './data/log-index';
 import { LogRepository } from './data/log-repository';
+import { PackageLibrary } from './data/package-library';
 import {
 	folderRenameMessage,
 	migrateFolderNames,
@@ -32,6 +33,7 @@ export default class FitnessLogPlugin extends Plugin {
 	services!: FitnessServices;
 	private locationKey = '';
 	private exerciseFolder = '';
+	private packageFolder = '';
 
 	async onload(): Promise<void> {
 		const store = new DataStore(this);
@@ -40,10 +42,13 @@ export default class FitnessLogPlugin extends Plugin {
 		const index = new LogIndex(this.app, repository);
 		const controller = new SessionController(store, repository, index);
 		const library = new ExerciseLibrary(this.app, store);
+		// パッケージ・ルーチンはパッケージノートが正（store.update のたびにノートへ書く）
+		const packages = new PackageLibrary(this.app, store, library);
 		this.services = {
 			app: this.app,
 			store,
 			library,
+			packages,
 			repository,
 			index,
 			controller,
@@ -52,6 +57,7 @@ export default class FitnessLogPlugin extends Plugin {
 		};
 		this.locationKey = this.currentLocationKey();
 		this.exerciseFolder = store.settings.exerciseFolder;
+		this.packageFolder = store.settings.packageFolder;
 
 		this.registerView(
 			VIEW_TYPE_MAIN,
@@ -79,7 +85,7 @@ export default class FitnessLogPlugin extends Plugin {
 	}
 
 	private async onLayoutReady(): Promise<void> {
-		const { store, index, library } = this.services;
+		const { store, index, library, packages } = this.services;
 		// フォルダの名前を変えた・移したら設定も追いかける
 		registerFolderFollow(this, this.app, store);
 		// 最初の起動（入れ直した直後を含む）: 保存先を聞くまでは何も作らない・動かさない
@@ -109,16 +115,46 @@ export default class FitnessLogPlugin extends Plugin {
 					folder: library.folderPath,
 				}),
 			);
+		packages.registerVaultEvents(this);
 		if (setup) {
-			// 保存先を決めてから初期データを入れる（最初の設定）
+			// 保存先を決めてから初期データを入れる（最初の設定。パッケージは保存先を決めてから読む）
 			openSetup(this.app, this.services);
 			return;
 		}
+		// パッケージ・ルーチンをパッケージノートから読む（この版の最初の起動では data.json から移す）
+		await this.loadPackages();
 		if (!store.current.seededAt) await library.seed();
 		// 設定の保存先とノートの場所が食い違っていれば（設定を変えたのにノートが前の場所にあるなど）聞く
 		this.checkNoteFolders();
 		if (store.settings.openOnStartup)
 			await activateMainView(this.app, { page: 'today', date: null });
+	}
+
+	/**
+	 * パッケージノートを読む。初めてなら data.json のパッケージをノートへ移して知らせる。
+	 * 移せなかったら（同じ名前の別のノートがあるなど）、data.json のパッケージのまま使い、次の起動でもう一度移す
+	 */
+	private async loadPackages(): Promise<void> {
+		const { packages } = this.services;
+		try {
+			const written = await packages.ensureLoaded();
+			if (written > 0)
+				new Notice(
+					t('notice.packagesMigrated', {
+						count: written,
+						folder: packages.folderPath,
+					}),
+					10_000,
+				);
+		} catch (error) {
+			new Notice(
+				t('notice.packagesMigrateFailed', {
+					message:
+						error instanceof Error ? error.message : String(error),
+				}),
+				15_000,
+			);
+		}
 	}
 
 	/**
@@ -143,7 +179,7 @@ export default class FitnessLogPlugin extends Plugin {
 
 	/** ログの保存先・書式・種目フォルダが変わったら読み直す */
 	private onDataChange(): void {
-		const { store, index, library } = this.services;
+		const { store, index, library, packages } = this.services;
 		const key = this.currentLocationKey();
 		if (key !== this.locationKey) {
 			this.locationKey = key;
@@ -152,6 +188,10 @@ export default class FitnessLogPlugin extends Plugin {
 		if (store.settings.exerciseFolder !== this.exerciseFolder) {
 			this.exerciseFolder = store.settings.exerciseFolder;
 			if (library.isLoaded) void library.reload();
+		}
+		if (store.settings.packageFolder !== this.packageFolder) {
+			this.packageFolder = store.settings.packageFolder;
+			if (packages.isReady) void packages.reload().catch(() => undefined);
 		}
 	}
 

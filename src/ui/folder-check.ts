@@ -2,6 +2,7 @@ import { Notice, type App } from 'obsidian';
 import {
 	FOLDER_KEYS,
 	findNotePaths,
+	folderName,
 	moveNotes,
 	type FolderKey,
 } from '../data/folders';
@@ -47,10 +48,6 @@ async function check(
 		await ask(app, services, key, mismatch);
 	}
 	return found;
-}
-
-function folderName(key: FolderKey): string {
-	return t(key === 'exerciseFolder' ? 'folders.exercise' : 'folders.log');
 }
 
 function ask(

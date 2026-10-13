@@ -29,6 +29,7 @@ import { isDateString } from '../time/date';
 export const DEFAULT_SETTINGS: FitnessLogSettings = {
 	logFolder: 'Fitness/log',
 	exerciseFolder: 'Fitness/exercise',
+	packageFolder: 'Fitness/package',
 	fileNameFormat: 'YYYY-MM-DD',
 	weightUnit: 'kg',
 	weightStep: 2.5,
@@ -107,17 +108,33 @@ function oneOf<T extends string>(
 	return options.find((option) => option === value);
 }
 
+/**
+ * パッケージの保存先が無い（この版より前の data.json）ときは、種目の保存先の隣（…/exercise → …/package）。
+ * どの端末も同じ種目の保存先なら、同じパッケージの保存先になる
+ */
+export function siblingPackageFolder(exerciseFolder: string): string {
+	const trimmed = exerciseFolder.replace(/^\/+|\/+$/g, '');
+	const slash = trimmed.lastIndexOf('/');
+	return slash < 0 ? 'package' : `${trimmed.slice(0, slash)}/package`;
+}
+
 function normalizeSettings(raw: unknown, legacy: Obj): FitnessLogSettings {
 	const s = isObj(raw) ? raw : {};
 	const step = num(s.weightStep);
+	const exerciseFolder =
+		nonEmpty(s.exerciseFolder) ?? DEFAULT_SETTINGS.exerciseFolder;
 	return {
 		// 0.1.0 以前は data.json の直下に logFolder だけを持っていた
 		logFolder:
 			nonEmpty(s.logFolder) ??
 			nonEmpty(legacy.logFolder) ??
 			DEFAULT_SETTINGS.logFolder,
-		exerciseFolder:
-			nonEmpty(s.exerciseFolder) ?? DEFAULT_SETTINGS.exerciseFolder,
+		exerciseFolder,
+		packageFolder:
+			nonEmpty(s.packageFolder) ??
+			(nonEmpty(s.exerciseFolder)
+				? siblingPackageFolder(exerciseFolder)
+				: DEFAULT_SETTINGS.packageFolder),
 		fileNameFormat:
 			nonEmpty(s.fileNameFormat) ?? DEFAULT_SETTINGS.fileNameFormat,
 		weightUnit:
@@ -179,7 +196,7 @@ function normalizePackageItem(raw: unknown): PackageItem | null {
 	return item;
 }
 
-function normalizePackage(raw: unknown): Package | null {
+export function normalizePackage(raw: unknown): Package | null {
 	if (!isObj(raw)) return null;
 	const id = nonEmpty(raw.id);
 	const name = nonEmpty(raw.name);
@@ -299,7 +316,7 @@ function normalizeRule(raw: unknown): RoutineRule | null {
 	return null;
 }
 
-function normalizeRoutine(raw: unknown): Routine | null {
+export function normalizeRoutine(raw: unknown): Routine | null {
 	if (!isObj(raw)) return null;
 	const id = nonEmpty(raw.id);
 	const packageId = nonEmpty(raw.packageId);

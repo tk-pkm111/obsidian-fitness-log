@@ -193,6 +193,10 @@ export const ja = {
 		'種目 {exercises} 件・パッケージ {packages} 件を追加しました。',
 	'notice.logFolderMigrated':
 		'記録のノート {count} 件を {folder} に移しました。',
+	'notice.packagesMigrated':
+		'パッケージを {count} 件のノートにしました（{folder}）。どの端末でも同じパッケージを使えます。',
+	'notice.packagesMigrateFailed':
+		'パッケージをノートにできませんでした（{message}）。今は前のまま使えます。次に起動したときにもう一度試します。',
 	'notice.exercisesMigrated':
 		'種目を {count} 件のノートにしました（{folder}）。種目のノートにフォームのコツなどを書けます。',
 	'notice.settingsUnavailable':
@@ -208,10 +212,14 @@ export const ja = {
 	'settings.logFolder.desc':
 		'トレーニングの記録（1 日 1 ノート）を保存するフォルダ。変えると、設定を閉じるときに今あるノートを移すか聞きます。',
 	'settings.logFolder.empty': 'フォルダを指定してください。',
-	'settings.folderOverlap': '記録と種目は別々のフォルダにしてください。',
+	'settings.folderOverlap':
+		'記録・種目・パッケージは別々のフォルダにしてください。',
 	'settings.exerciseFolder.name': '種目の保存先',
 	'settings.exerciseFolder.desc':
 		'種目のノート（1 種目 1 ノート）を保存するフォルダ。変えると、設定を閉じるときに今あるノートを移すか聞きます。',
+	'settings.packageFolder.name': 'パッケージの保存先',
+	'settings.packageFolder.desc':
+		'パッケージのノート（1 パッケージ 1 ノート。ルーチンもここに書きます）を保存するフォルダ。変えると、設定を閉じるときに今あるノートを移すか聞きます。',
 	'settings.fileNameFormat.name': '記録ノートの名前',
 	'settings.fileNameFormat.desc':
 		'日付の書式。YYYY-MM-DD なら 2026-10-02、YYYY/MM-DD なら年ごとのフォルダに分けます。今あるノートの名前は変わりません。',
@@ -465,6 +473,7 @@ export const ja = {
 		'{name}のノート {n} 件は、同じ名前のノートが「{target}」にあったので「{source}」に残しています。開いて見比べてください。',
 	'folders.exercise': '種目',
 	'folders.log': '記録',
+	'folders.package': 'パッケージ',
 	'setup.title': 'Fitness Log をはじめる',
 	'setup.titleAgain': '保存先',
 	'setup.intro':
@@ -479,8 +488,12 @@ export const ja = {
 		'これまでの記録が見つかりました。保存先はそのままで始められます。',
 	'setup.folderLabel': '保存するフォルダ',
 	'setup.folderPreview':
-		'「{log}」に記録、「{exercise}」に種目を保存します。',
-	'setup.chooseSeparately': '記録と種目のフォルダを別々に選ぶ',
+		'「{log}」に記録、「{exercise}」に種目、「{package}」にパッケージを保存します。',
+	'setup.chooseSeparately': 'フォルダを別々に選ぶ',
+	'setup.packageLabel': 'パッケージの保存先',
+	'setup.packageDesc':
+		'1 パッケージ 1 ノート。種目・目標・ルーチンを書きます。ほかの保存先とは別のフォルダにします。',
+	'setup.foundPackages': '{folder}（パッケージ {n} 件）',
 	'setup.useOneFolder': '1 つのフォルダにまとめる',
 	'setup.foundLogs': '{folder}（記録 {n} 件）',
 	'setup.foundExercises': '{folder}（種目 {n} 件）',
@@ -492,7 +505,7 @@ export const ja = {
 		'{n} 種目と、プッシュ・プル・脚に分けたパッケージの例。あとで編集・削除できます。',
 	'setup.seedDescExisting': 'すでにある種目・パッケージは足しません。',
 	'setup.empty': '保存するフォルダを入力してください。',
-	'setup.overlap': '記録と種目は別々のフォルダにしてください。',
+	'setup.overlap': '記録・種目・パッケージは別々のフォルダにしてください。',
 	'setup.later': 'あとで',
 	'setup.start': 'はじめる',
 	'setup.save': '保存',

@@ -20,7 +20,7 @@ src/settings.ts    設定タブ（宣言的。getControlValue/setControlValue �
 src/services.ts    画面・コマンドに渡すサービスのまとまり
 src/i18n/          UI 文言（t('key')）。日ノートの見出し・列名はファイル形式なので src/lib/log/markdown.ts の定数
 src/lib/           Obsidian 非依存の純粋ロジック（'obsidian' の import は ESLint で禁止）
-src/data/          data.json（DataStore）・日ノート（LogRepository）・履歴索引（LogIndex）・種目ノート（ExerciseLibrary）
+src/data/          data.json（DataStore）・日ノート（LogRepository）・履歴索引（LogIndex）・種目ノート（ExerciseLibrary）・パッケージノート（PackageLibrary）
 src/session/       開始・終了・修正の手順（SessionController）
 src/ui/            メインビュー（ItemView）・各ページ・モーダル・SVG チャート
 tests/             vitest。'obsidian' は tests/__mocks__/obsidian.ts、vault は tests/helpers/fake-app.ts の仮想 vault
@@ -61,6 +61,7 @@ docs/              設計メモ
 - 日ノートはプラグインが管理ブロック（`%% fitness-log:start %%` 〜 `end`）の中だけを書き換える。ブロックが読めないときは書き込まない（データを潰さない）。
 - 日ノートは `Fitness/log/YYYY-MM-DD.md`（設定で変更可）。以前の既定（`Fitness/` 直下、`…/ログ`・`…/種目`）のノートは初回起動時に `src/data/migrations.ts` が移す（一度きり、`data.json` の `migrations` に印）。フォルダ名は英語（`log`・`exercise`）。
 - 種目は種目ノート（`Fitness/exercise/*.md`）の frontmatter が正。data.json には保存しない（`DataStore.update` が保存時に外す）。ノートの本文には触らない。
+- パッケージとルーチンはパッケージノート（`Fitness/package/*.md`、1 パッケージ 1 ノート）の frontmatter が正（`src/data/package-library.ts`、形式は `src/lib/model/package-note.ts`）。画面は今までどおり `DataStore.update` で `data.packages` / `data.routines` を変え、update の中でノートと違うパッケージだけを書く。data.json には保存しない（移行済みの印 `packages-in-vault`）。今あるノートはそのフォルダのまま（保存先を変えても勝手に移さない）。ユーザーは Obsidian Sync でプラグインの設定を同期していないので、端末間でそろえたいものは必ず vault のノートに置く。
 - dev-vault をユーザーが Obsidian で開いて `npm run dev` を動かしているときは、ソースを保存するたびにその dev-vault に反映される（移行などの処理も走る）。E2E は dev-vault のコピー（`E2E_VAULT`）で行う。
 - ユーザーの本番 Vault（`~/Documents/Obsidian Vaults/` 配下など）と本番の Obsidian（起動中のアプリ・Obsidian CLI）には絶対に触らない。動作確認は `dev-vault/` と `npm run e2e` の隔離インスタンスのみ。
 - UI 文言は日本語で `src/i18n/ja.ts` に集約する。英単語を混ぜるときは sentence case（例: "vault" は小文字）。

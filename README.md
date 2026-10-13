@@ -59,7 +59,8 @@ duration_min: 1
 - 表を手で直してもよい（保存すると画面に反映される）。読めない形に壊れたときは書き込みを止め、通知からノートを開ける。
 - 重量は常に kg で保存する（設定の単位は表示と入力だけ）。空欄は `-`。単発の種目（どのパッケージにも入らない種目）の記録は `## その他`。
 - 種目・パッケージは名前で書く（AI や人が読める）。名前の照合は本名＋別名で行う。
-- パッケージ・ルーチン・進行中のセット・設定はプラグインの `data.json` に保存する。種目は種目ノートが正（下記）。
+- パッケージとルーチンは 1 パッケージ 1 ノート（`Fitness/package/PUSH A.md`。種目・目標・区切り・ルーチンを frontmatter に、本文は自由なメモ）が正。種目は種目ノートが正（下記）。どちらも vault の中なので、Obsidian Sync でプラグインの設定（「インストールされているコミュニティプラグイン」）を同期しなくても、端末間でそろう。
+- 進行中のセットと設定（保存先・単位など）は端末ごとのプラグインの `data.json` に保存する。
 
 ## 種目ノート
 
@@ -123,7 +124,7 @@ src/lib/             Obsidian 非依存の純粋ロジック（vitest でテス�
   history/           前回値の引き継ぎ・統計・パッケージ別のログ・チャートの座標・月ごとの一覧
   schedule/          ルーチンの判定
   today/             今日ページのモデル
-src/data/            data.json（DataStore）・日ノート（LogRepository）・履歴索引（LogIndex）
+src/data/            data.json（DataStore）・日ノート（LogRepository）・履歴索引（LogIndex）・種目ノート（ExerciseLibrary）・パッケージノート（PackageLibrary）
 src/session/         開始・終了・修正の手順（SessionController）
 src/ui/              メインビュー・各ページ・モーダル・チャート
 tests/               vitest（obsidian は tests/__mocks__/、vault は tests/helpers/fake-app.ts の仮想 vault）

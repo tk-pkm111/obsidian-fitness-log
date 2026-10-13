@@ -1,7 +1,9 @@
 /**
  * Fitness Log のドメインモデル（Obsidian 非依存）。
  *
- * - 種目・パッケージ・ルーチン・進行中セット・設定はプラグインの data.json（PluginData）に保存する。
+ * - 種目は種目ノート（1 種目 1 ノート）、パッケージとルーチンはパッケージノート（1 パッケージ 1 ノート）が正。
+ *   どちらも vault の中なので、Obsidian Sync でプラグインの設定を同期しなくても端末間でそろう。
+ * - 進行中セット・設定（保存先・単位など）は端末ごとの data.json（PluginData）に保存する。
  * - 実績（セッション・セット）は vault の日ノート（Markdown）が唯一の正。DayLog はその読み書き用の形。
  */
 
@@ -126,6 +128,8 @@ export interface FitnessLogSettings {
 	logFolder: string;
 	/** 種目ノート（1 種目 1 ノート）を置く vault 内フォルダ */
 	exerciseFolder: string;
+	/** パッケージノート（1 パッケージ 1 ノート。ルーチンもここに書く）を置く vault 内フォルダ */
+	packageFolder: string;
 	/** 日ノートのファイル名（moment 書式。'/' を含めるとサブフォルダ） */
 	fileNameFormat: string;
 	weightUnit: WeightUnit;

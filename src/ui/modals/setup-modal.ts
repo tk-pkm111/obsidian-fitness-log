@@ -13,6 +13,7 @@ import { t } from '../../i18n';
 import { folderCounts, foldersOverlap } from '../../lib/folders';
 import { DEFAULT_SETTINGS } from '../../lib/model/data';
 import { DEFAULT_EXERCISES } from '../../lib/model/defaults';
+import type { FitnessLogSettings } from '../../lib/model/types';
 import type { FitnessServices } from '../../services';
 import { activateMainView } from '../activate';
 import { checkNoteFolders } from '../folder-check';
@@ -20,7 +21,7 @@ import { FolderSuggest } from '../folder-suggest';
 import { runAction, textButton } from '../helpers';
 import { renderOnboardingVideo } from '../onboarding-video';
 
-/** 既定の保存先（Fitness/log・Fitness/exercise）の、親とその中のフォルダ名 */
+/** 既定の保存先（Fitness/log・Fitness/exercise・Fitness/package）の、親とその中のフォルダ名 */
 function splitDefault(path: string): { parent: string; child: string } {
 	const index = path.lastIndexOf('/');
 	return index < 0
@@ -29,6 +30,7 @@ function splitDefault(path: string): { parent: string; child: string } {
 }
 const LOG_DEFAULT = splitDefault(DEFAULT_SETTINGS.logFolder);
 const EXERCISE_DEFAULT = splitDefault(DEFAULT_SETTINGS.exerciseFolder);
+const PACKAGE_DEFAULT = splitDefault(DEFAULT_SETTINGS.packageFolder);
 
 function join(parent: string, child: string): string {
 	const p = normalizePath(parent.trim());
@@ -37,7 +39,7 @@ function join(parent: string, child: string): string {
 
 /**
  * はじめの設定（オンボーディング）。初めての人が迷わないよう、決めることは 1 つだけ:
- * 「保存するフォルダ」（その中に log・exercise を作る）。別々のフォルダにしたい人は「フォルダを別々に選ぶ」。
+ * 「保存するフォルダ」（その中に log・exercise・package を作る）。別々のフォルダにしたい人は「フォルダを別々に選ぶ」。
  * - 入れ直したときなど vault に既に記録・種目のノートがあれば、その場所をそのまま使う（別々の欄に入れておく）
  * - 「はじめる」までは何も作らない。よく使う種目とメニューの例は、保存先を決めてから足りない分だけ入れる
  * - コマンド「保存先を設定」でやり直せる（保存先を変えたらノートを移すか聞く）
@@ -61,15 +63,18 @@ export class SetupModal extends Modal {
 		const found = {
 			logFolder: this.found('logFolder'),
 			exerciseFolder: this.found('exerciseFolder'),
+			packageFolder: this.found('packageFolder'),
 		};
 		const hasExisting =
-			found.logFolder.length > 0 || found.exerciseFolder.length > 0;
+			found.logFolder.length > 0 ||
+			found.exerciseFolder.length > 0 ||
+			found.packageFolder.length > 0;
 		contentEl.createEl('p', {
 			text:
 				hasExisting && first ? t('setup.introFound') : t('setup.intro'),
 		});
 
-		// かんたん: 1 つのフォルダ（その中に log・exercise を作る）
+		// かんたん: 1 つのフォルダ（その中に log・exercise・package を作る）
 		const simple = contentEl.createDiv({ cls: 'fitness-log-setup-field' });
 		simple.createDiv({
 			cls: 'fitness-log-setup-label',
@@ -82,6 +87,7 @@ export class SetupModal extends Modal {
 				t('setup.folderPreview', {
 					log: join(parent.value, LOG_DEFAULT.child),
 					exercise: join(parent.value, EXERCISE_DEFAULT.child),
+					package: join(parent.value, PACKAGE_DEFAULT.child),
 				}),
 			);
 		parent.addEventListener('input', showPreview);
@@ -108,6 +114,15 @@ export class SetupModal extends Modal {
 				? found.exerciseFolder[0].folder
 				: store.settings.exerciseFolder,
 			found.exerciseFolder,
+		);
+		const pkg = this.separateField(
+			separate,
+			'packageFolder',
+			t('setup.packageLabel'),
+			first && found.packageFolder[0]
+				? found.packageFolder[0].folder
+				: store.settings.packageFolder,
+			found.packageFolder,
 		);
 		// 種目の保存先に、種目ではないノートがあれば知らせる（種目として読まれてしまう）
 		const warn = exercise.createDiv({ cls: 'fitness-log-setup-warning' });
@@ -173,10 +188,12 @@ export class SetupModal extends Modal {
 			first ? t('setup.start') : t('setup.save'),
 			() => {
 				const logInput = log.querySelector('input');
+				const packageInput = pkg.querySelector('input');
 				const raw = separateMode
 					? {
 							log: logInput?.value.trim() ?? '',
 							exercise: exerciseInput?.value.trim() ?? '',
+							package: packageInput?.value.trim() ?? '',
 						}
 					: {
 							log: join(parent.value, LOG_DEFAULT.child),
@@ -184,20 +201,31 @@ export class SetupModal extends Modal {
 								parent.value,
 								EXERCISE_DEFAULT.child,
 							),
+							package: join(parent.value, PACKAGE_DEFAULT.child),
 						};
-				if (!raw.log || !raw.exercise) {
+				if (!raw.log || !raw.exercise || !raw.package) {
 					error.setText(t('setup.empty'));
 					return;
 				}
-				const logFolder = normalizePath(raw.log);
-				const exerciseFolder = normalizePath(raw.exercise);
-				if (foldersOverlap(logFolder, exerciseFolder)) {
+				const folders = {
+					logFolder: normalizePath(raw.log),
+					exerciseFolder: normalizePath(raw.exercise),
+					packageFolder: normalizePath(raw.package),
+				};
+				if (
+					foldersOverlap(folders.logFolder, folders.exerciseFolder) ||
+					foldersOverlap(folders.logFolder, folders.packageFolder) ||
+					foldersOverlap(
+						folders.exerciseFolder,
+						folders.packageFolder,
+					)
+				) {
 					error.setText(t('setup.overlap'));
 					return;
 				}
 				this.close();
 				runAction(this.app, () =>
-					this.apply(logFolder, exerciseFolder, seed.checked, first),
+					this.apply(folders, seed.checked, first),
 				);
 			},
 			{ cta: true },
@@ -252,7 +280,9 @@ export class SetupModal extends Modal {
 					text: t(
 						key === 'logFolder'
 							? 'setup.foundLogs'
-							: 'setup.foundExercises',
+							: key === 'packageFolder'
+								? 'setup.foundPackages'
+								: 'setup.foundExercises',
 						{ folder, n: count },
 					),
 					attr: { type: 'button' },
@@ -267,24 +297,28 @@ export class SetupModal extends Modal {
 	}
 
 	private async apply(
-		logFolder: string,
-		exerciseFolder: string,
+		folders: Pick<
+			FitnessLogSettings,
+			'logFolder' | 'exerciseFolder' | 'packageFolder'
+		>,
 		seed: boolean,
 		first: boolean,
 	): Promise<void> {
-		const { store, library } = this.services;
-		await ensureFolder(this.app, logFolder);
-		await ensureFolder(this.app, exerciseFolder);
+		const { store, library, packages } = this.services;
+		await ensureFolder(this.app, folders.logFolder);
+		await ensureFolder(this.app, folders.exerciseFolder);
+		await ensureFolder(this.app, folders.packageFolder);
 		await store.update((d) => {
-			d.settings.logFolder = logFolder;
-			d.settings.exerciseFolder = exerciseFolder;
+			Object.assign(d.settings, folders);
 			d.setupAt ??= new Date().toISOString();
 			// 以前の版の保存先の移行（Fitness/ の直下 → Fitness/log、…/ログ → …/log）は、保存先を選んだので要らない
 			for (const id of [LOG_FOLDER_MIGRATION, ENGLISH_FOLDER_MIGRATION])
 				if (!d.migrations.includes(id)) d.migrations.push(id);
 		});
-		// 新しい保存先の種目ノートを読んでから、足りない種目・メニューの例だけを入れる
+		// 新しい保存先の種目ノート・パッケージノートを読んでから、足りない種目・メニューの例だけを入れる
+		// （ほかの端末で作ったパッケージがノートにあれば、それを使う）
 		await library.ensureLoaded();
+		await packages.reload();
 		const result = seed ? await library.seed() : null;
 		new Notice(
 			result && result.addedExercises + result.addedPackages > 0

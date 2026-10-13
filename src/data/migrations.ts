@@ -13,7 +13,7 @@ import { BLOCK_START } from '../lib/log/markdown';
 import { DEFAULT_SETTINGS } from '../lib/model/data';
 import { EXERCISE_KEYS } from '../lib/model/exercise-note';
 import type { DataStore } from './data-store';
-import { FOLDER_KEYS, moveNotes, type FolderKey } from './folders';
+import { FOLDER_KEYS, folderName, moveNotes, type FolderKey } from './folders';
 import { dateFromNotePath, dayNotePath } from './log-repository';
 
 /** 日ノートを Fitness/ の下のフォルダに分けた（以前は Fitness/ の直下） */
@@ -24,7 +24,7 @@ const OLD_DEFAULT_LOG_FOLDER = 'Fitness';
 export const ENGLISH_FOLDER_MIGRATION = 'folder-names-en';
 
 /** 以前の既定のフォルダの名前（日本語）。今の既定の名前は DEFAULT_SETTINGS（log・exercise） */
-const LEGACY_FOLDER_NAMES: Record<FolderKey, string> = {
+const LEGACY_FOLDER_NAMES: Partial<Record<FolderKey, string>> = {
 	logFolder: 'ログ',
 	exerciseFolder: '種目',
 };
@@ -112,12 +112,10 @@ export async function migrateFolderNames(
 	if (store.current.migrations.includes(ENGLISH_FOLDER_MIGRATION)) return [];
 	const plan: Array<{ key: FolderKey; from: string; to: string }> = [];
 	for (const key of FOLDER_KEYS) {
+		const legacy = LEGACY_FOLDER_NAMES[key];
+		if (legacy === undefined) continue;
 		const from = normalizePath(store.settings[key]);
-		const to = renamedLeaf(
-			from,
-			LEGACY_FOLDER_NAMES[key],
-			leafName(DEFAULT_SETTINGS[key]),
-		);
+		const to = renamedLeaf(from, legacy, leafName(DEFAULT_SETTINGS[key]));
 		if (to === null || (await hasForeignNotes(app, key, to))) continue;
 		plan.push({ key, from, to });
 	}
@@ -140,8 +138,7 @@ export async function migrateFolderNames(
 
 /** 名前を英語にしたことの知らせ（前のフォルダに残したノートがあればその場所も） */
 export function folderRenameMessage(results: readonly FolderRename[]): string {
-	const name = (key: FolderKey) =>
-		t(key === 'exerciseFolder' ? 'folders.exercise' : 'folders.log');
+	const name = folderName;
 	const lines = [
 		t('notice.folderNamesEnglish', {
 			list: results

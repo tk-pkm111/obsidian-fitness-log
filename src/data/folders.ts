@@ -3,6 +3,7 @@ import { t } from '../i18n';
 import { followRename, movedPath } from '../lib/folders';
 import { LOG_TAG } from '../lib/log/summary';
 import { EXERCISE_KEYS, EXERCISE_TAG } from '../lib/model/exercise-note';
+import { PACKAGE_KEYS, PACKAGE_TAG } from '../lib/model/package-note';
 import type { DataStore } from './data-store';
 
 /**
@@ -12,11 +13,23 @@ import type { DataStore } from './data-store';
  *   （聞くのは src/ui/folder-check.ts。ここはノートを探す・移す）
  */
 
-export type FolderKey = 'exerciseFolder' | 'logFolder';
+export type FolderKey = 'exerciseFolder' | 'logFolder' | 'packageFolder';
 export const FOLDER_KEYS: readonly FolderKey[] = [
 	'exerciseFolder',
 	'logFolder',
+	'packageFolder',
 ];
+
+/** 保存先の呼び名（「記録」「種目」「パッケージ」） */
+export function folderName(key: FolderKey): string {
+	return t(
+		key === 'exerciseFolder'
+			? 'folders.exercise'
+			: key === 'packageFolder'
+				? 'folders.package'
+				: 'folders.log',
+	);
+}
 
 function hasTag(value: unknown, tag: string): boolean {
 	const list: unknown[] = Array.isArray(value)
@@ -29,17 +42,24 @@ function hasTag(value: unknown, tag: string): boolean {
 	);
 }
 
-/** vault の中の種目ノート・日ノート（frontmatter のタグと id で見分ける） */
+/** vault の中の種目ノート・日ノート・パッケージノート（frontmatter のタグと id で見分ける） */
 export function findNotePaths(app: App, key: FolderKey): string[] {
 	return app.vault
 		.getMarkdownFiles()
 		.filter((file) => {
 			const fm = app.metadataCache.getFileCache(file)?.frontmatter;
 			if (!fm) return false;
-			return key === 'exerciseFolder'
-				? typeof fm[EXERCISE_KEYS.id] === 'string' &&
-						hasTag(fm[EXERCISE_KEYS.tags], EXERCISE_TAG)
-				: hasTag(fm.tags, LOG_TAG);
+			if (key === 'exerciseFolder')
+				return (
+					typeof fm[EXERCISE_KEYS.id] === 'string' &&
+					hasTag(fm[EXERCISE_KEYS.tags], EXERCISE_TAG)
+				);
+			if (key === 'packageFolder')
+				return (
+					typeof fm[PACKAGE_KEYS.id] === 'string' &&
+					hasTag(fm[PACKAGE_KEYS.tags], PACKAGE_TAG)
+				);
+			return hasTag(fm.tags, LOG_TAG);
 		})
 		.map((file) => file.path);
 }
@@ -50,11 +70,7 @@ function notify(patch: Partial<Record<FolderKey, string>>): void {
 		if (folder === undefined) continue;
 		new Notice(
 			t('notice.folderFollowed', {
-				name: t(
-					key === 'exerciseFolder'
-						? 'folders.exercise'
-						: 'folders.log',
-				),
+				name: folderName(key),
 				folder,
 			}),
 			8000,

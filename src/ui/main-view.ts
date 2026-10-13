@@ -119,12 +119,13 @@ export class MainView extends ItemView {
 			}
 		});
 		this.render();
-		// 日ノートの索引と種目ノートの一覧がそろってから描き直す
-		await Promise.all([
+		// 日ノートの索引と種目ノートの一覧がそろってから描き直す。待たずに開き終える
+		// （起動時に復元されたビューが onOpen で待つと、種目ノートの読み込みが待つ「レイアウトの準備」と
+		// 互いに待ち合い、Obsidian の「Failed to load deferred view: Timeout」になって起動が遅れていた）
+		void Promise.all([
 			this.services.index.ensureBuilt(),
 			this.services.library.ensureLoaded(),
-		]);
-		this.render();
+		]).then(() => this.render());
 	}
 
 	/** ログのチャートは幅に合わせて描くので、幅が変わったら描き直す */

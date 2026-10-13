@@ -35,8 +35,9 @@ export function coerceSetting(
 				? { logFolder: normalizeLogFolder(value) }
 				: {};
 		case 'exerciseFolder':
+		case 'packageFolder':
 			return typeof value === 'string' && value.trim().length > 0
-				? { exerciseFolder: normalizePath(value.trim()) }
+				? { [key]: normalizePath(value.trim()) }
 				: {};
 		case 'fileNameFormat':
 			return typeof value === 'string' &&
@@ -109,6 +110,18 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 			void checkNoteFolders(this.app, this.plugin.services, changed);
 	}
 
+	/** 保存先の入力の確かめ: 空でないこと、ほかの保存先と重ならないこと（記録・種目・パッケージは別々） */
+	private validateFolder(key: FolderKey, value: string): string | undefined {
+		if (value.trim().length === 0) return t('settings.logFolder.empty');
+		const folder = normalizePath(value.trim());
+		const { settings } = this.plugin.services.store;
+		return FOLDER_KEYS.some(
+			(other) => other !== key && foldersOverlap(folder, settings[other]),
+		)
+			? t('settings.folderOverlap')
+			: undefined;
+	}
+
 	getSettingDefinitions(): SettingDefinitionItem<SettingsKey>[] {
 		const { services } = this.plugin;
 		return [
@@ -121,14 +134,7 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 					placeholder: DEFAULT_SETTINGS.logFolder,
 					defaultValue: DEFAULT_SETTINGS.logFolder,
 					validate: (value) =>
-						value.trim().length === 0
-							? t('settings.logFolder.empty')
-							: foldersOverlap(
-										normalizePath(value.trim()),
-										services.store.settings.exerciseFolder,
-								  )
-								? t('settings.folderOverlap')
-								: undefined,
+						this.validateFolder('logFolder', value),
 				},
 			},
 			{
@@ -140,14 +146,19 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 					placeholder: DEFAULT_SETTINGS.exerciseFolder,
 					defaultValue: DEFAULT_SETTINGS.exerciseFolder,
 					validate: (value) =>
-						value.trim().length === 0
-							? t('settings.logFolder.empty')
-							: foldersOverlap(
-										normalizePath(value.trim()),
-										services.store.settings.logFolder,
-								  )
-								? t('settings.folderOverlap')
-								: undefined,
+						this.validateFolder('exerciseFolder', value),
+				},
+			},
+			{
+				name: t('settings.packageFolder.name'),
+				desc: t('settings.packageFolder.desc'),
+				control: {
+					type: 'folder',
+					key: 'packageFolder',
+					placeholder: DEFAULT_SETTINGS.packageFolder,
+					defaultValue: DEFAULT_SETTINGS.packageFolder,
+					validate: (value) =>
+						this.validateFolder('packageFolder', value),
 				},
 			},
 			{
