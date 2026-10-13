@@ -8,7 +8,7 @@ import { t } from '../i18n';
  *   正しい種類（video/mp4）で返す jsDelivr から読む。コミットで固定しているので、動画を作り直したら差し替える
  */
 const VIDEO_URL =
-	'https://cdn.jsdelivr.net/gh/tk-pkm111/obsidian-fitness-log@d2a4dfa7c029c4bced52326580b1c3b2e2bc85d1/docs/onboarding-video/onboarding.mp4';
+	'https://cdn.jsdelivr.net/gh/tk-pkm111/obsidian-fitness-log@ad33369bf497ec1299adcd310edb1ef1d43699de/docs/onboarding-video/onboarding.mp4';
 
 /** 表紙（押すと動画に替わる）と、通信の注意書き */
 export function renderOnboardingVideo(parent: HTMLElement): void {
