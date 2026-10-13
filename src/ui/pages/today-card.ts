@@ -37,6 +37,8 @@ export interface CardEnv {
 	 * done: 終わった種目（1 行にたたむ）、upcoming: まだの種目（▶ だけ）。null はすべて開いて見せる
 	 */
 	role?: CardRole | null;
+	/** いま取り組んでいる種目（開いた種目のうち、強調して次のセットの ▶ を塗るのはこれだけ） */
+	live?: boolean;
 	/** おすすめの ▶（塗りつぶし）: いまの種目が目標のセット数に届いたとき、最初のまだの種目 */
 	suggested?: boolean;
 	/** その種目の今日のセット数（同じ種目を 2 欄に分けていても合計） */
@@ -74,6 +76,7 @@ export function renderExerciseCard(
 		cls: ['fitness-log-card', `is-${role ?? 'full'}`],
 	});
 	box.toggleClass('is-active', card.active);
+	box.toggleClass('is-live', env.live === true);
 	box.toggleClass('is-suggested', env.suggested === true);
 	const header = box.createDiv({ cls: 'fitness-log-card-header' });
 	const slot = header.createDiv({ cls: 'fitness-log-slot' });
@@ -265,7 +268,10 @@ function renderSubtasks(
 			'play',
 			t('today.startSet', { n }),
 			() => startSet(ctx, section, card),
-			'fitness-log-play is-filled',
+			// いまの種目の次のセットだけ塗る（見返すために開いた種目は枠だけ）
+			env.live === false
+				? 'fitness-log-play'
+				: 'fitness-log-play is-filled',
 		);
 		play.disabled = active !== null;
 		row.createSpan({

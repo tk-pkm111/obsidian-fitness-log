@@ -581,6 +581,16 @@ a.fitness-log-section-link:hover {
 	padding-bottom: var(--size-4-2);
 }
 
+/* 見返すために開いた種目（いまの種目ではない）: 色と左の線を付けず、いまの種目だけが目立つように */
+.fitness-log-card.is-current:not(.is-live) {
+	--fitness-log-current-bg: var(--background-secondary);
+	box-shadow: none;
+}
+
+.fitness-log-card.is-current:not(.is-live) .fitness-log-card-title {
+	font-weight: var(--font-medium);
+}
+
 .fitness-log-card.is-current .fitness-log-card-title {
 	font-weight: var(--font-bold);
 }
@@ -891,6 +901,11 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 .fitness-log-card.is-current .fitness-log-set-dot {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
+}
+
+.fitness-log-card.is-current:not(.is-live) .fitness-log-set-dot:not(.is-ghost) {
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
 }
 
 /* まだのセット（目標のセット数までの残り） */
@@ -1455,6 +1470,10 @@ input.fitness-log-setup-input[type='text'] {
 	box-shadow: none;
 	color: var(--text-accent);
 	font-size: var(--font-ui-small);
+}
+
+.modal button.fitness-log-setup-toggle.fitness-log-new-exercise-details {
+	margin: 0 0 var(--size-4-2);
 }
 
 .modal button.fitness-log-setup-toggle svg {
@@ -3145,6 +3164,40 @@ button.fitness-log-quick-value.is-current {
 	flex-direction: column;
 	gap: var(--size-4-2);
 	margin-bottom: var(--size-4-3);
+}
+
+/* 新しい種目の部位（押したら作る）。スマホでも押しやすい大きさの 2 列 */
+.fitness-log-category-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: var(--size-4-2);
+	margin: var(--size-4-2) 0 var(--size-4-3);
+}
+
+.modal button.fitness-log-category-choice {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 2px;
+	height: auto;
+	min-height: 52px;
+	padding: var(--size-4-2) var(--size-4-3);
+	text-align: left;
+	white-space: normal;
+}
+
+.fitness-log-category-name {
+	font-weight: var(--font-semibold);
+}
+
+.fitness-log-category-hint {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.is-phone .fitness-log-category-grid {
+	grid-template-columns: 1fr 1fr;
 }
 
 .modal button.fitness-log-choice {

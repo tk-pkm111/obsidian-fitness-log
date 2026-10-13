@@ -39,6 +39,7 @@ export interface ExerciseEditOptions {
 	exercise?: Exercise;
 	/** 新規作成時の初期値 */
 	initialName?: string;
+	initialCategory?: ExerciseCategory;
 	/** 保存。CatalogError を投げればモーダルを閉じずに表示する */
 	onSave: (fields: ExerciseFields) => Promise<void>;
 	onDelete?: () => void;
@@ -70,7 +71,7 @@ export class ExerciseEditModal extends Modal {
 		});
 		const fields: ExerciseFields = {
 			name: source?.name ?? options.initialName ?? '',
-			category: source?.category ?? 'other',
+			category: source?.category ?? options.initialCategory ?? 'other',
 			equipment: source?.equipment,
 			recordType: source?.recordType ?? 'weight-reps',
 			unilateral: source?.unilateral ?? false,

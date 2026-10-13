@@ -26,8 +26,7 @@ import type { PageContext } from '../page-context';
 import { dragHandle, makeSortable, type SortableEntry } from '../sortable';
 import {
 	endSessionWithNotice,
-	focusKeyOf,
-	focusState,
+	focusOf,
 	formatMinutes,
 	removeExerciseFromDay,
 	sectionRef,
@@ -517,12 +516,9 @@ function renderCards(
 		rest: env.rest,
 	};
 	// 筋トレ中（今日）は、いまの種目だけを開いてセットをサブタスクに。終わった種目は 1 行、まだの種目は ▶ だけ
-	const focus = focusState(ctx);
-	const focusKey = focusKeyOf(ctx, section);
+	const focus = focusOf(ctx, section);
 	const layout =
-		mode === 'timer'
-			? cardLayout(section, env.lastSet, focus.get(focusKey) ?? null)
-			: null;
+		mode === 'timer' ? cardLayout(section, env.lastSet, focus) : null;
 	const envFor = (card: CardModel): CardEnv => {
 		const cardEnv: CardEnv = { ...baseEnv };
 		// まだやっていない種目は × でこの日から外せる（見るだけの未来の日を除く）
@@ -537,16 +533,20 @@ function renderCards(
 		return {
 			...cardEnv,
 			role: cardRole(card, layout),
+			live: layout.currentKey === card.key,
 			suggested: layout.suggestedKey === card.key,
 			total: card.exercise
 				? totalSets(section, card.exercise.id)
 				: card.sets.length,
+			// 開く・たたむはその種目だけ（ほかの開いている種目は閉じない）
 			onFocus: () => {
-				focus.set(focusKey, { kind: 'open', key: card.key });
+				focus.opened.add(card.key);
+				focus.collapsed.delete(card.key);
 				ctx.refresh();
 			},
 			onCollapse: () => {
-				focus.set(focusKey, { kind: 'collapsed' });
+				focus.collapsed.add(card.key);
+				focus.opened.delete(card.key);
 				ctx.refresh();
 			},
 		};

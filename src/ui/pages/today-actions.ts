@@ -10,7 +10,7 @@ import {
 import type { SetLog, WeightUnit } from '../../lib/model/types';
 import { nearestIndex, weightChoices } from '../../lib/picker';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
-import type { FocusChoice } from '../../lib/today/focus';
+import { emptyFocus, type FocusState } from '../../lib/today/focus';
 import { formatHm, formatMonthDay } from '../../lib/time/date';
 import { quickReps, quickWeights } from '../../lib/today/quick-values';
 import { fromDisplayWeight, toDisplayWeight } from '../../lib/units';
@@ -126,15 +126,21 @@ export function pickWeightWheel(
 }
 
 /**
- * 筋トレ中の「いまの種目」の利用者の操作（セクションごと。ビューを開いている間だけ覚える）。
- * 終わった種目を押して開く・開いている種目をたたむ。セットを始めると消える（startSet）
+ * 筋トレ中に利用者が開いた・たたんだ種目（セクションごと。ビューを開いている間だけ覚える）。
+ * 開いた種目はたたむまで開いたまま。いまの種目も、たたまない限り開いたまま
  */
-export function focusState(ctx: PageContext): Map<string, FocusChoice> {
-	return ctx.pageState('todayFocus', () => new Map<string, FocusChoice>());
-}
-
-export function focusKeyOf(ctx: PageContext, section: SectionModel): string {
-	return `${ctx.date}:${section.key}`;
+export function focusOf(ctx: PageContext, section: SectionModel): FocusState {
+	const map = ctx.pageState(
+		'todayFocus',
+		() => new Map<string, FocusState>(),
+	);
+	const key = `${ctx.date}:${section.key}`;
+	let focus = map.get(key);
+	if (!focus) {
+		focus = emptyFocus();
+		map.set(key, focus);
+	}
+	return focus;
 }
 
 /**
@@ -227,8 +233,8 @@ export function startSet(
 	if (!exercise) return;
 	const { controller, store } = ctx.services;
 	const unit = store.settings.weightUnit;
-	// セットを始めたら、その種目がいまの種目（終わった種目を開いていても・たたんでいても戻す）
-	focusState(ctx).delete(focusKeyOf(ctx, section));
+	// セットを始めた種目は開く（前にたたんでいても）。利用者が開いたほかの種目はそのまま
+	focusOf(ctx, section).collapsed.delete(card.key);
 	const hist = cardHistory(ctx, section, card);
 	const carry = carryOver({
 		occurrences: hist.occurrences,

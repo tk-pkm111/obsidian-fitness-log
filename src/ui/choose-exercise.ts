@@ -1,5 +1,7 @@
 import type { Exercise } from '../lib/model/types';
+import { ExerciseEditModal } from './modals/exercise-edit-modal';
 import { ExerciseSuggestModal } from './modals/exercise-suggest-modal';
+import { NewExerciseModal } from './modals/new-exercise-modal';
 import type { PageContext } from './page-context';
 
 /**
@@ -17,11 +19,33 @@ export function chooseExercise(
 		exercises: ctx.services.store.current.exercises,
 		exclude,
 		pinned,
-		// 種目ノートを作る（設定は frontmatter に。フォームやコツは後からノートに書ける）
-		onCreate: (name) =>
-			ctx.run(async () =>
-				onChoose(await ctx.services.library.create({ name })),
-			),
+		onCreate: (name) => createExercise(ctx, name, onChoose),
 		onChoose,
+	}).open();
+}
+
+/**
+ * 新しい種目を作る。まず部位だけを聞き、押したら作る（器具・記録のしかたはあとで「種目」から）。
+ * 「詳細を設定する」なら、種目のページと同じ編集画面で全部決めてから作る。
+ * 作った種目は種目ノートになる（設定は frontmatter、フォームやコツは後からノートの本文に）
+ */
+function createExercise(
+	ctx: PageContext,
+	name: string,
+	onChoose: (exercise: Exercise) => void,
+): void {
+	const { library } = ctx.services;
+	new NewExerciseModal(ctx.app, {
+		name,
+		onCreate: (category) =>
+			ctx.run(async () =>
+				onChoose(await library.create({ name, category })),
+			),
+		onDetails: () =>
+			new ExerciseEditModal(ctx.app, {
+				initialName: name,
+				onSave: async (fields) =>
+					onChoose(await library.create(fields)),
+			}).open(),
 	}).open();
 }

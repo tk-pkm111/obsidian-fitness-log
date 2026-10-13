@@ -325,6 +325,10 @@ export const ja = {
 	'exercises.archived': 'アーカイブ済み',
 
 	'exerciseEdit.newTitle': '新しい種目',
+	'newExercise.question': 'どの部位の種目ですか？',
+	'newExercise.hint.push': '胸・肩',
+	'newExercise.hint.pull': '背中',
+	'newExercise.details': '詳細を設定する',
 	'exerciseEdit.title': '種目を編集',
 	'exerciseEdit.name': '名前',
 	'exerciseEdit.nameDesc':
