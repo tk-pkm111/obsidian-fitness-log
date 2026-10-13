@@ -3,6 +3,8 @@
 #   master.mp4      1920×1080・60fps（手元用。git には入れない）
 #   onboarding.mp4  1280×720・60fps（プラグインの「はじめの設定」で再生する。git に入れる）
 set -e
+# 前回の書き出しの残り（chunk-*）が無くても止まらないように
+setopt null_glob
 cd "$(dirname "$0")"
 node audio.mjs
 rm -f chunk-*.mp4

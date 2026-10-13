@@ -601,7 +601,7 @@ const winBox = abs(world, 1310 - 450, 110);
 const win = h('div', 'window ui', winBox);
 win.innerHTML = `
 	<div class="tabs"><div class="tab on"><span style="display:flex;width:16px;color:var(--muted)">${ICON.note}</span>2026-10-02</div><div class="tab">ケーブルYレイズ</div></div>
-	<div class="crumb">Fitness / ログ / 2026-10-02</div>
+	<div class="crumb">Fitness / log / 2026-10-02</div>
 	<div class="doc">
 		<h1 class="dl">2026-10-02</h1>
 		<div class="props dl">
@@ -621,7 +621,7 @@ const propRows = [...win.querySelectorAll('.prop')];
 const t1 = win.querySelector('.t1'), t2 = win.querySelector('.t2');
 const t2cells = [...t2.querySelectorAll('td')];
 const setCard = abs(world, 0, 0); setCard.innerHTML = '<div class="setcard"><div class="num ok" style="width:34px;height:34px;font-size:16px">2</div>15 kg × 10 回</div>';
-const pathTag = abs(world, 1310, 870); pathTag.innerHTML = `<div class="path-tag"><span style="display:flex;width:22px">${ICON.folder}</span>Fitness/ログ/2026-10-02.md</div>`;
+const pathTag = abs(world, 1310, 870); pathTag.innerHTML = `<div class="path-tag"><span style="display:flex;width:22px">${ICON.folder}</span>Fitness/log/2026-10-02.md</div>`;
 
 /* ================= CHAPTER 4: log ================= */
 const ch4 = chapter('04', 'STEP 04 ・ ログ', 'var(--magenta)', ['伸びが、', 'ひと目でわかる。'], ['パッケージごとに、', '前回比と自己ベスト。']);
@@ -788,7 +788,7 @@ function renderCh1(t) {
 	const focused = t >= c.clickInput;
 	mInput.classList.toggle('focus', focused && t < c.press);
 	mCaret.style.opacity = focused && t < c.press && Math.floor(t * 2.4) % 2 === 0 ? 1 : (t >= c.typeStart && t < c.typeEnd + 0.2 ? 1 : 0);
-	mPreview.innerHTML = val ? `「<em>${val}/ログ</em>」に記録、「<em>${val}/種目</em>」に種目を保存します。` : '';
+	mPreview.innerHTML = val ? `「<em>${val}/log</em>」に記録、「<em>${val}/exercise</em>」に種目を保存します。` : '';
 	S(mStart, { s: press(t, c.press) });
 	// cursor
 	const cIn = P(t, c.cursorIn, c.cursorIn + 0.3) * (1 - P(t, c.press + 0.15, c.press + 0.4));
