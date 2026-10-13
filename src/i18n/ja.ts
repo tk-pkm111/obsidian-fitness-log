@@ -100,6 +100,13 @@ export const ja = {
 	'today.removeFromDay': 'この日から外す',
 	'today.removePackage': 'パッケージを外す',
 	'today.removeShort': '外す',
+	'today.removePackageTitle': '{name} を{day}の予定から外しますか？',
+	'today.removePackageManual':
+		'まだ記録が無いので、消えるものはありません。\nまた入れたいときは、下のボタンからパッケージを追加できます。',
+	'today.removePackageRoutine':
+		'ルーチンの予定は変わりません。{day}の分だけスキップします。\n下の「スキップした予定」から戻せます。',
+	'today.dayToday': '今日',
+	'today.dayThis': 'この日',
 	'today.removeExerciseConfirm':
 		'この日の一覧から外します。パッケージの内容は変わりません。戻すときは「種目を追加」から選びます。',
 	'today.removeExerciseOk': '外す',

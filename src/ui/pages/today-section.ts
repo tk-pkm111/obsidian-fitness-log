@@ -20,6 +20,7 @@ import type { RestState } from '../../lib/today/rest';
 import { formatDuration, formatHm, parseTime } from '../../lib/time/date';
 import { chooseExercise } from '../choose-exercise';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
+import { ConfirmModal } from '../modals/confirm-modal';
 import { TextPromptModal } from '../modals/text-prompt-modal';
 import type { PageContext } from '../page-context';
 import { dragHandle, makeSortable, type SortableEntry } from '../sortable';
@@ -258,7 +259,6 @@ function openSectionMenu(
 ): void {
 	const { services, date } = ctx;
 	const ref = sectionRef(section);
-	const plannedBy = section.plannedBy;
 	const menu = new Menu();
 	menu.addItem((item) =>
 		item
@@ -305,29 +305,19 @@ function openSectionMenu(
 					ctx.navigate({});
 				}),
 		);
-	if (section.inNote && !hasSets && !hasActive)
+	if (section.isOther && section.inNote && !hasSets && !hasActive)
 		menu.addItem((item) =>
 			item
-				.setTitle(
-					section.isOther
-						? t('today.removeFromDay')
-						: t('today.removePackage'),
-				)
+				.setTitle(t('today.removeFromDay'))
 				.setIcon('x')
 				.onClick(() => removeSection(ctx, section)),
 		);
-	if (plannedBy && section.status === 'planned')
+	else if (canRemovePackage(section))
 		menu.addItem((item) =>
 			item
-				.setTitle(
-					date === ctx.today ? t('today.skip') : t('today.skipDay'),
-				)
-				.setIcon('skip-forward')
-				.onClick(() =>
-					ctx.run(() =>
-						services.controller.skipRoutine(plannedBy.id, date),
-					),
-				),
+				.setTitle(t('today.removePackage'))
+				.setIcon('x')
+				.onClick(() => confirmRemovePackage(ctx, section)),
 		);
 	const file = services.repository.fileFor(date);
 	if (file)
@@ -342,7 +332,7 @@ function openSectionMenu(
 
 /**
  * 予定: やる順の種目の一覧（区切りごと）と「▶ 筋トレを開始」。
- * 横に、ルーチンの予定なら「今日はスキップ」、自分で足したパッケージなら「外す」（記録が無いので確認しない。また足せる）
+ * 一覧の枠の右上の × でこのパッケージをその日の予定から外す（確認してから。ルーチンの予定ならその日だけスキップ）
  */
 function renderPlanned(
 	ctx: PageContext,
@@ -356,6 +346,15 @@ function renderPlanned(
 	if (section.cards.length > 0) {
 		// やる順に番号付きで（区切りがあれば見出しを挟み、番号は続きから）
 		const list = box.createDiv({ cls: 'fitness-log-planned' });
+		// 外す × は枠の右上（種目名は × をよけて折り返す。外すものの上に置けば、何を外すのかが分かる）
+		if (canRemovePackage(section))
+			iconButton(
+				list,
+				'x',
+				t('today.removePackage'),
+				() => confirmRemovePackage(ctx, section),
+				'fitness-log-planned-remove',
+			);
 		let number = 1;
 		for (const group of cardGroups(ctx, section, section.cards)) {
 			const label = groupLabel(group);
@@ -373,13 +372,8 @@ function renderPlanned(
 			number += group.cards.length;
 		}
 	}
-	if (env.isFuture && !section.inNote) return;
+	if (env.isFuture) return;
 	const actions = box.createDiv({ cls: 'fitness-log-session-actions' });
-	if (env.isFuture) {
-		// 未来の日に足したパッケージは外すだけ（開始・記録はその日になってから）
-		renderRemoveButton(ctx, actions, section);
-		return;
-	}
 	const pkg = section.pkg;
 	if (env.isToday && pkg) {
 		const start = textButton(
@@ -410,35 +404,40 @@ function renderPlanned(
 			{ icon: 'plus', cls: 'fitness-log-session-button' },
 		);
 	}
-	const plannedBy = section.plannedBy;
-	if (plannedBy)
-		textButton(
-			actions,
-			date === ctx.today ? t('today.skip') : t('today.skipDay'),
-			() =>
-				ctx.run(() =>
-					services.controller.skipRoutine(plannedBy.id, date),
-				),
-			{ cls: 'mod-quiet' },
-		);
-	else if (section.inNote) renderRemoveButton(ctx, actions, section);
 }
 
-/** 自分で足したパッケージ（まだ記録が無い）の「外す」 */
-function renderRemoveButton(
-	ctx: PageContext,
-	actions: HTMLElement,
-	section: SectionModel,
-): void {
-	textButton(
-		actions,
-		t('today.removeShort'),
-		() => removeSection(ctx, section),
-		{
-			icon: 'x',
-			cls: 'mod-quiet',
-		},
+/**
+ * パッケージをその日の予定から外せるか: まだ記録が無いこと（セット・実行中のセットが無い）。
+ * 自分で足したもの（ノートの見出し）も、ルーチンの予定（その日だけスキップ）も
+ */
+function canRemovePackage(section: SectionModel): boolean {
+	if (section.isOther) return false;
+	if (section.cards.some((c) => c.sets.length > 0 || c.active)) return false;
+	return (
+		section.inNote ||
+		(section.plannedBy !== null && section.status === 'planned')
 	);
+}
+
+/** 「LEGS A を今日の予定から外しますか？」。消えるものが無いことと、戻し方を添える */
+function confirmRemovePackage(ctx: PageContext, section: SectionModel): void {
+	const day =
+		ctx.date === ctx.today ? t('today.dayToday') : t('today.dayThis');
+	const routine = section.inNote ? null : section.plannedBy;
+	new ConfirmModal(ctx.app, {
+		title: t('today.removePackageTitle', { name: section.title, day }),
+		message: routine
+			? t('today.removePackageRoutine', { day })
+			: t('today.removePackageManual'),
+		confirmText: t('today.removeShort'),
+		onConfirm: () => {
+			if (routine)
+				ctx.run(() =>
+					ctx.services.controller.skipRoutine(routine.id, ctx.date),
+				);
+			else removeSection(ctx, section);
+		},
+	}).open();
 }
 
 /** セクションをこの日から外す（記録が無いときだけ。ノートの見出しを消す） */

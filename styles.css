@@ -1728,6 +1728,15 @@ button.fitness-log-weekday.is-active {
 	margin-top: var(--size-4-3);
 }
 
+/* 予定が空のとき（ボタンが真ん中）は、スキップした予定も真ん中に置いて間を空ける */
+.fitness-log-skipped:has(+ .fitness-log-footer.is-empty-actions) {
+	justify-content: center;
+}
+
+.fitness-log-skipped + .fitness-log-footer.is-empty-actions {
+	margin-top: var(--size-4-5);
+}
+
 .fitness-log-skipped-item {
 	display: inline-flex;
 	align-items: center;
@@ -2645,12 +2654,57 @@ button.fitness-log-table-main:hover {
 
 /* 予定: やる順の種目の一覧 */
 .fitness-log-planned {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-4-1);
+	/* 右上の × を float で置き、種目名はそれをよけて並ぶ（行は overflow: hidden なので × の幅だけ縮む） */
+	display: flow-root;
 	padding: var(--size-4-2) var(--size-4-3);
 	border-radius: var(--radius-l);
 	border: 1px solid var(--background-modifier-border);
+}
+
+.fitness-log-planned > .fitness-log-planned-group {
+	margin-top: 0;
+}
+
+.fitness-log-planned > .fitness-log-planned-group + .fitness-log-planned-list {
+	margin-top: var(--size-4-1);
+}
+
+.fitness-log-planned > .fitness-log-planned-list + .fitness-log-planned-group {
+	margin-top: var(--size-4-2);
+}
+
+/* このパッケージを外す ×（枠の右上。灰色の丸。押せる範囲は見た目より広く） */
+.fitness-log-planned > button.fitness-log-planned-remove,
+.is-mobile .fitness-log-planned > button.fitness-log-planned-remove {
+	position: relative;
+	float: right;
+	width: 26px;
+	height: 26px;
+	min-width: 26px;
+	min-height: 26px;
+	margin: 0 calc(var(--size-4-1) * -1) 0 var(--size-4-2);
+	padding: 0;
+	border-radius: 50%;
+	corner-shape: round;
+	background: var(--background-modifier-hover);
+	box-shadow: none;
+	color: var(--text-muted);
+}
+
+.fitness-log-planned > button.fitness-log-planned-remove::after {
+	content: '';
+	position: absolute;
+	inset: -9px;
+}
+
+.fitness-log-planned > button.fitness-log-planned-remove svg {
+	width: 14px;
+	height: 14px;
+}
+
+.fitness-log-planned > button.fitness-log-planned-remove:hover {
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
 }
 
 .fitness-log-planned-group {
