@@ -322,7 +322,7 @@ function renderPackageDetail(
 		() =>
 			new ConfirmModal(ctx.app, {
 				title: pkg.name,
-				message: t('packages.deleteConfirm', { name: pkg.name }),
+				message: deleteMessage(store.current.routines, pkg.id),
 				confirmText: t('confirm.delete'),
 				danger: true,
 				onConfirm: () =>
@@ -543,11 +543,7 @@ function renderItemRow(
 	iconButton(buttons, 'x', t('packages.removeItem'), () =>
 		new ConfirmModal(ctx.app, {
 			title: exercise?.name ?? '?',
-			message: t('packages.removeItemConfirm', {
-				exercise: exercise?.name ?? '?',
-				package: pkg.name,
-				target: describeItem(item),
-			}),
+			message: t('packages.removeItemConfirm', { package: pkg.name }),
 			confirmText: t('packages.removeItemOk'),
 			danger: true,
 			onConfirm: () =>
@@ -947,4 +943,15 @@ function field(parent: HTMLElement, label: string, desc?: string): HTMLElement {
 	head.createDiv({ text: label });
 	if (desc) head.createDiv({ cls: 'fitness-log-muted', text: desc });
 	return row.createDiv({ cls: 'fitness-log-field-control' });
+}
+
+/** パッケージを削除するときの確認。ルーチンも一緒に消えるときだけ、その数を添える */
+function deleteMessage(
+	routines: ReadonlyArray<{ packageId: string }>,
+	packageId: string,
+): string {
+	const n = routines.filter((r) => r.packageId === packageId).length;
+	return n > 0
+		? t('packages.deleteConfirmRoutines', { n })
+		: t('packages.deleteConfirm');
 }

@@ -185,7 +185,6 @@ function openEditor(
 		deleteMessage:
 			exercise && used.length > 0
 				? t('exerciseEdit.deleteConfirmUsed', {
-						name: exercise.name,
 						packages: used.map((p) => p.name).join('、'),
 					})
 				: undefined,

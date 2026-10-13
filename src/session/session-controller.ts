@@ -8,6 +8,7 @@ import {
 	endSession,
 	ensureExercise,
 	ensureSession,
+	findSession,
 	removeEmptyExercise,
 	removeSession,
 	resumeSession,
@@ -347,6 +348,16 @@ export class SessionController {
 					target.matchSession,
 					target.matchExercise,
 				);
+				// 単発の種目の最後の 1 つなら、空になった「単発の種目」の見出しも消す（コメントがあれば残す）
+				const rest = findSession(d, target.matchSession);
+				if (
+					ref.packageId === null &&
+					ref.sessionName === null &&
+					rest &&
+					rest.exercises.length === 0 &&
+					rest.note.trim().length === 0
+				)
+					removeSession(d, target.matchSession);
 			});
 		await this.setRemovedFromDay(date, ref, exercise, true);
 	}

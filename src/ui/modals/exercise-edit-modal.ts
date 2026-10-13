@@ -155,7 +155,7 @@ export class ExerciseEditModal extends Modal {
 					title: source.name,
 					message:
 						options.deleteMessage ??
-						t('exerciseEdit.deleteConfirm', { name: source.name }),
+						t('exerciseEdit.deleteConfirm'),
 					confirmText: t('confirm.delete'),
 					danger: true,
 					onConfirm: () => {

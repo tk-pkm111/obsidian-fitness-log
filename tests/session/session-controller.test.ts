@@ -4,6 +4,7 @@ import { LogIndex } from '../../src/data/log-index';
 import { LogParseError, LogRepository } from '../../src/data/log-repository';
 import type { Exercise, Package } from '../../src/lib/model/types';
 import {
+	OTHER_SESSION,
 	SessionController,
 	SessionError,
 } from '../../src/session/session-controller';
@@ -273,6 +274,42 @@ describe('SessionController', () => {
 		expect(
 			index.day('2026-10-01')?.sessions[0]?.exercises.map((e) => e.name),
 		).toEqual(['ケーブルYレイズ']);
+	});
+
+	it('単発の種目の最後の 1 つを外すと、空になった見出しも消える（コメントがあれば残す）', async () => {
+		await controller.addExerciseToDay('2026-10-01', OTHER_SESSION, 'ex_d');
+		await controller.addExerciseToDay('2026-10-01', OTHER_SESSION, 'ex_y');
+		await controller.removeExerciseFromDay(
+			'2026-10-01',
+			OTHER_SESSION,
+			'ex_d',
+		);
+		expect(
+			index
+				.day('2026-10-01')
+				?.sessions.map((s) => s.exercises.map((e) => e.name)),
+		).toEqual([['ケーブルYレイズ']]);
+		await controller.removeExerciseFromDay(
+			'2026-10-01',
+			OTHER_SESSION,
+			'ex_y',
+		);
+		expect(index.day('2026-10-01')?.sessions).toEqual([]);
+
+		await controller.addExerciseToDay('2026-10-01', OTHER_SESSION, 'ex_d');
+		await controller.setSessionNote(
+			'2026-10-01',
+			OTHER_SESSION,
+			'混んでいた',
+		);
+		await controller.removeExerciseFromDay(
+			'2026-10-01',
+			OTHER_SESSION,
+			'ex_d',
+		);
+		expect(index.day('2026-10-01')?.sessions).toEqual([
+			{ name: null, note: '混んでいた', exercises: [] },
+		]);
 	});
 
 	it('記録のある種目・進行中のセットの種目は外せない', async () => {

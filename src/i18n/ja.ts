@@ -99,16 +99,12 @@ export const ja = {
 		'休憩は 2:30 や 2.30 の形（分:秒）で入力してください。',
 	'today.removeFromDay': 'この日から外す',
 	'today.removePackage': 'パッケージを外す',
+	'today.removeOther': '単発の種目を外す',
 	'today.removeShort': '外す',
-	'today.removePackageTitle': '{name} を{day}の予定から外しますか？',
-	'today.removePackageManual':
-		'まだ記録が無いので、消えるものはありません。\nまた入れたいときは、下のボタンからパッケージを追加できます。',
-	'today.removePackageRoutine':
-		'ルーチンの予定は変わりません。{day}の分だけスキップします。\n下の「スキップした予定」から戻せます。',
+	'today.removeSectionConfirm': '{day}の予定から外しますか？',
 	'today.dayToday': '今日',
 	'today.dayThis': 'この日',
-	'today.removeExerciseConfirm':
-		'この日の一覧から外します。パッケージの内容は変わりません。戻すときは「種目を追加」から選びます。',
+	'today.removeExerciseConfirm': 'この日の一覧から外しますか？',
 	'today.removeExerciseOk': '外す',
 	'today.collapseExercise': 'たたむ',
 	'today.openNote': 'ノートを開く',
@@ -130,8 +126,7 @@ export const ja = {
 	'today.futureHint': '未来の日付です。予定だけを表示しています。',
 	'today.complete': '目標セット数に到達',
 	'today.cancelSet': '取り消す',
-	'today.cancelSetConfirm':
-		'進行中のセットを取り消しますか？記録は残りません。',
+	'today.cancelSetConfirm': '進行中のセットを取り消しますか？',
 	'today.weightPlaceholder': '重量',
 	'today.addedWeightPlaceholder': '加重',
 	'today.timeRange': '{start} – {end}',
@@ -277,8 +272,7 @@ export const ja = {
 	'packages.sectionsHint':
 		'セクションで種目を区切れます（例: 背中・腕）。左の ⋮⋮ をつかんで、種目とセクションの位置を動かせます。',
 	'packages.removeItem': 'パッケージから外す',
-	'packages.removeItemConfirm':
-		'「{exercise}」を {package} から外しますか？\n記録は消えません。目標（{target}）は覚えておくので、もう一度追加するときに戻せます。',
+	'packages.removeItemConfirm': '{package} から外しますか？',
 	'packages.removeItemOk': '外す',
 	'packages.previouslyIn': '以前このパッケージにあった ・ {target}',
 	'packages.restoreMessage':
@@ -314,8 +308,9 @@ export const ja = {
 	'packages.addItem': '種目を追加',
 	'packages.duplicate': '複製',
 	'packages.delete': '削除',
-	'packages.deleteConfirm':
-		'「{name}」を削除しますか？このパッケージのルーチンも削除されます。過去の記録（日ノート）は残ります。',
+	'packages.deleteConfirm': 'このパッケージを削除しますか？',
+	'packages.deleteConfirmRoutines':
+		'このパッケージを削除しますか？ルーチン（{n} 件）も削除されます。',
 	'packages.invalidRest':
 		'休憩は「2:30」や「2」（分）の形で入力してください。',
 	'packages.aliases': '旧名: {names}',
@@ -354,10 +349,9 @@ export const ja = {
 	'exerciseEdit.openNote': 'ノートを開く',
 	'exerciseEdit.noteHint':
 		'フォームのコツや参考動画などは、種目のノートに書けます。',
-	'exerciseEdit.deleteConfirm':
-		'「{name}」を削除しますか？過去の記録（日ノート）は残ります。',
+	'exerciseEdit.deleteConfirm': 'この種目を削除しますか？',
 	'exerciseEdit.deleteConfirmUsed':
-		'「{name}」を削除しますか？{packages} から外れます。過去の記録（日ノート）は残ります。アーカイブなら履歴を残したまま隠せます。',
+		'この種目を削除しますか？{packages} からも外れます。',
 
 	'routines.new': '新しいルーチン',
 	'routines.empty':
@@ -401,8 +395,7 @@ export const ja = {
 	'routineEdit.enabled': '有効',
 	'routineEdit.save': '保存',
 	'routineEdit.delete': 'ルーチンを外す',
-	'routineEdit.deleteConfirm':
-		'このルーチンを外しますか？パッケージと過去の記録は残ります。',
+	'routineEdit.deleteConfirm': 'このルーチンを外しますか？',
 
 	'log.mode.package': 'パッケージ',
 	'log.mode.exercise': '種目',
