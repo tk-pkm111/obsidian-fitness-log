@@ -3,6 +3,7 @@ import { packagesUsingExercise } from '../../lib/model/catalog';
 import { nameKey } from '../../lib/model/resolve';
 import type { Exercise, ExerciseCategory } from '../../lib/model/types';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
+import { ConfirmModal } from '../modals/confirm-modal';
 import { CATEGORIES, ExerciseEditModal } from '../modals/exercise-edit-modal';
 import type { PageContext } from '../page-context';
 
@@ -117,7 +118,7 @@ function renderExerciseRow(
 	list: HTMLElement,
 	exercise: Exercise,
 ): void {
-	// 行を押すと編集、右のアイコンで種目ノート（フォームやコツのメモ）を開く
+	// 行を押すと編集。右のアイコンで種目ノート（フォームやコツのメモ）を開く・種目を削除する（確かめてから）
 	const row = list.createDiv({
 		cls: 'fitness-log-list-row fitness-log-split-row',
 	});
@@ -157,6 +158,35 @@ function renderExerciseRow(
 		iconButton(row, 'file-text', t('exerciseEdit.openNote'), () =>
 			openNoteInNewTab(ctx.app, path),
 		);
+	iconButton(
+		row,
+		'trash-2',
+		t('exerciseEdit.delete'),
+		() => confirmDelete(ctx, exercise),
+		'fitness-log-row-delete',
+	);
+}
+
+/** 削除の確認の文言（パッケージで使っていれば、そこからも外れることを添える） */
+function deleteMessage(ctx: PageContext, exercise: Exercise): string {
+	const used = packagesUsingExercise(ctx.services.store.current, exercise.id);
+	return used.length > 0
+		? t('exerciseEdit.deleteConfirmUsed', {
+				packages: used.map((p) => p.name).join('、'),
+			})
+		: t('exerciseEdit.deleteConfirm');
+}
+
+/** 「ディップス ／ この種目を削除しますか？」。種目ノートはゴミ箱へ、過去の記録（日ノート）は残る */
+function confirmDelete(ctx: PageContext, exercise: Exercise): void {
+	new ConfirmModal(ctx.app, {
+		title: exercise.name,
+		message: deleteMessage(ctx, exercise),
+		confirmText: t('confirm.delete'),
+		danger: true,
+		onConfirm: () =>
+			ctx.run(() => ctx.services.library.remove(exercise.id)),
+	}).open();
 }
 
 function openEditor(
@@ -164,10 +194,7 @@ function openEditor(
 	exercise: Exercise | undefined,
 	initialName = '',
 ): void {
-	const { store, library } = ctx.services;
-	const used = exercise
-		? packagesUsingExercise(store.current, exercise.id)
-		: [];
+	const { library } = ctx.services;
 	new ExerciseEditModal(ctx.app, {
 		exercise,
 		initialName,
@@ -182,11 +209,6 @@ function openEditor(
 		onOpenNote: exercise?.path
 			? () => openNoteInNewTab(ctx.app, exercise.path ?? '')
 			: undefined,
-		deleteMessage:
-			exercise && used.length > 0
-				? t('exerciseEdit.deleteConfirmUsed', {
-						packages: used.map((p) => p.name).join('、'),
-					})
-				: undefined,
+		deleteMessage: exercise ? deleteMessage(ctx, exercise) : undefined,
 	}).open();
 }

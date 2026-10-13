@@ -1713,6 +1713,15 @@ button.fitness-log-weekday.is-active {
 	min-height: 44px;
 }
 
+/* 種目の行の削除（薄く出し、乗せると赤。押すと確かめる） */
+.fitness-log-split-row > .fitness-log-row-delete {
+	color: var(--text-faint);
+}
+
+.fitness-log-split-row > .fitness-log-row-delete:hover {
+	color: var(--text-error);
+}
+
 .fitness-log-split-row .fitness-log-list-body,
 .fitness-log-routine-row .fitness-log-list-body {
 	cursor: pointer;
