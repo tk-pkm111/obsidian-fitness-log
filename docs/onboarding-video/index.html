@@ -496,7 +496,7 @@ outroCap.innerHTML = '<span style="font:500 19px/1 var(--sans);color:rgba(255,25
 const fadeBlack = h('div', 'abs', stage); fadeBlack.style.cssText += 'width:1920px;height:1080px;background:#000;pointer-events:none;';
 
 /* ================= CHAPTER 1: setup ================= */
-const ch1 = chapter('01', 'STEP 01 ・ 保存先', 'var(--accent2)', ['保存するフォルダを、', '1 つ選ぶだけ。'], ['その中に「記録」と「種目」を', '自動で作ります。']);
+const ch1 = chapter('01', 'STEP 01 ・ 保存先', 'var(--accent2)', ['保存するフォルダを、', '1 つ選ぶだけ。'], ['その中に「記録」「種目」「パッケージ」を', '自動で作ります。']);
 const modalBox = abs(world, 1310 - 360, 140);
 const modal = h('div', 'modal ui', modalBox);
 modal.innerHTML = `
@@ -505,7 +505,7 @@ modal.innerHTML = `
 	<div class="m-label">保存するフォルダ</div>
 	<div class="m-input"><span class="m-val"></span><span class="m-caret"></span><span class="m-ph">例: Fitness</span></div>
 	<div class="m-preview"></div>
-	<div class="m-link">記録と種目のフォルダを別々に選ぶ ›</div>
+	<div class="m-link">フォルダを別々に選ぶ ›</div>
 	<div class="m-check"><div class="m-box"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>よく使う種目とパッケージの例を入れる</b><span>66 種目と、プッシュ・プル・脚に分けたパッケージの例。あとで編集・削除できます。</span></div></div>
 	<div class="m-buttons"><div class="btn ghost">あとで</div><div class="btn cta m-start">はじめる</div></div>`;
 const mInput = modal.querySelector('.m-input'), mVal = modal.querySelector('.m-val'), mCaret = modal.querySelector('.m-caret'), mPh = modal.querySelector('.m-ph');
@@ -788,7 +788,7 @@ function renderCh1(t) {
 	const focused = t >= c.clickInput;
 	mInput.classList.toggle('focus', focused && t < c.press);
 	mCaret.style.opacity = focused && t < c.press && Math.floor(t * 2.4) % 2 === 0 ? 1 : (t >= c.typeStart && t < c.typeEnd + 0.2 ? 1 : 0);
-	mPreview.innerHTML = val ? `「<em>${val}/log</em>」に記録、「<em>${val}/exercise</em>」に種目を保存します。` : '';
+	mPreview.innerHTML = val ? `「<em>${val}/log</em>」に記録、「<em>${val}/exercise</em>」に種目、<br>「<em>${val}/package</em>」にパッケージを保存します。` : '';
 	S(mStart, { s: press(t, c.press) });
 	// cursor
 	const cIn = P(t, c.cursorIn, c.cursorIn + 0.3) * (1 - P(t, c.press + 0.15, c.press + 0.4));
