@@ -6,7 +6,7 @@ describe('設定値の受け取り（不正な値は採用しない）', () => {
 		expect(coerceSetting('logFolder', ' /Training//Logs/ ')).toEqual({
 			logFolder: 'Training/Logs',
 		});
-		expect(normalizeLogFolder('   ')).toBe('Fitness/ログ');
+		expect(normalizeLogFolder('   ')).toBe('Fitness/log');
 		expect(coerceSetting('logFolder', 3)).toEqual({});
 	});
 

@@ -6,7 +6,11 @@ import { ExerciseLibrary } from './data/exercise-library';
 import { registerFolderFollow } from './data/folders';
 import { LogIndex } from './data/log-index';
 import { LogRepository } from './data/log-repository';
-import { migrateLogFolder } from './data/migrations';
+import {
+	folderRenameMessage,
+	migrateFolderNames,
+	migrateLogFolder,
+} from './data/migrations';
 import { t } from './i18n';
 import type { FitnessServices } from './services';
 import { SessionController } from './session/session-controller';
@@ -80,7 +84,7 @@ export default class FitnessLogPlugin extends Plugin {
 		registerFolderFollow(this, this.app, store);
 		// 最初の起動（入れ直した直後を含む）: 保存先を聞くまでは何も作らない・動かさない
 		const setup = store.needsSetup;
-		// 以前の版（日ノートを Fitness/ の直下に保存）からの移行 → Fitness/ログ/ へ
+		// 以前の版（日ノートを Fitness/ の直下に保存）からの移行 → Fitness/log/ へ
 		const movedNotes = setup ? 0 : await migrateLogFolder(this.app, store);
 		if (movedNotes > 0)
 			new Notice(
@@ -89,6 +93,10 @@ export default class FitnessLogPlugin extends Plugin {
 					folder: store.settings.logFolder,
 				}),
 			);
+		// 以前の既定の名前（…/ログ・…/種目）の保存先 → 英語の名前（…/log・…/exercise）へ
+		const renamed = setup ? [] : await migrateFolderNames(this.app, store);
+		if (renamed.length > 0)
+			new Notice(folderRenameMessage(renamed), 15_000);
 		await library.ensureLoaded();
 		library.registerVaultEvents(this);
 		index.registerVaultEvents(this);

@@ -451,6 +451,11 @@ export const ja = {
 	'log.daySummary': '{sets} セット ・ {volume} ・ {minutes} 分',
 	'notice.basesCreated': '{path} を作成しました。',
 	'notice.folderFollowed': '{name}の保存先を「{folder}」にしました。',
+	'notice.folderNamesEnglish':
+		'保存先のフォルダの名前を英語にしました（{list}）。',
+	'notice.folderNamesItem': '{name}: {folder}',
+	'notice.folderNamesKept':
+		'{name}のノート {n} 件は、同じ名前のノートが「{target}」にあったので「{source}」に残しています。開いて見比べてください。',
 	'folders.exercise': '種目',
 	'folders.log': '記録',
 	'setup.title': 'Fitness Log をはじめる',

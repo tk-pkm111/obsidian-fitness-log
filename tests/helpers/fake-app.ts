@@ -142,6 +142,25 @@ export class FakeVault extends Events {
 		return Promise.resolve();
 	}
 
+	/** テスト用: フォルダの削除（中のファイル・フォルダごと） */
+	externalDeleteFolder(path: string): void {
+		const folder = this.folders.get(path);
+		if (!folder) throw new Error(`no folder ${path}`);
+		for (const key of [...this.files.keys()])
+			if (key.startsWith(`${path}/`)) {
+				this.files.delete(key);
+				this.contents.delete(key);
+			}
+		for (const key of [...this.folders.keys()])
+			if (key === path || key.startsWith(`${path}/`))
+				this.folders.delete(key);
+		if (folder.parent)
+			folder.parent.children = folder.parent.children.filter(
+				(c) => c !== folder,
+			);
+		this.trigger('delete', folder);
+	}
+
 	/** テスト用: 削除 */
 	externalDelete(path: string): void {
 		const file = this.files.get(path);
@@ -174,9 +193,10 @@ export class FakeFileManager {
 		return this.vault.rename(file, newPath);
 	}
 
-	trashFile(file: TFile): Promise<void> {
+	trashFile(file: TAbstractFile): Promise<void> {
 		this.trashed.push(file.path);
-		this.vault.externalDelete(file.path);
+		if (file instanceof TFolder) this.vault.externalDeleteFolder(file.path);
+		else this.vault.externalDelete(file.path);
 		return Promise.resolve();
 	}
 

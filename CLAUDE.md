@@ -59,8 +59,8 @@ docs/              設計メモ
 - モバイル対応（`isDesktopOnly: false`）: Node.js / Electron API 禁止、HTTP は `requestUrl`、OS 判定は `Platform`、正規表現の後読み禁止。
 - vault への書き込み: 開いているノートは `Editor`、裏での編集は `Vault.process`、frontmatter は `FileManager.processFrontMatter`、削除は `FileManager.trashFile`。`Vault.modify` と Adapter API は使わない。
 - 日ノートはプラグインが管理ブロック（`%% fitness-log:start %%` 〜 `end`）の中だけを書き換える。ブロックが読めないときは書き込まない（データを潰さない）。
-- 日ノートは `Fitness/ログ/YYYY-MM-DD.md`（設定で変更可）。以前の既定 `Fitness/` 直下のノートは初回起動時に `src/data/migrations.ts` が移す（一度きり、`data.json` の `migrations` に印）。
-- 種目は種目ノート（`Fitness/種目/*.md`）の frontmatter が正。data.json には保存しない（`DataStore.update` が保存時に外す）。ノートの本文には触らない。
+- 日ノートは `Fitness/log/YYYY-MM-DD.md`（設定で変更可）。以前の既定（`Fitness/` 直下、`…/ログ`・`…/種目`）のノートは初回起動時に `src/data/migrations.ts` が移す（一度きり、`data.json` の `migrations` に印）。フォルダ名は英語（`log`・`exercise`）。
+- 種目は種目ノート（`Fitness/exercise/*.md`）の frontmatter が正。data.json には保存しない（`DataStore.update` が保存時に外す）。ノートの本文には触らない。
 - dev-vault をユーザーが Obsidian で開いて `npm run dev` を動かしているときは、ソースを保存するたびにその dev-vault に反映される（移行などの処理も走る）。E2E は dev-vault のコピー（`E2E_VAULT`）で行う。
 - ユーザーの本番 Vault（`~/Documents/Obsidian Vaults/` 配下など）と本番の Obsidian（起動中のアプリ・Obsidian CLI）には絶対に触らない。動作確認は `dev-vault/` と `npm run e2e` の隔離インスタンスのみ。
 - UI 文言は日本語で `src/i18n/ja.ts` に集約する。英単語を混ぜるときは sentence case（例: "vault" は小文字）。

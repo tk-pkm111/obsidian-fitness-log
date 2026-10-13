@@ -5,7 +5,10 @@ import {
 	findNotePaths,
 	type FolderKey,
 } from '../../data/folders';
-import { LOG_FOLDER_MIGRATION } from '../../data/migrations';
+import {
+	ENGLISH_FOLDER_MIGRATION,
+	LOG_FOLDER_MIGRATION,
+} from '../../data/migrations';
 import { t } from '../../i18n';
 import { folderCounts, foldersOverlap } from '../../lib/folders';
 import { DEFAULT_SETTINGS } from '../../lib/model/data';
@@ -17,7 +20,7 @@ import { FolderSuggest } from '../folder-suggest';
 import { runAction, textButton } from '../helpers';
 import { renderOnboardingVideo } from '../onboarding-video';
 
-/** 既定の保存先（Fitness/ログ・Fitness/種目）の、親とその中のフォルダ名 */
+/** 既定の保存先（Fitness/log・Fitness/exercise）の、親とその中のフォルダ名 */
 function splitDefault(path: string): { parent: string; child: string } {
 	const index = path.lastIndexOf('/');
 	return index < 0
@@ -34,7 +37,7 @@ function join(parent: string, child: string): string {
 
 /**
  * はじめの設定（オンボーディング）。初めての人が迷わないよう、決めることは 1 つだけ:
- * 「保存するフォルダ」（その中に ログ・種目 を作る）。別々のフォルダにしたい人は「フォルダを別々に選ぶ」。
+ * 「保存するフォルダ」（その中に log・exercise を作る）。別々のフォルダにしたい人は「フォルダを別々に選ぶ」。
  * - 入れ直したときなど vault に既に記録・種目のノートがあれば、その場所をそのまま使う（別々の欄に入れておく）
  * - 「はじめる」までは何も作らない。よく使う種目とメニューの例は、保存先を決めてから足りない分だけ入れる
  * - コマンド「保存先を設定」でやり直せる（保存先を変えたらノートを移すか聞く）
@@ -66,7 +69,7 @@ export class SetupModal extends Modal {
 				hasExisting && first ? t('setup.introFound') : t('setup.intro'),
 		});
 
-		// かんたん: 1 つのフォルダ（その中に ログ・種目 を作る）
+		// かんたん: 1 つのフォルダ（その中に log・exercise を作る）
 		const simple = contentEl.createDiv({ cls: 'fitness-log-setup-field' });
 		simple.createDiv({
 			cls: 'fitness-log-setup-label',
@@ -276,9 +279,9 @@ export class SetupModal extends Modal {
 			d.settings.logFolder = logFolder;
 			d.settings.exerciseFolder = exerciseFolder;
 			d.setupAt ??= new Date().toISOString();
-			// 以前の版の保存先の移行（Fitness/ の直下 → Fitness/ログ）は、保存先を選んだので要らない
-			if (!d.migrations.includes(LOG_FOLDER_MIGRATION))
-				d.migrations.push(LOG_FOLDER_MIGRATION);
+			// 以前の版の保存先の移行（Fitness/ の直下 → Fitness/log、…/ログ → …/log）は、保存先を選んだので要らない
+			for (const id of [LOG_FOLDER_MIGRATION, ENGLISH_FOLDER_MIGRATION])
+				if (!d.migrations.includes(id)) d.migrations.push(id);
 		});
 		// 新しい保存先の種目ノートを読んでから、足りない種目・メニューの例だけを入れる
 		await library.ensureLoaded();

@@ -47,7 +47,7 @@ describe('SessionController', () => {
 	let index: LogIndex;
 	let controller: SessionController;
 	let clock: Date;
-	const path = 'Fitness/ログ/2026-10-01.md';
+	const path = 'Fitness/log/2026-10-01.md';
 
 	beforeEach(async () => {
 		fake = createFakeApp();
@@ -394,7 +394,7 @@ describe('SessionController（筋トレの開始・終了）', () => {
 	it('開始で日ノートに開始時刻、終了で終了時刻を書き、時間は開始〜終了', async () => {
 		const { fake, controller, setClock } = await make();
 		await controller.startSession('2026-10-01', 'pk_a');
-		const path = 'Fitness/ログ/2026-10-01.md';
+		const path = 'Fitness/log/2026-10-01.md';
 		expect(fake.vault.text(path)).toContain(
 			'## PUSH A\n- 時間: 18:30:05 –\n',
 		);
@@ -458,7 +458,7 @@ describe('SessionController（筋トレの開始・終了）', () => {
 			packageId: 'pk_a',
 			sessionName: null,
 		});
-		expect(fake.vault.text('Fitness/ログ/2026-10-01.md')).toContain(
+		expect(fake.vault.text('Fitness/log/2026-10-01.md')).toContain(
 			'- 時間: 18:30:05 –\n',
 		);
 	});
@@ -478,7 +478,7 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		// 翌日
 		setClock(new Date(2026, 9, 2, 9, 0, 0));
 		await controller.endSession('2026-10-01', ref);
-		const path = 'Fitness/ログ/2026-10-01.md';
+		const path = 'Fitness/log/2026-10-01.md';
 		expect(fake.vault.text(path)).toContain('- 時間: 18:30:05 – 18:31:00');
 		await expect(
 			controller.resumeSession('2026-10-01', ref),

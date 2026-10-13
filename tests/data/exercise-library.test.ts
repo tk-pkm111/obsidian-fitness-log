@@ -10,7 +10,7 @@ import {
 	type FakeApp,
 } from '../helpers/fake-app';
 
-const folder = 'Fitness/種目';
+const folder = 'Fitness/exercise';
 
 async function setup(raw: unknown = null) {
 	const fake = createFakeApp();

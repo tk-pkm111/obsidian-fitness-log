@@ -6,7 +6,9 @@ import {
 	foldersOverlap,
 	followRename,
 	isInside,
+	leafName,
 	movedPath,
+	renamedLeaf,
 } from '../../src/lib/folders';
 
 describe('followRename', () => {
@@ -122,5 +124,18 @@ describe('最初の設定', () => {
 			{ folder: '/', count: 1 },
 			{ folder: 'Fitness/種目', count: 1 },
 		]);
+	});
+});
+
+describe('renamedLeaf / leafName', () => {
+	it('最後の名前が同じときだけ変える', () => {
+		expect(renamedLeaf('02_Config/Fitness/ログ', 'ログ', 'log')).toBe(
+			'02_Config/Fitness/log',
+		);
+		expect(renamedLeaf('/ログ/', 'ログ', 'log')).toBe('log');
+		expect(renamedLeaf('ログ/日記', 'ログ', 'log')).toBeNull();
+		expect(renamedLeaf('Journal/筋トレ', 'ログ', 'log')).toBeNull();
+		expect(leafName('Fitness/exercise')).toBe('exercise');
+		expect(leafName('log')).toBe('log');
 	});
 });

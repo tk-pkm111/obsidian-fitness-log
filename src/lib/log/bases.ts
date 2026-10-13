@@ -20,6 +20,17 @@ function quote(value: string): string {
 	return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
+/** 日ノートのフォルダを移したとき、.base の絞り込み（file.inFolder("…")）を新しいフォルダに書き換える */
+export function retargetBasesFolder(
+	text: string,
+	from: string,
+	to: string,
+): string {
+	return text
+		.split(`file.inFolder(${quote(from)})`)
+		.join(`file.inFolder(${quote(to)})`);
+}
+
 export function basesFileContent(logFolder: string): BasesFileContent {
 	return {
 		filters: {

@@ -27,8 +27,8 @@ import type {
 import { isDateString } from '../time/date';
 
 export const DEFAULT_SETTINGS: FitnessLogSettings = {
-	logFolder: 'Fitness/ログ',
-	exerciseFolder: 'Fitness/種目',
+	logFolder: 'Fitness/log',
+	exerciseFolder: 'Fitness/exercise',
 	fileNameFormat: 'YYYY-MM-DD',
 	weightUnit: 'kg',
 	weightStep: 2.5,

@@ -1,6 +1,9 @@
 import YAML from 'yaml';
 import { describe, expect, it } from 'vitest';
-import { basesFileContent } from '../../../src/lib/log/bases';
+import {
+	basesFileContent,
+	retargetBasesFolder,
+} from '../../../src/lib/log/bases';
 
 describe('basesFileContent', () => {
 	it('ログのタグとフォルダで絞り込み、集計列を日付の降順で並べる', () => {
@@ -27,5 +30,16 @@ describe('basesFileContent', () => {
 		const content = basesFileContent('My "Gym"');
 		expect(content.filters.and[1]).toBe('file.inFolder("My \\"Gym\\"")');
 		expect(YAML.parse(YAML.stringify(content))).toEqual(content);
+	});
+});
+
+describe('retargetBasesFolder', () => {
+	it('日ノートのフォルダの絞り込みだけを書き換える', () => {
+		const text =
+			'filters:\n  and:\n    - file.hasTag("fitness-log")\n    - file.inFolder("Fitness/ログ")\n';
+		expect(retargetBasesFolder(text, 'Fitness/ログ', 'Fitness/log')).toBe(
+			text.replace('Fitness/ログ', 'Fitness/log'),
+		);
+		expect(retargetBasesFolder(text, 'Other', 'Fitness/log')).toBe(text);
 	});
 });

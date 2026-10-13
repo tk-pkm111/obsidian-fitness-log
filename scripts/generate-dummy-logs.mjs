@@ -1,8 +1,8 @@
 // 開発用: dev-vault にダミーの日ノート（PPL を回した記録）を作る。
 // 推移チャートの見た目と、履歴索引の性能（実装計画 §11: 300 日分で 1 秒未満）の確認に使う。
 //
-//   npm run vault:dummy                    # 直近 300 日のうち約 6 割の日に記録（dev-vault/Fitness/ログ）
-//   npm run vault:dummy -- --days 60 --end 2026-09-30 --folder Fitness/ログ
+//   npm run vault:dummy                    # 直近 300 日のうち約 6 割の日に記録（dev-vault/Fitness/log）
+//   npm run vault:dummy -- --days 60 --end 2026-09-30 --folder Fitness/log
 //
 // - 書き込み先は dev-vault の中だけ（本番 Vault は対象外。パスを検査して拒否する）
 // - 既にあるノートは上書きしない
@@ -18,7 +18,7 @@ const args = Object.fromEntries(
 		.reduce((pairs, arg, i, all) => (arg.startsWith('--') ? [...pairs, [arg.slice(2), all[i + 1]]] : pairs), []),
 );
 const days = Number(args.days ?? 300);
-const folder = args.folder ?? 'Fitness/ログ';
+const folder = args.folder ?? 'Fitness/log';
 const vault = path.resolve('dev-vault');
 const target = path.resolve(vault, folder);
 if (!target.startsWith(vault + path.sep)) {

@@ -107,6 +107,27 @@ export function folderMismatch(
 	};
 }
 
+/** フォルダの最後の名前（'Fitness/log' → 'log'） */
+export function leafName(folder: string): string {
+	const parts = trimSlashes(folder).split('/');
+	return parts[parts.length - 1] ?? '';
+}
+
+/**
+ * フォルダの最後の名前が from なら to に変えたパス（'02_Config/Fitness/ログ' → '02_Config/Fitness/log'）。
+ * 違う名前なら null（利用者が自分で付けた名前には触らない）
+ */
+export function renamedLeaf(
+	folder: string,
+	from: string,
+	to: string,
+): string | null {
+	const parts = trimSlashes(folder).split('/');
+	if (parts[parts.length - 1] !== from) return null;
+	parts[parts.length - 1] = to;
+	return parts.join('/');
+}
+
 /** 2 つのフォルダが同じか、一方がもう一方の中にあるか（種目ノートと日ノートを混ぜないため） */
 export function foldersOverlap(a: string, b: string): boolean {
 	const x = trimSlashes(a);

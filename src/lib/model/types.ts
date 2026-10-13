@@ -36,7 +36,7 @@ export interface Exercise {
 	/** ISO 8601 */
 	createdAt: string;
 	/**
-	 * 種目ノートの vault 内パス（'Fitness/種目/ケーブルYレイズ.md'）。
+	 * 種目ノートの vault 内パス（'Fitness/exercise/ケーブルYレイズ.md'）。
 	 * 種目の設定はこのノートの frontmatter が正で、本文はノウハウを書く場所。まだノートが無ければ undefined
 	 */
 	path?: string;
