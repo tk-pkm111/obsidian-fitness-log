@@ -137,6 +137,7 @@ describe('normalizePluginData', () => {
 				'broken key': ['ex:a'],
 				'2026-10-02 other': 'x',
 			},
+			dayRemoved: { '2026-10-01 pkg:pk_1': ['ex:b'], 'broken key': [] },
 		});
 		expect(data.settings.packageSections).toBe(true);
 		expect(data.packages[0]?.sections).toEqual([
@@ -144,6 +145,8 @@ describe('normalizePluginData', () => {
 			{ id: 'sc_2', name: '腕', at: 1 },
 		]);
 		expect(data.dayOrders).toEqual({ '2026-10-01 pkg:pk_1': ['ex:a'] });
+		expect(data.dayRemoved).toEqual({ '2026-10-01 pkg:pk_1': ['ex:b'] });
+		expect(normalizePluginData({}).dayRemoved).toBeUndefined();
 		expect(normalizePluginData({}).settings.packageSections).toBe(false);
 	});
 

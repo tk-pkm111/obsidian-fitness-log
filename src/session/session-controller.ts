@@ -8,6 +8,7 @@ import {
 	endSession,
 	ensureExercise,
 	ensureSession,
+	removeEmptyExercise,
 	removeSession,
 	resumeSession,
 	setSessionNote,
@@ -27,7 +28,7 @@ import type {
 	Package,
 	SetLog,
 } from '../lib/model/types';
-import { setDayOrder } from '../lib/today/groups';
+import { dayRemovedFor, setDayOrder, setDayRemoved } from '../lib/today/groups';
 import { formatTime, todayString } from '../lib/time/date';
 
 /** 利用者に見せるエラー（Notice にそのまま出す） */
@@ -47,6 +48,13 @@ export interface SessionRef {
 }
 
 export const OTHER_SESSION: SessionRef = { packageId: null, sessionName: null };
+
+/** 今日の画面のセクションのキー（buildDayModel の SectionModel.key と同じ付け方） */
+export function sectionKeyOf(ref: SessionRef): string {
+	if (ref.packageId !== null) return `pkg:${ref.packageId}`;
+	if (ref.sessionName !== null) return `name:${ref.sessionName}`;
+	return 'other';
+}
 
 /**
  * セットの開始・終了・修正などの手順。画面（UI）とデータ層の間に立つ。
@@ -282,7 +290,7 @@ export class SessionController {
 		});
 	}
 
-	/** セクションに種目を追加する（パッケージの定義は変えず、その日だけ） */
+	/** セクションに種目を追加する（パッケージの定義は変えず、その日だけ）。「この日から外した」種目なら戻す */
 	async addExerciseToDay(
 		date: string,
 		ref: SessionRef,
@@ -290,6 +298,7 @@ export class SessionController {
 	): Promise<DayLog> {
 		const exercise = this.requireExercise(exerciseId);
 		const target = this.target(ref, exercise);
+		await this.setRemovedFromDay(date, ref, exercise, false);
 		return this.write(date, (d) => {
 			const session = ensureSession(
 				d,
@@ -298,6 +307,70 @@ export class SessionController {
 			);
 			ensureExercise(session, target.matchExercise, target.exerciseName);
 		});
+	}
+
+	/**
+	 * まだやっていない種目をその日の一覧から外す（混んでいて別の種目にした等）。パッケージの定義は変えない。
+	 * ノートに空の欄（「種目を追加」したもの）があれば消し、パッケージの種目は data.json に「外した」と覚える
+	 * （「種目を追加」で戻せる）。記録のある種目は外さない（セットを消してから）
+	 */
+	async removeExerciseFromDay(
+		date: string,
+		ref: SessionRef,
+		exerciseId: string,
+	): Promise<void> {
+		const exercise = this.requireExercise(exerciseId);
+		if (this.doneSets(date, ref, exerciseId).length > 0)
+			throw new SessionError(
+				'記録のある種目は外せません。先にセットを削除してください',
+			);
+		const active = this.activeSet;
+		if (
+			active &&
+			active.date === date &&
+			active.exerciseId === exerciseId &&
+			active.packageId === ref.packageId
+		)
+			throw new SessionError('進行中のセットの種目は外せません');
+		const target = this.target(ref, exercise);
+		const session = this.index
+			.day(date)
+			?.sessions.find((s) => target.matchSession(s.name));
+		if (
+			session?.exercises.some(
+				(e) => e.sets.length === 0 && target.matchExercise(e.name),
+			)
+		)
+			await this.write(date, (d) => {
+				removeEmptyExercise(
+					d,
+					target.matchSession,
+					target.matchExercise,
+				);
+			});
+		await this.setRemovedFromDay(date, ref, exercise, true);
+	}
+
+	private async setRemovedFromDay(
+		date: string,
+		ref: SessionRef,
+		exercise: Exercise,
+		removed: boolean,
+	): Promise<void> {
+		const sectionKey = sectionKeyOf(ref);
+		const cardKey = `ex:${exercise.id}`;
+		const current = dayRemovedFor(this.store.current, date)[sectionKey];
+		if ((current?.includes(cardKey) ?? false) === removed) return;
+		await this.store.update((data) =>
+			setDayRemoved(
+				data,
+				date,
+				sectionKey,
+				cardKey,
+				removed,
+				todayString(this.now()),
+			),
+		);
 	}
 
 	async setSessionNote(

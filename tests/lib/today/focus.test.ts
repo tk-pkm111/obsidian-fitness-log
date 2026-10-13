@@ -10,7 +10,11 @@ import {
 	buildDayModel,
 	latestFinishedSet,
 } from '../../../src/lib/today/day-model';
-import { cardLayout, cardRole } from '../../../src/lib/today/focus';
+import {
+	cardLayout,
+	cardRole,
+	type FocusChoice,
+} from '../../../src/lib/today/focus';
 
 const NOW = '2026-10-02T00:00:00.000Z';
 const ex = (id: string): Exercise => ({
@@ -41,7 +45,7 @@ const set = (end: string): SetLog => ({
 });
 const layoutOf = (
 	done: Array<{ name: string; sets: SetLog[] }>,
-	options: { active?: ActiveSet; focus?: string } = {},
+	options: { active?: ActiveSet; focus?: FocusChoice } = {},
 ) => {
 	const day: DayLog = {
 		date: '2026-10-02',
@@ -68,15 +72,15 @@ const layoutOf = (
 	};
 };
 
-describe('cardLayout（いまの種目・次の印）', () => {
-	it('何もしていなければ、いまの種目は無く、最初の種目に次の印', () => {
+describe('cardLayout（いまの種目・おすすめの ▶）', () => {
+	it('何もしていなければ、いまの種目は無く、最初の種目におすすめの ▶', () => {
 		expect(layoutOf([])).toEqual({
 			layout: { currentKey: null, suggestedKey: 'ex:a' },
 			roles: ['A:upcoming', 'B:upcoming', 'C:upcoming'],
 		});
 	});
 
-	it('最後にセットを終えた種目がいま。目標に届くまでは次の印を付けない', () => {
+	it('最後にセットを終えた種目がいま。目標に届くまではおすすめの ▶ を付けない', () => {
 		expect(layoutOf([{ name: 'A', sets: [set('10:05:00')] }])).toEqual({
 			layout: { currentKey: 'ex:a', suggestedKey: null },
 			roles: ['A:current', 'B:upcoming', 'C:upcoming'],
@@ -87,7 +91,7 @@ describe('cardLayout（いまの種目・次の印）', () => {
 		).toEqual({ currentKey: 'ex:a', suggestedKey: 'ex:b' });
 	});
 
-	it('セット中はその種目がいま（次の印は無し）。開いた種目は終わった種目のときだけ効く', () => {
+	it('セット中はその種目がいま（おすすめの ▶ は無し）。開いた種目は終わった種目のときだけ効く', () => {
 		const done = [
 			{ name: 'A', sets: [set('10:05:00'), set('10:08:00')] },
 			{ name: 'B', sets: [set('10:12:00')] },
@@ -106,13 +110,36 @@ describe('cardLayout（いまの種目・次の印）', () => {
 			layout: { currentKey: 'ex:c', suggestedKey: null },
 			roles: ['A:done', 'B:done', 'C:current'],
 		});
-		expect(layoutOf(done, { focus: 'ex:a' }).roles).toEqual([
-			'A:current',
-			'B:done',
-			'C:upcoming',
-		]);
-		expect(layoutOf(done, { focus: 'ex:c' }).layout.currentKey).toBe(
-			'ex:b',
-		);
+		expect(
+			layoutOf(done, { focus: { kind: 'open', key: 'ex:a' } }).roles,
+		).toEqual(['A:current', 'B:done', 'C:upcoming']);
+		expect(
+			layoutOf(done, { focus: { kind: 'open', key: 'ex:c' } }).layout
+				.currentKey,
+		).toBe('ex:b');
+	});
+
+	it('たたむと、セット中でなければどの種目も開かない（おすすめの ▶ も付けない）', () => {
+		const done = [
+			{ name: 'A', sets: [set('10:05:00'), set('10:08:00')] },
+			{ name: 'B', sets: [set('10:12:00')] },
+		];
+		expect(layoutOf(done, { focus: { kind: 'collapsed' } })).toEqual({
+			layout: { currentKey: null, suggestedKey: null },
+			roles: ['A:done', 'B:done', 'C:upcoming'],
+		});
+		// セット中はその種目が開く
+		expect(
+			layoutOf(done, {
+				focus: { kind: 'collapsed' },
+				active: {
+					date: '2026-10-02',
+					packageId: 'pk',
+					exerciseId: 'b',
+					setIndex: 2,
+					startedAt: NOW,
+				},
+			}).roles,
+		).toEqual(['A:done', 'B:current', 'C:upcoming']);
 	});
 });

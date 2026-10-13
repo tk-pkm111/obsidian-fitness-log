@@ -8,7 +8,9 @@ import {
 	type ExerciseOccurrence,
 } from '../../lib/history/carry-over';
 import type { SetLog, WeightUnit } from '../../lib/model/types';
+import { nearestIndex, weightChoices } from '../../lib/picker';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
+import type { FocusChoice } from '../../lib/today/focus';
 import { formatHm, formatMonthDay } from '../../lib/time/date';
 import { quickReps, quickWeights } from '../../lib/today/quick-values';
 import { fromDisplayWeight, toDisplayWeight } from '../../lib/units';
@@ -16,8 +18,10 @@ import {
 	OTHER_SESSION,
 	type SessionRef,
 } from '../../session/session-controller';
+import { ConfirmModal } from '../modals/confirm-modal';
 import { NumberPromptModal } from '../modals/number-prompt-modal';
 import { SetEditModal } from '../modals/set-edit-modal';
+import { WheelPickerModal } from '../modals/wheel-picker-modal';
 import type { PageContext } from '../page-context';
 
 /**
@@ -68,6 +72,95 @@ export function endSessionWithNotice(
 /** ホイールで選べる重量の上限（それより重い記録があればそこまで広げる） */
 export function wheelMaxWeight(unit: WeightUnit): number {
 	return unit === 'lb' ? 500 : 250;
+}
+
+/**
+ * 重量をスクロールで選ぶ（スマホ。セットの重量・実行中のセットの重量）。値は表示の単位、空は null。
+ * ホイールの代わりにキーボードで打ったときは onType（文字のまま。false を返すと閉じない）
+ */
+export function pickWeightWheel(
+	ctx: PageContext,
+	options: {
+		current: number | null;
+		/** 「レッグカール ・ セット 2」 */
+		hint: string;
+		/** 今の値と違う値を決めたとき */
+		onPick: (value: number | null) => void;
+		onType: (text: string) => boolean;
+	},
+): void {
+	const { store } = ctx.services;
+	const unit = store.settings.weightUnit;
+	const { current } = options;
+	const choices = weightChoices(
+		current,
+		store.settings.weightStep,
+		wheelMaxWeight(unit),
+		true,
+	);
+	new WheelPickerModal(ctx.app, {
+		title: t('setEdit.weight', { unit }),
+		hint: options.hint,
+		columns: [
+			{
+				items: choices.map((v) =>
+					v === null ? t('wheel.none') : String(v),
+				),
+				index: nearestIndex(choices, current),
+				label: t('setEdit.weight', { unit }),
+				width: 5,
+			},
+		],
+		unit,
+		submitText: t('wheel.done'),
+		onSubmit: ([i = 0]) => {
+			const value = choices[i] ?? null;
+			if (value !== current) options.onPick(value);
+		},
+		keyboard: {
+			value: current === null ? '' : String(current),
+			inputMode: 'decimal',
+			onSubmit: options.onType,
+		},
+	}).open();
+}
+
+/**
+ * 筋トレ中の「いまの種目」の利用者の操作（セクションごと。ビューを開いている間だけ覚える）。
+ * 終わった種目を押して開く・開いている種目をたたむ。セットを始めると消える（startSet）
+ */
+export function focusState(ctx: PageContext): Map<string, FocusChoice> {
+	return ctx.pageState('todayFocus', () => new Map<string, FocusChoice>());
+}
+
+export function focusKeyOf(ctx: PageContext, section: SectionModel): string {
+	return `${ctx.date}:${section.key}`;
+}
+
+/**
+ * まだやっていない種目をこの日の一覧から外す（混んでいて別の種目にした等）。確認してから。
+ * パッケージの内容は変えず、「種目を追加」で戻せる
+ */
+export function removeExerciseFromDay(
+	ctx: PageContext,
+	section: SectionModel,
+	card: CardModel,
+): void {
+	const exercise = card.exercise;
+	if (!exercise) return;
+	new ConfirmModal(ctx.app, {
+		title: card.name,
+		message: t('today.removeExerciseConfirm'),
+		confirmText: t('today.removeExerciseOk'),
+		onConfirm: () =>
+			ctx.run(() =>
+				ctx.services.controller.removeExerciseFromDay(
+					ctx.date,
+					sectionRef(section),
+					exercise.id,
+				),
+			),
+	}).open();
 }
 
 export function sectionRef(section: SectionModel): SessionRef {
@@ -134,10 +227,8 @@ export function startSet(
 	if (!exercise) return;
 	const { controller, store } = ctx.services;
 	const unit = store.settings.weightUnit;
-	// セットを始めたら、その種目がいまの種目（終わった種目を開いていても戻す）
-	ctx.pageState('todayFocus', () => new Map<string, string>()).delete(
-		`${ctx.date}:${section.key}`,
-	);
+	// セットを始めたら、その種目がいまの種目（終わった種目を開いていても・たたんでいても戻す）
+	focusState(ctx).delete(focusKeyOf(ctx, section));
 	const hist = cardHistory(ctx, section, card);
 	const carry = carryOver({
 		occurrences: hist.occurrences,

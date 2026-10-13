@@ -82,9 +82,42 @@ export function reorderWithinGroup(
 		.map((key) => (inGroup.has(key) ? (moved[next++] ?? key) : key));
 }
 
-/** data.json に保存する、その日だけの並びのキー */
+/** data.json に保存する、その日だけの並び・外した種目のキー */
 export function dayOrderKey(date: string, sectionKey: string): string {
 	return `${date} ${sectionKey}`;
+}
+
+/** 'YYYY-MM-DD セクションのキー' → 一覧 から、その日の分だけをセクションのキーで引けるように */
+function entriesFor(
+	map: Readonly<Record<string, string[]>> | undefined,
+	date: string,
+): Record<string, string[]> {
+	const result: Record<string, string[]> = {};
+	for (const [key, list] of Object.entries(map ?? {}))
+		if (key.startsWith(`${date} `))
+			result[key.slice(date.length + 1)] = list;
+	return result;
+}
+
+/**
+ * その日・そのセクションの一覧を入れ替える（空なら消す）。
+ * 2 週間より前の日のものは消す（今日の画面でしか使わない）
+ */
+function withEntry(
+	map: Readonly<Record<string, string[]>> | undefined,
+	date: string,
+	sectionKey: string,
+	keys: readonly string[],
+	today: string,
+): Record<string, string[]> | undefined {
+	const oldest = addDays(today, -14);
+	const result: Record<string, string[]> = {};
+	for (const [key, list] of Object.entries(map ?? {}))
+		if (key.slice(0, 10) >= oldest) result[key] = list;
+	const entryKey = dayOrderKey(date, sectionKey);
+	if (keys.length > 0) result[entryKey] = [...keys];
+	else delete result[entryKey];
+	return Object.keys(result).length > 0 ? result : undefined;
 }
 
 /** その日のセクションごとの並び（buildDayModel の orders） */
@@ -92,11 +125,7 @@ export function dayOrdersFor(
 	data: Readonly<PluginData>,
 	date: string,
 ): Record<string, string[]> {
-	const orders: Record<string, string[]> = {};
-	for (const [key, list] of Object.entries(data.dayOrders ?? {}))
-		if (key.startsWith(`${date} `))
-			orders[key.slice(date.length + 1)] = list;
-	return orders;
+	return entriesFor(data.dayOrders, date);
 }
 
 /** その日の並びを保存する。2 週間より前の日の並びは消す（今日の画面でしか使わない） */
@@ -107,10 +136,33 @@ export function setDayOrder(
 	keys: readonly string[],
 	today: string,
 ): void {
-	const oldest = addDays(today, -14);
-	const orders: Record<string, string[]> = {};
-	for (const [key, list] of Object.entries(data.dayOrders ?? {}))
-		if (key.slice(0, 10) >= oldest) orders[key] = list;
-	orders[dayOrderKey(date, sectionKey)] = [...keys];
-	data.dayOrders = orders;
+	const orders = withEntry(data.dayOrders, date, sectionKey, keys, today);
+	if (orders) data.dayOrders = orders;
+	else delete data.dayOrders;
+}
+
+/** その日のセクションごとの「この日から外した」種目のカードのキー（buildDayModel の removed） */
+export function dayRemovedFor(
+	data: Readonly<PluginData>,
+	date: string,
+): Record<string, string[]> {
+	return entriesFor(data.dayRemoved, date);
+}
+
+/** まだやっていない種目を「この日から外す」。「種目を追加」で戻すときは removed=false */
+export function setDayRemoved(
+	data: PluginData,
+	date: string,
+	sectionKey: string,
+	cardKey: string,
+	removed: boolean,
+	today: string,
+): void {
+	const current = dayRemovedFor(data, date)[sectionKey] ?? [];
+	const keys = removed
+		? [...new Set([...current, cardKey])]
+		: current.filter((k) => k !== cardKey);
+	const next = withEntry(data.dayRemoved, date, sectionKey, keys, today);
+	if (next) data.dayRemoved = next;
+	else delete data.dayRemoved;
 }

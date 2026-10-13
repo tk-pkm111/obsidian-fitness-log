@@ -9,6 +9,7 @@ import {
 	endSession,
 	resumeSession,
 	startSession,
+	removeEmptyExercise,
 	removeSession,
 	setSessionNote,
 	setsInSession,
@@ -275,6 +276,46 @@ describe('セッションの操作', () => {
 		expect(() => removeSession(day, exact('B'))).toThrow(DayLogError);
 		removeSession(day, exact('無い')); // 無ければ何もしない
 		expect(day.sessions).toHaveLength(1);
+	});
+});
+
+describe('removeEmptyExercise', () => {
+	it('セットの無い欄だけ消す。記録のある欄・他のセッションは残す', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'PUSH A',
+					note: '',
+					exercises: [
+						{ name: 'ディップス', sets: [set(null, 8)] },
+						{ name: 'ケーブルYレイズ', sets: [] },
+					],
+				},
+				{
+					name: null,
+					note: '',
+					exercises: [{ name: 'ケーブルYレイズ', sets: [] }],
+				},
+			],
+		};
+		const isY = (n: string) => n === 'ケーブルYレイズ';
+		expect(removeEmptyExercise(day, exact('PUSH A'), isY)).toBe(true);
+		expect(day.sessions[0]?.exercises.map((e) => e.name)).toEqual([
+			'ディップス',
+		]);
+		expect(day.sessions[1]?.exercises).toHaveLength(1);
+		// もう無い・記録のある欄は消さない（false）
+		expect(removeEmptyExercise(day, exact('PUSH A'), isY)).toBe(false);
+		expect(
+			removeEmptyExercise(
+				day,
+				exact('PUSH A'),
+				(n) => n === 'ディップス',
+			),
+		).toBe(false);
+		expect(day.sessions[0]?.exercises).toHaveLength(1);
+		expect(removeEmptyExercise(day, exact('LEGS'), isY)).toBe(false);
 	});
 });
 

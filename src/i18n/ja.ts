@@ -97,9 +97,12 @@ export const ja = {
 	'today.invalidRest':
 		'休憩は 2:30 や 2.30 の形（分:秒）で入力してください。',
 	'today.removeFromDay': 'この日から外す',
+	'today.removeExerciseConfirm':
+		'この日の一覧から外します。パッケージの内容は変わりません。戻すときは「種目を追加」から選びます。',
+	'today.removeExerciseOk': '外す',
+	'today.collapseExercise': 'たたむ',
 	'today.openNote': 'ノートを開く',
 	'today.extraGroup': '追加した種目',
-	'today.nextChip': '次',
 	'today.setCount': '{n} セット',
 	'today.setProgress': '{done} / {target} セット',
 	'today.openExercise': '{exercise} を開く',

@@ -9,7 +9,9 @@ import {
 	dayOrdersFor,
 	groupCards,
 	reorderWithinGroup,
+	dayRemovedFor,
 	setDayOrder,
+	setDayRemoved,
 } from '../../../src/lib/today/groups';
 
 const NOW = '2026-10-01T00:00:00.000Z';
@@ -130,5 +132,62 @@ describe('その日だけの並び', () => {
 		expect(dayOrdersFor(data, '2026-10-01')).toEqual({
 			'pkg:pk': ['ex:c', 'ex:d'],
 		});
+	});
+});
+
+describe('この日から外した種目', () => {
+	it('外す・戻すを日付とセクションごとに覚え、空になれば消す。古い日のものは消す', () => {
+		const data = createEmptyData();
+		data.dayRemoved = { '2026-09-01 pkg:pk': ['ex:a'] };
+		setDayRemoved(data, '2026-10-01', 'pkg:pk', 'ex:b', true, '2026-10-01');
+		setDayRemoved(data, '2026-10-01', 'pkg:pk', 'ex:b', true, '2026-10-01');
+		setDayRemoved(data, '2026-10-01', 'pkg:pk', 'ex:c', true, '2026-10-01');
+		expect(data.dayRemoved).toEqual({
+			'2026-10-01 pkg:pk': ['ex:b', 'ex:c'],
+		});
+		expect(dayRemovedFor(data, '2026-10-01')).toEqual({
+			'pkg:pk': ['ex:b', 'ex:c'],
+		});
+		setDayRemoved(
+			data,
+			'2026-10-01',
+			'pkg:pk',
+			'ex:b',
+			false,
+			'2026-10-01',
+		);
+		setDayRemoved(
+			data,
+			'2026-10-01',
+			'pkg:pk',
+			'ex:c',
+			false,
+			'2026-10-01',
+		);
+		expect(data.dayRemoved).toBeUndefined();
+		expect(dayRemovedFor(data, '2026-10-01')).toEqual({});
+	});
+
+	it('外した種目はまだの種目から消え、やった種目は残る', () => {
+		const cards = buildDayModel({
+			date: '2026-10-01',
+			day: {
+				date: '2026-10-01',
+				sessions: [
+					{
+						name: 'PULL',
+						note: '',
+						start: '09:59:00',
+						exercises: [{ name: 'A', sets: [set] }],
+					},
+				],
+			},
+			packages: [pkg],
+			exercises,
+			routines: [],
+			activeSet: null,
+			removed: { 'pkg:pk': ['ex:a', 'ex:c'] },
+		})[0]?.cards;
+		expect(names(cards ?? [])).toEqual(['A', 'B', 'D']);
 	});
 });

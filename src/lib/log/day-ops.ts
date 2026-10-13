@@ -215,6 +215,24 @@ export function removeSession(day: DayLog, matches: SessionMatcher): void {
 	day.sessions.splice(index, 1);
 }
 
+/**
+ * セットの無い種目の欄（「種目を追加」したもの）をセッションから消す。記録のある欄は消さない。
+ * 消したら true（ノートに書く必要がある）
+ */
+export function removeEmptyExercise(
+	day: DayLog,
+	matchSession: SessionMatcher,
+	matchExercise: ExerciseMatcher,
+): boolean {
+	const session = findSession(day, matchSession);
+	if (!session) return false;
+	const before = session.exercises.length;
+	session.exercises = session.exercises.filter(
+		(e) => e.sets.length > 0 || !matchExercise(e.name),
+	);
+	return session.exercises.length !== before;
+}
+
 export function countSets(day: DayLog): number {
 	let count = 0;
 	for (const session of day.sessions)

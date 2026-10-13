@@ -24,7 +24,6 @@ import {
 	splitClock,
 	splitDuration,
 	stepRange,
-	weightChoices,
 } from '../../lib/picker';
 import { iconButton } from '../helpers';
 import { inlineInput } from '../inline-input';
@@ -32,7 +31,7 @@ import { ConfirmModal } from '../modals/confirm-modal';
 import { TextPromptModal } from '../modals/text-prompt-modal';
 import { WheelPickerModal } from '../modals/wheel-picker-modal';
 import type { PageContext } from '../page-context';
-import { wheelMaxWeight } from './today-actions';
+import { pickWeightWheel } from './today-actions';
 
 /** 直したセットを日ノートに書く（描き直しで新しい値が出る）。true を返す */
 type SaveSet = (updated: SetLog) => boolean;
@@ -267,46 +266,19 @@ function renderResult(
 			weight: value === null ? null : fromDisplayWeight(value, unit),
 		});
 	};
-	const pickWeight = () => {
-		const current =
-			set.weight === null ? null : toDisplayWeight(set.weight, unit);
-		const choices = weightChoices(
-			current,
-			ctx.services.store.settings.weightStep,
-			wheelMaxWeight(unit),
-			true,
-		);
-		new WheelPickerModal(ctx.app, {
-			title: t('setEdit.weight', { unit }),
+	const pickWeight = () =>
+		pickWeightWheel(ctx, {
+			current:
+				set.weight === null ? null : toDisplayWeight(set.weight, unit),
 			hint: title,
-			columns: [
-				{
-					items: choices.map((v) =>
-						v === null ? t('wheel.none') : String(v),
-					),
-					index: nearestIndex(choices, current),
-					label: t('setEdit.weight', { unit }),
-					width: 5,
-				},
-			],
-			unit,
-			submitText: t('wheel.done'),
-			onSubmit: ([i = 0]) => {
-				const value = choices[i] ?? null;
-				if (value === current) return;
+			onPick: (value) =>
 				save({
 					...set,
 					weight:
 						value === null ? null : fromDisplayWeight(value, unit),
-				});
-			},
-			keyboard: {
-				value: weightText,
-				inputMode: 'decimal',
-				onSubmit: commitWeight,
-			},
-		}).open();
-	};
+				}),
+			onType: commitWeight,
+		});
 	const weightField = () =>
 		inlineInput(el, {
 			value: weightText,

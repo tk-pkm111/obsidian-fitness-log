@@ -249,6 +249,50 @@ describe('SessionController', () => {
 		expect(index.day('2026-10-01')?.sessions).toEqual([]);
 	});
 
+	it('まだやっていない種目をその日から外す（ノートの空の欄を消し、パッケージの種目は覚える）。「種目を追加」で戻る', async () => {
+		const ref = { packageId: 'pk_a', sessionName: null };
+		await controller.addPackageToDay('2026-10-01', 'pk_a');
+		await controller.addExerciseToDay('2026-10-01', ref, 'ex_d');
+		// パッケージに無い種目（ノートの空の欄だけ）: 欄を消す
+		await controller.removeExerciseFromDay('2026-10-01', ref, 'ex_d');
+		expect(index.day('2026-10-01')?.sessions[0]?.exercises).toEqual([]);
+		expect(store.current.dayRemoved).toEqual({
+			'2026-10-01 pkg:pk_a': ['ex:ex_d'],
+		});
+		// パッケージの種目（ノートに無い）: data.json に覚えるだけ
+		await controller.removeExerciseFromDay('2026-10-01', ref, 'ex_y');
+		expect(store.current.dayRemoved).toEqual({
+			'2026-10-01 pkg:pk_a': ['ex:ex_d', 'ex:ex_y'],
+		});
+		expect(index.day('2026-10-01')?.sessions[0]?.exercises).toEqual([]);
+		// 「種目を追加」で戻す
+		await controller.addExerciseToDay('2026-10-01', ref, 'ex_y');
+		expect(store.current.dayRemoved).toEqual({
+			'2026-10-01 pkg:pk_a': ['ex:ex_d'],
+		});
+		expect(
+			index.day('2026-10-01')?.sessions[0]?.exercises.map((e) => e.name),
+		).toEqual(['ケーブルYレイズ']);
+	});
+
+	it('記録のある種目・進行中のセットの種目は外せない', async () => {
+		const ref = { packageId: 'pk_a', sessionName: null };
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await expect(
+			controller.removeExerciseFromDay('2026-10-01', ref, 'ex_y'),
+		).rejects.toBeInstanceOf(SessionError);
+		await controller.finishSet(8);
+		await expect(
+			controller.removeExerciseFromDay('2026-10-01', ref, 'ex_y'),
+		).rejects.toBeInstanceOf(SessionError);
+		expect(store.current.dayRemoved).toBeUndefined();
+	});
+
 	it('ルーチンのスキップと取り消し', async () => {
 		await store.update((d) => {
 			d.routines = [

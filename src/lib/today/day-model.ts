@@ -84,6 +84,8 @@ export interface DayModelInput {
 	activeSet: ActiveSet | null;
 	/** その日だけの並び（今日の画面のセクションのキー → まだやっていない種目のカードのキー） */
 	orders?: Readonly<Record<string, readonly string[]>>;
+	/** その日に「この日から外した」まだやっていない種目（セクションのキー → カードのキー）。セットのある種目は外さない */
+	removed?: Readonly<Record<string, readonly string[]>>;
 }
 
 export function buildDayModel(input: DayModelInput): SectionModel[] {
@@ -246,8 +248,13 @@ export function buildDayModel(input: DayModelInput): SectionModel[] {
 		);
 	}
 
-	// その日だけの並び（ドラッグした順）。やった種目はやった順のまま、まだの種目だけを並べ替える
+	// その日だけの並び（ドラッグした順）と、この日から外した種目。やった種目はそのまま、まだの種目だけ
 	for (const section of sections) {
+		const removed = input.removed?.[section.key];
+		if (removed && removed.length > 0)
+			section.cards = section.cards.filter(
+				(c) => c.sets.length > 0 || !removed.includes(cardOrderKey(c)),
+			);
 		const order = input.orders?.[section.key];
 		if (order) section.cards = applyDayOrder(section.cards, order);
 	}

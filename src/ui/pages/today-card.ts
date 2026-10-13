@@ -1,4 +1,4 @@
-import { setIcon } from 'obsidian';
+import { Notice, setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import { formatSetResult, formatSetsCompact } from '../../lib/format';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
@@ -11,9 +11,15 @@ import {
 	toDisplayWeight,
 } from '../../lib/units';
 import { iconButton, openNoteInNewTab } from '../helpers';
+import { inlineInput } from '../inline-input';
 import { ConfirmModal } from '../modals/confirm-modal';
 import type { PageContext } from '../page-context';
-import { addSetManually, finishSet, startSet } from './today-actions';
+import {
+	addSetManually,
+	finishSet,
+	pickWeightWheel,
+	startSet,
+} from './today-actions';
 import { renderSetRow } from './today-set-row';
 
 export interface CardEnv {
@@ -31,12 +37,16 @@ export interface CardEnv {
 	 * done: 終わった種目（1 行にたたむ）、upcoming: まだの種目（▶ だけ）。null はすべて開いて見せる
 	 */
 	role?: CardRole | null;
-	/** 「次」の印（いまの種目が目標のセット数に届いたとき、最初のまだの種目） */
+	/** おすすめの ▶（塗りつぶし）: いまの種目が目標のセット数に届いたとき、最初のまだの種目 */
 	suggested?: boolean;
 	/** その種目の今日のセット数（同じ種目を 2 欄に分けていても合計） */
 	total?: number;
 	/** 終わった種目を押したとき（いまの種目として開く） */
 	onFocus?: () => void;
+	/** 開いている種目の ⌃ を押したとき（たたむ。セット中は出さない） */
+	onCollapse?: () => void;
+	/** まだやっていない種目の × を押したとき（この日の一覧から外す）。無ければ × を出さない */
+	onRemove?: () => void;
 }
 
 /** これより長く空いたら休憩とみなさない（休憩が延々と数え続けないように） */
@@ -46,10 +56,11 @@ const STALE_REST_SEC = 60 * 60;
  * 種目の行（TaskChute と同じく、左の列にボタン、右に種目名）。左の列は「状態と操作」の列で、
  * まだの種目は ▶、終わった種目はセット数の丸、いまの種目のセットは番号の丸・実行中の ■・次の ▶ が縦に並ぶ。
  * - いまの種目（current）: セットをサブタスクとして並べる。終えたセット（数字はその場で直せる）→ 休憩 →
- *   実行中のセット（■）か次のセット（▶）→ 目標のセット数までの残り（薄い行）→ 目標を超えたら「＋ セットを追加」
+ *   実行中のセット（■）か次のセット（▶）→ 目標のセット数までの残り（薄い行）→ 目標を超えたら「＋ セットを追加」。
+ *   右端の ⌃ でたたむ（セット中を除く）
  * - 終わった種目（done）: 1 行（セット数・要約）。押すといまの種目として開く
- * - まだの種目（upcoming）: ▶ で 1 セット目を開始（いまの種目になる）
- * - 手入力・閲覧（role なし）: すべて開いて、左は ＋（セットを手で足す）
+ * - まだの種目（upcoming）: ▶ で 1 セット目を開始（いまの種目になる）。右端の × でこの日から外す
+ * - 手入力・閲覧（role なし）: すべて開いて、左は ＋（セットを手で足す）。セットの無い種目は × で外せる
  */
 export function renderExerciseCard(
 	ctx: PageContext,
@@ -85,11 +96,7 @@ export function renderExerciseCard(
 			play.toggleClass('is-filled', env.suggested === true);
 		}
 		renderTitle(ctx, header, card);
-		if (env.suggested)
-			header.createSpan({
-				cls: 'fitness-log-next-chip',
-				text: t('today.nextChip'),
-			});
+		renderRemoveButton(header, env);
 	} else if (role === 'current') {
 		renderTitle(ctx, header, card);
 		const target = card.item?.targetSets;
@@ -101,6 +108,16 @@ export function renderExerciseCard(
 					? t('today.setCount', { n: total })
 					: t('today.setProgress', { done: total, target }),
 		});
+		// たたむ（セット中は実行中の行が隠れるので出さない）
+		const collapse = env.onCollapse;
+		if (collapse && !card.active)
+			iconButton(
+				header,
+				'chevron-up',
+				t('today.collapseExercise'),
+				collapse,
+				'fitness-log-card-collapse',
+			);
 		renderSubtasks(ctx, box, section, card, env);
 	} else {
 		// 手入力・閲覧: すべて開く
@@ -113,6 +130,7 @@ export function renderExerciseCard(
 				'fitness-log-play',
 			);
 		renderTitle(ctx, header, card);
+		renderRemoveButton(header, env);
 		if (card.sets.length > 0) {
 			const rows = box.createDiv({ cls: 'fitness-log-set-rows' });
 			card.sets.forEach((_, index) =>
@@ -135,6 +153,19 @@ export function renderExerciseCard(
 			text: t('today.unknownExercise'),
 		});
 	return { box, header };
+}
+
+/** まだやっていない種目の右端の ×（この日の一覧から外す） */
+function renderRemoveButton(header: HTMLElement, env: CardEnv): void {
+	const remove = env.onRemove;
+	if (!remove) return;
+	iconButton(
+		header,
+		'x',
+		t('today.removeFromDay'),
+		remove,
+		'fitness-log-card-remove',
+	);
 }
 
 /** 種目名。押すと種目ノート（フォームやコツのメモ）を開く */
@@ -286,7 +317,10 @@ function renderSubtasks(
 	}
 }
 
-/** 実行中のセット: 左の ■ で終える（回数を聞いて記録）。重量はその場で変えられる */
+/**
+ * 実行中のセット: 左の ■ で終える（回数を聞いて記録）。重量はその場で変えられる
+ * （終えたセットの数字と同じ欄。スマホはホイール、デスクトップは押すと全体が選ばれて打ち直せる）
+ */
 function renderActiveRow(
 	ctx: PageContext,
 	parent: HTMLElement,
@@ -315,35 +349,45 @@ function renderActiveRow(
 
 	if (card.recordType !== 'duration') {
 		const weightWrap = row.createSpan({ cls: 'fitness-log-inline-weight' });
-		const input = weightWrap.createEl('input', {
-			type: 'text',
-			cls: 'fitness-log-inline-input',
-			value:
-				active.weight === undefined
-					? ''
-					: String(toDisplayWeight(active.weight, unit)),
-			attr: {
-				inputmode: 'decimal',
-				'aria-label': t('today.weightPlaceholder'),
-				placeholder:
-					card.recordType === 'reps'
-						? t('today.addedWeightPlaceholder')
-						: t('today.weightPlaceholder'),
-			},
-		});
-		weightWrap.createSpan({ cls: 'fitness-log-muted', text: unit });
-		input.addEventListener('keydown', (event) => {
-			if (event.key === 'Enter' && !event.isComposing) input.blur();
-		});
-		input.addEventListener('change', () => {
-			const value = parseNumberInput(input.value);
-			if (value === undefined) return;
+		const current =
+			active.weight === undefined
+				? null
+				: toDisplayWeight(active.weight, unit);
+		const label =
+			card.recordType === 'reps'
+				? t('today.addedWeightPlaceholder')
+				: t('today.weightPlaceholder');
+		const apply = (value: number | null) =>
 			ctx.run(() =>
 				controller.updateActiveWeight(
 					value === null ? null : fromDisplayWeight(value, unit),
 				),
 			);
+		const commit = (text: string) => {
+			const value = parseNumberInput(text);
+			if (value === undefined || (value !== null && value < 0)) {
+				new Notice(t('prompt.invalidNumber'));
+				return false;
+			}
+			apply(value);
+			return true;
+		};
+		inlineInput(weightWrap, {
+			value: current === null ? '' : String(current),
+			placeholder: label,
+			label,
+			focusKey: `active:${card.key}:weight`,
+			inputMode: 'decimal',
+			onCommit: commit,
+			onPick: () =>
+				pickWeightWheel(ctx, {
+					current,
+					hint: `${card.name} ・ ${t('today.set', { n: active.setIndex })}`,
+					onPick: apply,
+					onType: commit,
+				}),
 		});
+		weightWrap.createSpan({ cls: 'fitness-log-muted', text: unit });
 	}
 
 	const timer = row.createSpan({ cls: 'fitness-log-timer' });

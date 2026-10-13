@@ -679,18 +679,31 @@ a.fitness-log-section-link:hover {
 	display: none;
 }
 
-/* 「次」の印（いまの種目が目標のセット数に届いたとき） */
-.fitness-log-next-chip {
+/* 開いている種目をたたむ ⌃ と、まだの種目をこの日から外す ×（行の右端。薄く） */
+.fitness-log-card-header > .fitness-log-card-collapse,
+.fitness-log-card-header > .fitness-log-card-remove {
 	flex-shrink: 0;
-	padding: 0 var(--size-4-2);
-	border: 1px solid var(--fitness-log-accent-line);
-	border-radius: 999px;
-	color: var(--text-accent);
-	font-size: var(--font-ui-smaller);
-	font-weight: var(--font-bold);
-	line-height: 1.6;
+	margin-right: calc(var(--size-4-2) * -1);
+	color: var(--text-faint);
 }
 
+.fitness-log-card-header > .fitness-log-card-collapse:hover,
+.fitness-log-card-header > .fitness-log-card-remove:hover {
+	color: var(--text-muted);
+}
+
+/* デスクトップでは ⋮⋮ と同じく薄く出し、行に乗せると濃く */
+body:not(.is-mobile) .fitness-log-card-remove {
+	opacity: 0.45;
+	transition: opacity 120ms ease;
+}
+
+body:not(.is-mobile) .fitness-log-card:hover .fitness-log-card-remove,
+body:not(.is-mobile) .fitness-log-card-remove:focus-visible {
+	opacity: 1;
+}
+
+/* おすすめの ▶（いまの種目が目標のセット数に届いたとき、最初のまだの種目）は塗りつぶす */
 button.fitness-log-play.fitness-log-icon-button.is-filled {
 	background: var(--interactive-accent);
 	border-color: var(--interactive-accent);
@@ -1102,9 +1115,7 @@ button.fitness-log-add-set:hover {
 	gap: var(--size-4-1);
 }
 
-.fitness-log-inline-weight input.fitness-log-inline-input {
-	width: 5em;
-	text-align: right;
+.fitness-log-inline-weight .fitness-log-inline-edit {
 	font-weight: var(--font-semibold);
 }
 

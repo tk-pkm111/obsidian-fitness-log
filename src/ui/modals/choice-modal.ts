@@ -13,6 +13,7 @@ export interface ChoiceItem {
 
 export interface ChoiceOptions {
 	title: string;
+	/** 空なら出さない */
 	message: string;
 	choices: readonly ChoiceItem[];
 	/** どれも選ばずに閉じたとき */
@@ -33,7 +34,7 @@ export class ChoiceModal extends Modal {
 	onOpen(): void {
 		const { contentEl, options } = this;
 		this.setTitle(options.title);
-		contentEl.createEl('p', { text: options.message });
+		if (options.message) contentEl.createEl('p', { text: options.message });
 		const list = contentEl.createDiv({ cls: 'fitness-log-choices' });
 		for (const choice of options.choices) {
 			const button = list.createEl('button', {

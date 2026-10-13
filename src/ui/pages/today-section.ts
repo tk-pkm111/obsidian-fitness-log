@@ -25,7 +25,10 @@ import type { PageContext } from '../page-context';
 import { dragHandle, makeSortable, type SortableEntry } from '../sortable';
 import {
 	endSessionWithNotice,
+	focusKeyOf,
+	focusState,
 	formatMinutes,
+	removeExerciseFromDay,
 	sectionRef,
 } from './today-actions';
 import { renderExerciseCard, type CardEnv } from './today-card';
@@ -485,27 +488,40 @@ function renderCards(
 		rest: env.rest,
 	};
 	// 筋トレ中（今日）は、いまの種目だけを開いてセットをサブタスクに。終わった種目は 1 行、まだの種目は ▶ だけ
-	const focus = ctx.pageState('todayFocus', () => new Map<string, string>());
-	const focusKey = `${ctx.date}:${section.key}`;
+	const focus = focusState(ctx);
+	const focusKey = focusKeyOf(ctx, section);
 	const layout =
 		mode === 'timer'
 			? cardLayout(section, env.lastSet, focus.get(focusKey) ?? null)
 			: null;
-	const envFor = (card: CardModel): CardEnv =>
-		layout
-			? {
-					...baseEnv,
-					role: cardRole(card, layout),
-					suggested: layout.suggestedKey === card.key,
-					total: card.exercise
-						? totalSets(section, card.exercise.id)
-						: card.sets.length,
-					onFocus: () => {
-						focus.set(focusKey, card.key);
-						ctx.refresh();
-					},
-				}
-			: baseEnv;
+	const envFor = (card: CardModel): CardEnv => {
+		const cardEnv: CardEnv = { ...baseEnv };
+		// まだやっていない種目は × でこの日から外せる（見るだけの未来の日を除く）
+		if (
+			mode !== 'readonly' &&
+			card.exercise &&
+			card.sets.length === 0 &&
+			!card.active
+		)
+			cardEnv.onRemove = () => removeExerciseFromDay(ctx, section, card);
+		if (!layout) return cardEnv;
+		return {
+			...cardEnv,
+			role: cardRole(card, layout),
+			suggested: layout.suggestedKey === card.key,
+			total: card.exercise
+				? totalSets(section, card.exercise.id)
+				: card.sets.length,
+			onFocus: () => {
+				focus.set(focusKey, { kind: 'open', key: card.key });
+				ctx.refresh();
+			},
+			onCollapse: () => {
+				focus.set(focusKey, { kind: 'collapsed' });
+				ctx.refresh();
+			},
+		};
+	};
 	const groups = cardGroups(ctx, section, cards);
 	for (const group of groups) {
 		if (group.cards.length === 0) continue;

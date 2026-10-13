@@ -249,6 +249,7 @@ function normalizeSections(raw: unknown, itemCount: number): PackageSection[] {
 	return sections;
 }
 
+/** dayOrders / dayRemoved（'YYYY-MM-DD セクションのキー' → カードのキーの並び） */
 function normalizeDayOrders(
 	raw: unknown,
 ): Record<string, string[]> | undefined {
@@ -380,6 +381,8 @@ export function normalizePluginData(raw: unknown): PluginData {
 	};
 	const dayOrders = normalizeDayOrders(obj.dayOrders);
 	if (dayOrders) data.dayOrders = dayOrders;
+	const dayRemoved = normalizeDayOrders(obj.dayRemoved);
+	if (dayRemoved) data.dayRemoved = dayRemoved;
 	const seededAt = str(obj.seededAt);
 	if (seededAt) data.seededAt = seededAt;
 	const setupAt = str(obj.setupAt);

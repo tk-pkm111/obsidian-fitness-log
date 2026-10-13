@@ -1,17 +1,25 @@
 /**
  * 今日の画面（筋トレ中）の種目の見せ方。いま取り組んでいる種目だけを開いてセットをサブタスクとして並べ、
  * 終わった種目は 1 行にたたみ、まだの種目は ▶ だけの行にする。
- * - いまの種目: 実行中のセットの種目 → 利用者が開いた種目（終わった種目を押したとき）→ 最後にセットを終えた種目
- * - 次の印: いまの種目が目標のセット数に届いたら（セット中でなければ）、並び順で最初のまだの種目。
+ * - いまの種目: 実行中のセットの種目 → 利用者が開いた種目（終わった種目を押したとき）→ 最後にセットを終えた種目。
+ *   利用者がたたんだ（開いている種目の ⌃ を押した）ときは、セット中でなければどの種目も開かない
+ * - おすすめの ▶（塗りつぶし）: いまの種目が目標のセット数に届いたら（セット中でなければ）、並び順で最初のまだの種目。
  *   まだ何もしていなければ最初の種目
  */
 import type { CardModel, LastSet, SectionModel } from './day-model';
 
 export type CardRole = 'current' | 'done' | 'upcoming';
 
+/**
+ * 利用者の操作で決めた「いまの種目」（セクションごと。ビューを開いている間だけ覚える）。
+ * open: 終わった種目を押して開いた。collapsed: 開いていた種目をたたんだ。
+ * セットを始めると消え、実行中のセットの種目 → 最後にセットを終えた種目に戻る
+ */
+export type FocusChoice = { kind: 'open'; key: string } | { kind: 'collapsed' };
+
 export interface CardLayout {
 	currentKey: string | null;
-	/** 「次」の印を付けるまだの種目 */
+	/** おすすめの ▶ を付けるまだの種目 */
 	suggestedKey: string | null;
 }
 
@@ -25,22 +33,23 @@ export function totalSets(section: SectionModel, exerciseId: string): number {
 export function cardLayout(
 	section: SectionModel,
 	lastSet: LastSet | null,
-	focusKey: string | null,
+	focus: FocusChoice | null,
 ): CardLayout {
 	const cards = section.cards;
-	const current =
-		cards.find((c) => c.active) ??
-		(focusKey
-			? cards.find((c) => c.key === focusKey && c.sets.length > 0)
-			: undefined) ??
-		(lastSet
-			? cards.find(
-					(c) =>
-						c.source?.sessionIndex === lastSet.sessionIndex &&
-						c.source.exerciseIndex === lastSet.exerciseIndex,
-				)
-			: undefined) ??
-		null;
+	const byLastSet = lastSet
+		? cards.find(
+				(c) =>
+					c.source?.sessionIndex === lastSet.sessionIndex &&
+					c.source.exerciseIndex === lastSet.exerciseIndex,
+			)
+		: undefined;
+	let chosen: CardModel | undefined;
+	if (focus?.kind === 'open')
+		chosen =
+			cards.find((c) => c.key === focus.key && c.sets.length > 0) ??
+			byLastSet;
+	else if (focus?.kind !== 'collapsed') chosen = byLastSet;
+	const current = cards.find((c) => c.active) ?? chosen ?? null;
 	const firstUpcoming =
 		cards.find(
 			(c) => c.sets.length === 0 && !c.active && c.exercise !== null,
