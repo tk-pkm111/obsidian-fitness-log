@@ -205,14 +205,33 @@ export function setSessionNote(
 	ensureSession(day, matches, name).note = note.trim();
 }
 
-/** セッションを外す。セットが記録されていれば外さずにエラー（記録を消さない）。 */
-export function removeSession(day: DayLog, matches: SessionMatcher): void {
+/**
+ * セッションを外す。セットが記録されていれば外さずにエラー（記録を消さない）。
+ * withSets のときは記録ごと消す（画面で「記録した N セットも消えます」と確かめてから）
+ */
+export function removeSession(
+	day: DayLog,
+	matches: SessionMatcher,
+	options: { withSets?: boolean } = {},
+): void {
 	const index = day.sessions.findIndex((s) => matches(s.name));
 	if (index < 0) return;
 	const session = day.sessions[index];
-	if (session?.exercises.some((e) => e.sets.length > 0))
+	if (!options.withSets && session?.exercises.some((e) => e.sets.length > 0))
 		throw new DayLogError('セットが記録されているセッションは外せません');
 	day.sessions.splice(index, 1);
+}
+
+/** セッションを別のパッケージにする（見出しの名前だけ変える。開始・終了・セット・コメントはそのまま） */
+export function renameSession(
+	day: DayLog,
+	matches: SessionMatcher,
+	name: string,
+): boolean {
+	const session = findSession(day, matches);
+	if (!session) return false;
+	session.name = name;
+	return true;
 }
 
 /**

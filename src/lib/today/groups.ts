@@ -166,3 +166,31 @@ export function setDayRemoved(
 	if (next) data.dayRemoved = next;
 	else delete data.dayRemoved;
 }
+
+/**
+ * その日のセクションの並び・外した種目を別のセクションへ移す（パッケージを変えたとき）。
+ * to が null なら消す（パッケージをその日から外したとき。もう一度足したら最初から）
+ */
+export function moveDaySection(
+	data: PluginData,
+	date: string,
+	from: string,
+	to: string | null,
+	today: string,
+): void {
+	const move = (
+		map: Record<string, string[]> | undefined,
+	): Record<string, string[]> | undefined => {
+		const keys = entriesFor(map, date)[from];
+		if (!keys) return map;
+		let next = withEntry(map, date, from, [], today);
+		if (to !== null) next = withEntry(next, date, to, keys, today);
+		return next;
+	};
+	const orders = move(data.dayOrders);
+	if (orders) data.dayOrders = orders;
+	else delete data.dayOrders;
+	const removed = move(data.dayRemoved);
+	if (removed) data.dayRemoved = removed;
+	else delete data.dayRemoved;
+}

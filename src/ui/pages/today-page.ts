@@ -1,6 +1,6 @@
-import { Menu, Platform, setIcon } from 'obsidian';
+import { Menu, setIcon } from 'obsidian';
 import { t } from '../../i18n';
-import type { DayLog, Package, SessionLog } from '../../lib/model/types';
+import type { DayLog, SessionLog } from '../../lib/model/types';
 import { weekdayLabel } from '../../lib/schedule/routine';
 import {
 	buildDayModel,
@@ -17,9 +17,8 @@ import {
 } from '../../lib/time/date';
 import { OTHER_SESSION } from '../../session/session-controller';
 import { chooseExercise } from '../choose-exercise';
+import { choosePackage } from '../choose-package';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
-import { ChoiceModal } from '../modals/choice-modal';
-import { PackageSuggestModal } from '../modals/package-suggest-modal';
 import type { PageContext } from '../page-context';
 import { renderSection } from './today-section';
 
@@ -92,6 +91,9 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 	// 休憩は最後にセットを終えた種目のすぐ下に出す（筋トレ中・その他のときだけ）
 	const lastSet = isToday ? latestFinishedSet(day) : null;
 	const rest = restState(sections, lastSet, isToday);
+	const packagesInDay = new Set(
+		sections.flatMap((s) => (s.inNote && s.pkg ? [s.pkg.id] : [])),
+	);
 	for (const section of sections)
 		renderSection(ctx, list, section, {
 			isToday,
@@ -100,6 +102,7 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 			session: sessionOf(day, section),
 			rest,
 			lastSet,
+			packagesInDay,
 		});
 
 	// 「今日はスキップ」した予定（取り消せるように残す）
@@ -250,38 +253,16 @@ function chooseAndAddPackage(
 	ctx: PageContext,
 	sections: readonly SectionModel[],
 ): void {
-	const { services } = ctx;
-	const shown = new Set(
-		sections.map((s) => s.pkg?.id).filter((id) => id !== undefined),
-	);
-	const { exercises } = services.store.current;
-	const packages = services.store.current.packages.filter(
-		(p) => !shown.has(p.id),
-	);
-	const add = (pkg: Package) =>
-		ctx.run(() => services.controller.addPackageToDay(ctx.date, pkg.id));
-	if (Platform.isMobile) {
-		// スマホは検索せず一覧から押す（検索の欄にキーボードが出て一覧が半分隠れる。パッケージは数が少ない）
-		const names = new Map(exercises.map((e) => [e.id, e.name]));
-		new ChoiceModal(ctx.app, {
-			title: addPackageLabel(sections),
-			message: packages.length === 0 ? t('suggest.noPackages') : '',
-			choices: packages.map((pkg) => ({
-				text: pkg.name,
-				desc: pkg.items
-					.map((i) => names.get(i.exerciseId))
-					.filter((n) => n !== undefined)
-					.join('、'),
-				onChoose: () => add(pkg),
-			})),
-		}).open();
-		return;
-	}
-	new PackageSuggestModal(ctx.app, {
-		packages,
-		exercises,
-		onChoose: add,
-	}).open();
+	choosePackage(ctx, {
+		title: addPackageLabel(sections),
+		exclude: new Set(
+			sections.map((s) => s.pkg?.id).filter((id) => id !== undefined),
+		),
+		onChoose: (pkg) =>
+			ctx.run(() =>
+				ctx.services.controller.addPackageToDay(ctx.date, pkg.id),
+			),
+	});
 }
 
 /** セクションに対応する日ノートのセッション（ノートに無ければ undefined） */

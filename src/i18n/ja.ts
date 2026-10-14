@@ -102,6 +102,9 @@ export const ja = {
 	'today.removeOther': '単発の種目を外す',
 	'today.removeShort': '外す',
 	'today.removeSectionConfirm': '{day}の予定から外しますか？',
+	'today.removeSectionConfirmSets':
+		'記録した {n} セットも消えます。外しますか？',
+	'today.changePackage': '別のパッケージに変える',
 	'today.dayToday': '今日',
 	'today.dayThis': 'この日',
 	'today.removeExerciseConfirm': 'この日の一覧から外しますか？',
@@ -538,7 +541,7 @@ export const ja = {
 
 	'session.start': '筋トレを開始',
 	'session.end': '筋トレを終了',
-	'session.resume': '再開する',
+	'session.resume': '筋トレを再開',
 	'session.started': '開始 {time}',
 	'session.elapsed': '経過 {time}',
 	'session.minutes': '{n} 分',

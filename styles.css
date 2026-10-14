@@ -2744,6 +2744,11 @@ button.fitness-log-end-button {
 	font-weight: var(--font-medium);
 }
 
+/* 終了後の「筋トレを再開」は、筋トレ中の「筋トレを終了」と同じ右下に */
+button.fitness-log-resume-button {
+	margin-left: auto;
+}
+
 /* 終了: 「お疲れ様でした」 */
 .fitness-log-finished {
 	display: flex;

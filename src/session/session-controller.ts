@@ -11,6 +11,7 @@ import {
 	findSession,
 	removeEmptyExercise,
 	removeSession,
+	renameSession,
 	resumeSession,
 	setSessionNote,
 	setsInSession,
@@ -27,9 +28,16 @@ import type {
 	DayLog,
 	Exercise,
 	Package,
+	Routine,
 	SetLog,
 } from '../lib/model/types';
-import { dayRemovedFor, setDayOrder, setDayRemoved } from '../lib/today/groups';
+import { isScheduledOn } from '../lib/schedule/routine';
+import {
+	dayRemovedFor,
+	moveDaySection,
+	setDayOrder,
+	setDayRemoved,
+} from '../lib/today/groups';
 import { formatTime, todayString } from '../lib/time/date';
 
 /** 利用者に見せるエラー（Notice にそのまま出す） */
@@ -49,6 +57,17 @@ export interface SessionRef {
 }
 
 export const OTHER_SESSION: SessionRef = { packageId: null, sessionName: null };
+
+/** そのパッケージをその日に予定しているルーチンを、その日だけスキップする */
+function skipRoutinesOf(
+	routines: Routine[],
+	packageId: string,
+	date: string,
+): void {
+	for (const routine of routines)
+		if (routine.packageId === packageId && isScheduledOn(routine, date))
+			routine.skipDates.push(date);
+}
 
 /** 今日の画面のセクションのキー（buildDayModel の SectionModel.key と同じ付け方） */
 export function sectionKeyOf(ref: SessionRef): string {
@@ -393,10 +412,78 @@ export class SessionController {
 		return this.write(date, (d) => setSessionNote(d, match, name, note));
 	}
 
-	/** セットの無いセッションをその日から外す */
-	async removeSessionFromDay(date: string, ref: SessionRef): Promise<DayLog> {
+	/**
+	 * まとまり（パッケージ・単発の種目）をその日から外す。筋トレ中・終了後でも外せる（記録したセットも消す。
+	 * 画面で確かめてから）。進行中のセットは取り消し、ルーチンの予定ならその日はスキップする（外したのにまた出ない）
+	 */
+	async removeSessionFromDay(date: string, ref: SessionRef): Promise<void> {
 		const { match } = this.sessionMatcher(ref);
-		return this.write(date, (d) => removeSession(d, match));
+		if (this.index.day(date)?.sessions.some((s) => match(s.name)))
+			await this.write(date, (d) =>
+				removeSession(d, match, { withSets: true }),
+			);
+		const sectionKey = sectionKeyOf(ref);
+		await this.store.update((data) => {
+			if (this.isActiveIn(data.activeSet, date, ref))
+				data.activeSet = null;
+			if (ref.packageId !== null)
+				skipRoutinesOf(data.routines, ref.packageId, date);
+			moveDaySection(
+				data,
+				date,
+				sectionKey,
+				null,
+				todayString(this.now()),
+			);
+		});
+	}
+
+	/**
+	 * パッケージを別のパッケージに変える（記録はそのまま。日ノートの見出しの名前を変える）。
+	 * ノートに無い予定（ルーチン）なら、その日はスキップして新しいパッケージを足す。
+	 * 進行中のセットも新しいパッケージのセットにする
+	 */
+	async changeSessionPackage(
+		date: string,
+		ref: SessionRef,
+		packageId: string,
+	): Promise<void> {
+		const next = this.packageById(packageId);
+		if (!next) throw new SessionError('パッケージが見つかりません');
+		const from = this.sessionMatcher(ref);
+		const to = this.sessionMatcher({ packageId, sessionName: null });
+		const sessions = this.index.day(date)?.sessions ?? [];
+		if (sessions.some((s) => to.match(s.name)))
+			throw new SessionError(`「${next.name}」はもうこの日にあります`);
+		await this.write(date, (d) => {
+			if (!renameSession(d, from.match, next.name))
+				ensureSession(d, to.match, next.name);
+		});
+		await this.store.update((data) => {
+			if (this.isActiveIn(data.activeSet, date, ref) && data.activeSet)
+				data.activeSet.packageId = packageId;
+			if (ref.packageId !== null)
+				skipRoutinesOf(data.routines, ref.packageId, date);
+			moveDaySection(
+				data,
+				date,
+				sectionKeyOf(ref),
+				sectionKeyOf({ packageId, sessionName: null }),
+				todayString(this.now()),
+			);
+		});
+	}
+
+	/** 進行中のセットがその日のそのまとまりのものか */
+	private isActiveIn(
+		active: ActiveSet | null,
+		date: string,
+		ref: SessionRef,
+	): boolean {
+		if (active === null || active.date !== date) return false;
+		// パッケージで解決できない見出し（パッケージを消した等）では、セットを始められない
+		if (ref.packageId === null && ref.sessionName !== null) return false;
+		return active.packageId === ref.packageId;
 	}
 
 	// -------------------------------------------------------------------------
@@ -451,6 +538,15 @@ export class SessionController {
 		if (date !== todayString(this.now()))
 			throw new SessionError('再開できるのは今日の筋トレだけです');
 		const { match } = this.sessionMatcher(ref);
+		const running = this.index
+			.day(date)
+			?.sessions.find(
+				(s) => s.name !== null && s.start && !s.end && !match(s.name),
+			);
+		if (running?.name)
+			throw new SessionError(
+				`「${running.name}」が筋トレ中です。先に終了してください`,
+			);
 		return this.write(date, (d) => resumeSession(d, match));
 	}
 

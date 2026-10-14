@@ -19,6 +19,7 @@ import { sectionProgress } from '../../lib/today/progress';
 import type { RestState } from '../../lib/today/rest';
 import { formatDuration, formatHm, parseTime } from '../../lib/time/date';
 import { chooseExercise } from '../choose-exercise';
+import { choosePackage } from '../choose-package';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
 import { ConfirmModal } from '../modals/confirm-modal';
 import { TextPromptModal } from '../modals/text-prompt-modal';
@@ -44,14 +45,18 @@ export interface SectionEnv {
 	rest: RestState | null;
 	/** その日に最後に終えたセット（今日だけ。いまの種目を決める） */
 	lastSet: LastSet | null;
+	/** その日のノートにもうあるパッケージ（「別のパッケージに変える」の候補から外す） */
+	packagesInDay: ReadonlySet<string>;
 }
 
 /**
  * 今日ページの 1 セクション（パッケージ 1 つ分）。枠で囲まず、見出し（名前・状態・進み）と種目のリストで見せる。
  * - 予定（planned）: 種目名のチップと「▶ 筋トレを開始」
  * - 筋トレ中（in-progress）: 進みのバー、種目のリスト（やった順 → まだの種目）、「■ 筋トレを終了」
- * - 終了（finished）: 「お疲れ様でした」とまとめ（種目数・セット数）。「記録を見る」でやった種目だけを開いて修正
- * - その他（manual）: パッケージ外の種目。いつも開いていて、開始・終了は無い
+ * - 終了（finished）: 「お疲れ様でした」とまとめ（種目数・セット数）。「記録を見る」でやった種目だけを開いて修正。
+ *   今日なら右下に「筋トレを再開」（筋トレ中の「筋トレを終了」と同じ場所）
+ * - 単発の種目（manual）: パッケージ外の種目。いつも開いていて、開始・終了は無い
+ * 名前の行の右端の × で、まとまりをその日から外せる（筋トレ中・終了後も。記録があれば確かめてから消す）
  * 実行中のセットはその種目の行に、休憩は最後にセットを終えた種目のすぐ下に出す（today-card.ts）。
  */
 export function renderSection(
@@ -75,7 +80,7 @@ export function renderSection(
 		case 'planned':
 			if (expanded.has(expandKey) && !env.isFuture) {
 				renderCards(ctx, box, section, section.cards, 'manual', env);
-				renderFooter(ctx, box, section, false);
+				renderFooter(ctx, box, section, { add: true });
 			} else renderPlanned(ctx, box, section, env, expanded, expandKey);
 			return;
 		case 'in-progress':
@@ -87,7 +92,7 @@ export function renderSection(
 				env.isToday ? 'timer' : 'manual',
 				env,
 			);
-			renderFooter(ctx, box, section, true);
+			renderFooter(ctx, box, section, { add: true, end: true });
 			return;
 		case 'finished':
 			renderFinished(ctx, box, section, env, expanded, expandKey);
@@ -99,7 +104,8 @@ export function renderSection(
 					? 'timer'
 					: 'manual';
 			renderCards(ctx, box, section, section.cards, mode, env);
-			if (mode !== 'readonly') renderFooter(ctx, box, section, false);
+			if (mode !== 'readonly')
+				renderFooter(ctx, box, section, { add: true });
 			return;
 		}
 	}
@@ -235,7 +241,7 @@ function renderHeader(
 		openSectionMenu(ctx, section, env, expanded, expandKey, event),
 	);
 	// まとまり（パッケージ・単発の種目）を外す × は名前の行の右端。種目の行の × と並ばないように、
-	// 種目がいくつでも、まとまりの名前の隣にだけ置く
+	// 種目がいくつでも、まとまりの名前の隣にだけ置く。筋トレ中・終了後も同じ場所に出す
 	if (canRemoveSection(section))
 		iconButton(
 			actions,
@@ -267,7 +273,6 @@ function openSectionMenu(
 	event: MouseEvent,
 ): void {
 	const { services, date } = ctx;
-	const ref = sectionRef(section);
 	const menu = new Menu();
 	menu.addItem((item) =>
 		item
@@ -283,20 +288,13 @@ function openSectionMenu(
 				.setIcon('sliders-horizontal')
 				.onClick(() => openPackageEditor(ctx, pkg.id)),
 		);
-	// 再開は今日だけ（過去の日はタイマーで続きのセットを計れない）
-	if (
-		section.status === 'finished' &&
-		!section.isOther &&
-		section.pkg &&
-		date === ctx.today
-	)
+	// 記録はそのままで、別のパッケージに入れ替える（間違えて始めた・混んでいて別のメニューにした）
+	if (!section.isOther && !env.isFuture)
 		menu.addItem((item) =>
 			item
-				.setTitle(t('session.resume'))
-				.setIcon('rotate-ccw')
-				.onClick(() =>
-					ctx.run(() => services.controller.resumeSession(date, ref)),
-				),
+				.setTitle(t('today.changePackage'))
+				.setIcon('arrow-right-left')
+				.onClick(() => changePackage(ctx, section, env)),
 		);
 	if (
 		section.status === 'planned' &&
@@ -398,15 +396,14 @@ function renderPlanned(
 }
 
 /**
- * まとまり（パッケージ・単発の種目）をその日の予定から外せるか: まだ記録が無いこと（セット・実行中のセットが無い）。
- * パッケージは、自分で足したもの（ノートの見出し）も、ルーチンの予定（その日だけスキップ）も
+ * まとまり（パッケージ・単発の種目）をその日から外せるか: ノートの見出し・ルーチンの予定（その日だけスキップ）・
+ * 進行中のセットのどれかがあること。記録があっても外せる（確認で「記録した N セットも消えます」）
  */
 function canRemoveSection(section: SectionModel): boolean {
-	if (section.cards.some((c) => c.sets.length > 0 || c.active)) return false;
-	if (section.isOther) return section.inNote;
 	return (
 		section.inNote ||
-		(section.plannedBy !== null && section.status === 'planned')
+		section.plannedBy !== null ||
+		section.cards.some((c) => c.active)
 	);
 }
 
@@ -414,33 +411,52 @@ function removeSectionLabel(section: SectionModel): string {
 	return section.isOther ? t('today.removeOther') : t('today.removePackage');
 }
 
-/** 「LEGS A ／ 今日の予定から外しますか？」（確認は短く。ルーチンの予定ならその日だけスキップ） */
+/**
+ * 「LEGS A ／ 今日の予定から外しますか？」（確認は短く）。記録があれば「記録した 3 セットも消えます。外しますか？」。
+ * ルーチンの予定ならその日だけスキップ（今日の画面の「スキップ」から戻せる）
+ */
 function confirmRemoveSection(ctx: PageContext, section: SectionModel): void {
 	const day =
 		ctx.date === ctx.today ? t('today.dayToday') : t('today.dayThis');
-	const routine = section.inNote ? null : section.plannedBy;
+	const sets = section.cards.reduce((n, c) => n + c.sets.length, 0);
 	new ConfirmModal(ctx.app, {
 		title: section.isOther ? t('today.other') : section.title,
-		message: t('today.removeSectionConfirm', { day }),
+		message:
+			sets > 0
+				? t('today.removeSectionConfirmSets', { n: sets })
+				: t('today.removeSectionConfirm', { day }),
 		confirmText: t('today.removeShort'),
-		onConfirm: () => {
-			if (routine)
-				ctx.run(() =>
-					ctx.services.controller.skipRoutine(routine.id, ctx.date),
-				);
-			else removeSection(ctx, section);
-		},
+		danger: sets > 0,
+		onConfirm: () =>
+			ctx.run(() =>
+				ctx.services.controller.removeSessionFromDay(
+					ctx.date,
+					sectionRef(section),
+				),
+			),
 	}).open();
 }
 
-/** セクションをこの日から外す（記録が無いときだけ。ノートの見出しを消す） */
-function removeSection(ctx: PageContext, section: SectionModel): void {
-	ctx.run(() =>
-		ctx.services.controller.removeSessionFromDay(
-			ctx.date,
-			sectionRef(section),
-		),
-	);
+/** 「別のパッケージに変える」: 選んだパッケージに入れ替える（記録・開始時刻・コメントはそのまま） */
+function changePackage(
+	ctx: PageContext,
+	section: SectionModel,
+	env: SectionEnv,
+): void {
+	const exclude = new Set(env.packagesInDay);
+	if (section.pkg) exclude.add(section.pkg.id);
+	choosePackage(ctx, {
+		title: t('today.changePackage'),
+		exclude,
+		onChoose: (pkg) =>
+			ctx.run(() =>
+				ctx.services.controller.changeSessionPackage(
+					ctx.date,
+					sectionRef(section),
+					pkg.id,
+				),
+			),
+	});
 }
 
 /** 終了: 「お疲れ様でした」とまとめ。「記録を見る」でやった種目だけを開いて修正できる */
@@ -488,17 +504,20 @@ function renderFinished(
 		},
 		{ icon: open ? 'chevron-up' : 'chevron-down', cls: 'mod-quiet' },
 	);
-	if (!open) return;
 	// やった種目だけ（やらなかった種目を並べても修正には要らない）。足すときは「種目を追加」
-	renderCards(
-		ctx,
-		box,
-		section,
-		section.cards.filter((c) => c.sets.length > 0),
-		env.isFuture ? 'readonly' : 'manual',
-		env,
-	);
-	if (!env.isFuture) renderFooter(ctx, box, section, false);
+	if (open)
+		renderCards(
+			ctx,
+			box,
+			section,
+			section.cards.filter((c) => c.sets.length > 0),
+			env.isFuture ? 'readonly' : 'manual',
+			env,
+		);
+	// 再開は今日のパッケージだけ（過去の日はタイマーで続きのセットを計れない）
+	const resume = env.isToday && !section.isOther && section.pkg !== null;
+	const add = open && !env.isFuture;
+	if (add || resume) renderFooter(ctx, box, section, { add, resume });
 }
 
 /** 種目のリスト（パッケージの区切りごと）。今日の筋トレ中は、まだの種目を ⋮⋮ で並べ替えられる */
@@ -595,35 +614,55 @@ function renderCards(
 	}
 }
 
-/** リストの下: 「＋ 種目を追加」と（筋トレ中は）「■ 筋トレを終了」 */
+/**
+ * リストの下: 左に「＋ 種目を追加」、右に（筋トレ中は）「■ 筋トレを終了」・（終了後は）「↻ 筋トレを再開」。
+ * 終了と再開は同じ右下に出す（終えたところで、そのまま押し直せる）
+ */
 function renderFooter(
 	ctx: PageContext,
 	box: HTMLElement,
 	section: SectionModel,
-	withEnd: boolean,
+	options: { add?: boolean; end?: boolean; resume?: boolean },
 ): void {
 	const footer = box.createDiv({ cls: 'fitness-log-section-footer' });
-	textButton(
-		footer,
-		t('today.addExercise'),
-		() =>
-			chooseExerciseForSection(ctx, section, (exerciseId) =>
-				ctx.run(() =>
-					ctx.services.controller.addExerciseToDay(
-						ctx.date,
-						sectionRef(section),
-						exerciseId,
+	if (options.add)
+		textButton(
+			footer,
+			t('today.addExercise'),
+			() =>
+				chooseExerciseForSection(ctx, section, (exerciseId) =>
+					ctx.run(() =>
+						ctx.services.controller.addExerciseToDay(
+							ctx.date,
+							sectionRef(section),
+							exerciseId,
+						),
 					),
 				),
-			),
-		{ icon: 'plus', cls: 'mod-quiet' },
-	);
-	if (withEnd)
+			{ icon: 'plus', cls: 'mod-quiet' },
+		);
+	if (options.end)
 		textButton(
 			footer,
 			t('session.end'),
 			() => endSessionWithNotice(ctx, section),
 			{ icon: 'square', cls: 'fitness-log-end-button' },
+		);
+	if (options.resume)
+		textButton(
+			footer,
+			t('session.resume'),
+			() =>
+				ctx.run(() =>
+					ctx.services.controller.resumeSession(
+						ctx.date,
+						sectionRef(section),
+					),
+				),
+			{
+				icon: 'rotate-ccw',
+				cls: 'fitness-log-end-button fitness-log-resume-button',
+			},
 		);
 }
 

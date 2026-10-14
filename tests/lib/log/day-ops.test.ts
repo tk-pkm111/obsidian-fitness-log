@@ -11,6 +11,7 @@ import {
 	startSession,
 	removeEmptyExercise,
 	removeSession,
+	renameSession,
 	setSessionNote,
 	setsInSession,
 	updateSet,
@@ -276,6 +277,46 @@ describe('セッションの操作', () => {
 		expect(() => removeSession(day, exact('B'))).toThrow(DayLogError);
 		removeSession(day, exact('無い')); // 無ければ何もしない
 		expect(day.sessions).toHaveLength(1);
+	});
+
+	it('withSets なら記録ごと外す（筋トレ中・終了後のパッケージを外す）', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'B',
+					note: '',
+					start: '10:00:00',
+					exercises: [{ name: 'X', sets: [set(1, 1)] }],
+				},
+			],
+		};
+		removeSession(day, exact('B'), { withSets: true });
+		expect(day.sessions).toEqual([]);
+	});
+
+	it('別のパッケージにするときは見出しの名前だけ変える（開始・セット・コメントはそのまま）', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'A',
+					note: 'メモ',
+					start: '10:00:00',
+					exercises: [{ name: 'X', sets: [set(1, 1)] }],
+				},
+			],
+		};
+		expect(renameSession(day, exact('A'), 'B')).toBe(true);
+		expect(day.sessions).toEqual([
+			{
+				name: 'B',
+				note: 'メモ',
+				start: '10:00:00',
+				exercises: [{ name: 'X', sets: [set(1, 1)] }],
+			},
+		]);
+		expect(renameSession(day, exact('無い'), 'C')).toBe(false);
 	});
 });
 

@@ -425,7 +425,13 @@ describe('SessionController（筋トレの開始・終了）', () => {
 			index,
 			() => clock,
 		);
-		return { fake, store, controller, setClock: (d: Date) => (clock = d) };
+		return {
+			fake,
+			store,
+			index,
+			controller,
+			setClock: (d: Date) => (clock = d),
+		};
 	}
 
 	it('開始で日ノートに開始時刻、終了で終了時刻を書き、時間は開始〜終了', async () => {
@@ -498,6 +504,123 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		expect(fake.vault.text('Fitness/log/2026-10-01.md')).toContain(
 			'- 時間: 18:30:05 –\n',
 		);
+	});
+
+	const routine = (packageId: string) => ({
+		id: `rt_${packageId}`,
+		packageId,
+		rule: { type: 'everyNDays' as const, intervalDays: 1 },
+		startDate: '2026-09-01',
+		enabled: true,
+		skipDates: [] as string[],
+	});
+
+	it('筋トレ中でもパッケージを外せる（記録ごと消し、進行中のセットは取り消し、ルーチンの予定はその日スキップ）', async () => {
+		const { fake, store, controller } = await make();
+		const ref = { packageId: 'pk_a', sessionName: 'PUSH A' };
+		await store.update((d) => {
+			d.routines = [routine('pk_a')];
+			d.dayOrders = { '2026-10-01 pkg:pk_a': ['ex:ex_y'] };
+		});
+		await controller.startSession('2026-10-01', 'pk_a');
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await controller.finishSet(9);
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await controller.removeSessionFromDay('2026-10-01', ref);
+		expect(fake.vault.text('Fitness/log/2026-10-01.md')).not.toContain(
+			'PUSH A',
+		);
+		expect(store.current.activeSet).toBeNull();
+		expect(store.current.routines[0]?.skipDates).toEqual(['2026-10-01']);
+		expect(store.current.dayOrders).toBeUndefined();
+	});
+
+	it('別のパッケージに変える: 記録・開始時刻はそのまま、進行中のセットも移る。もうその日にあるパッケージには変えない', async () => {
+		const { fake, store, controller } = await make();
+		const ref = { packageId: 'pk_a', sessionName: 'PUSH A' };
+		await store.update((d) => {
+			d.routines = [routine('pk_a')];
+			d.dayRemoved = { '2026-10-01 pkg:pk_a': ['ex:ex_d'] };
+		});
+		await controller.startSession('2026-10-01', 'pk_a');
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await controller.finishSet(9);
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await controller.changeSessionPackage('2026-10-01', ref, 'pk_b');
+		const text = fake.vault.text('Fitness/log/2026-10-01.md')!;
+		expect(text).toContain('## PULL A\n- 時間: 18:30:05 –\n');
+		expect(text).not.toContain('PUSH A');
+		expect(text).toContain('ケーブルYレイズ');
+		expect(store.current.activeSet).toMatchObject({ packageId: 'pk_b' });
+		// 元のパッケージのルーチンはその日スキップ（変えたのに予定として出ない）
+		expect(store.current.routines[0]?.skipDates).toEqual(['2026-10-01']);
+		expect(store.current.dayRemoved).toEqual({
+			'2026-10-01 pkg:pk_b': ['ex:ex_d'],
+		});
+		// 進行中のセットは新しいパッケージのセットとして書く
+		await controller.finishSet(8);
+		expect(
+			controller.doneSets(
+				'2026-10-01',
+				{ packageId: 'pk_b', sessionName: null },
+				'ex_y',
+			),
+		).toHaveLength(2);
+		await controller.addPackageToDay('2026-10-01', 'pk_a');
+		await expect(
+			controller.changeSessionPackage(
+				'2026-10-01',
+				{ packageId: 'pk_a', sessionName: 'PUSH A' },
+				'pk_b',
+			),
+		).rejects.toBeInstanceOf(SessionError);
+	});
+
+	it('ノートに無い予定（ルーチン）を変えたら、その日はスキップして新しいパッケージを足す', async () => {
+		const { store, index, controller } = await make();
+		await store.update((d) => {
+			d.routines = [routine('pk_a')];
+		});
+		await controller.changeSessionPackage(
+			'2026-10-01',
+			{ packageId: 'pk_a', sessionName: null },
+			'pk_b',
+		);
+		expect(store.current.routines[0]?.skipDates).toEqual(['2026-10-01']);
+		expect(index.day('2026-10-01')?.sessions).toEqual([
+			{ name: 'PULL A', note: '', exercises: [] },
+		]);
+	});
+
+	it('別のパッケージが筋トレ中なら再開できない', async () => {
+		const { controller } = await make();
+		const refA = { packageId: 'pk_a', sessionName: null };
+		await controller.startSession('2026-10-01', 'pk_a');
+		await controller.endSession('2026-10-01', refA);
+		await controller.startSession('2026-10-01', 'pk_b');
+		await expect(
+			controller.resumeSession('2026-10-01', refA),
+		).rejects.toBeInstanceOf(SessionError);
 	});
 
 	it('再開は今日だけ。日が変わってから終えると最後のセットの終了で終える', async () => {

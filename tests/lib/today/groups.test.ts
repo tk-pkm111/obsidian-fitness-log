@@ -10,6 +10,7 @@ import {
 	groupCards,
 	reorderWithinGroup,
 	dayRemovedFor,
+	moveDaySection,
 	setDayOrder,
 	setDayRemoved,
 } from '../../../src/lib/today/groups';
@@ -132,6 +133,31 @@ describe('その日だけの並び', () => {
 		expect(dayOrdersFor(data, '2026-10-01')).toEqual({
 			'pkg:pk': ['ex:c', 'ex:d'],
 		});
+	});
+});
+
+describe('パッケージを変える・外す（その日の並び・外した種目を移す）', () => {
+	it('変えたら新しいセクションへ移し、外したら消す。ほかの日・ほかのセクションはそのまま', () => {
+		const data = createEmptyData();
+		data.dayOrders = {
+			'2026-10-01 pkg:a': ['ex:b', 'ex:a'],
+			'2026-10-01 other': ['ex:c'],
+			'2026-09-30 pkg:a': ['ex:a'],
+		};
+		data.dayRemoved = { '2026-10-01 pkg:a': ['ex:d'] };
+		moveDaySection(data, '2026-10-01', 'pkg:a', 'pkg:b', '2026-10-01');
+		expect(data.dayOrders).toEqual({
+			'2026-10-01 pkg:b': ['ex:b', 'ex:a'],
+			'2026-10-01 other': ['ex:c'],
+			'2026-09-30 pkg:a': ['ex:a'],
+		});
+		expect(data.dayRemoved).toEqual({ '2026-10-01 pkg:b': ['ex:d'] });
+		moveDaySection(data, '2026-10-01', 'pkg:b', null, '2026-10-01');
+		expect(data.dayOrders).toEqual({
+			'2026-10-01 other': ['ex:c'],
+			'2026-09-30 pkg:a': ['ex:a'],
+		});
+		expect(data.dayRemoved).toBeUndefined();
 	});
 });
 
