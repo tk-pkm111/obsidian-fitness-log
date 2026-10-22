@@ -4,7 +4,7 @@ import {
 	type App,
 	type FuzzyMatch,
 } from 'obsidian';
-import { t, type MessageKey } from '../../i18n';
+import { t } from '../../i18n';
 import { nameKey } from '../../lib/model/resolve';
 import type { Exercise } from '../../lib/model/types';
 
@@ -112,9 +112,9 @@ export class ExerciseSuggestModal extends FuzzySuggestModal<Choice> {
 			);
 			note.createSpan({ text: pinned });
 		}
-		const meta = [t(`category.${exercise.category}` as MessageKey)];
-		if (exercise.equipment)
-			meta.push(t(`equipment.${exercise.equipment}` as MessageKey));
+		const meta: string[] = [];
+		if (exercise.category) meta.push(exercise.category);
+		if (exercise.equipment) meta.push(exercise.equipment);
 		if (exercise.aliases.length > 0) meta.push(exercise.aliases.join('、'));
 		el.createDiv({
 			cls: 'fitness-log-suggestion-note',

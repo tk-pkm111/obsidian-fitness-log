@@ -1,5 +1,6 @@
 import { Notice, setIcon } from 'obsidian';
 import { t } from '../../i18n';
+import { hasField, keepsWeight } from '../../lib/model/record-type';
 import { formatSetResult, formatSetsCompact } from '../../lib/format';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
 import type { CardRole } from '../../lib/today/focus';
@@ -353,16 +354,16 @@ function renderActiveRow(
 		text: t('today.set', { n: active.setIndex }),
 	});
 
-	if (card.recordType !== 'duration') {
+	// 重量（回数の種目は加重）を持つ種目だけ、計っている間も重量を直せる
+	if (keepsWeight(card.recordType)) {
 		const weightWrap = row.createSpan({ cls: 'fitness-log-inline-weight' });
 		const current =
 			active.weight === undefined
 				? null
 				: toDisplayWeight(active.weight, unit);
-		const label =
-			card.recordType === 'reps'
-				? t('today.addedWeightPlaceholder')
-				: t('today.weightPlaceholder');
+		const label = hasField(card.recordType, 'weight')
+			? t('today.weightPlaceholder')
+			: t('today.addedWeightPlaceholder');
 		const apply = (value: number | null) =>
 			ctx.run(() =>
 				controller.updateActiveWeight(

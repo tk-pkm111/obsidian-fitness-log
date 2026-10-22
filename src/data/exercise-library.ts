@@ -29,6 +29,7 @@ import {
 	exerciseNoteFrontmatter,
 } from '../lib/model/exercise-note';
 import { newId } from '../lib/model/ids';
+import { hasLegacyLabel } from '../lib/model/lists';
 import type { Exercise } from '../lib/model/types';
 import type { DataStore } from './data-store';
 
@@ -52,6 +53,8 @@ export class ExerciseLibrary extends Events {
 	private pending = new Set<string>();
 	/** ファイル名を変えたノート（新しいパス → 旧名）。旧名を別名に足す */
 	private renamedFrom = new Map<string, string>();
+	/** カテゴリ・器具が以前の英語のキー（push など）のノート。読んだ後で名前（「プッシュ」）に書き直す */
+	private legacyLabels = new Set<string>();
 	private readonly flushLater = debounce(
 		() => void this.flushPending(),
 		300,
@@ -159,6 +162,23 @@ export class ExerciseLibrary extends Events {
 		for (const file of withoutId) await this.assignId(file);
 		this.ready = true;
 		this.publish();
+		await this.rewriteLegacyLabels();
+	}
+
+	/** 以前の版の英語のキー（category: push）を名前（category: プッシュ）に書き直す */
+	private async rewriteLegacyLabels(): Promise<void> {
+		const paths = [...this.legacyLabels];
+		this.legacyLabels.clear();
+		for (const path of paths) {
+			const file = this.app.vault.getFileByPath(path);
+			const exercise = this.byPath.get(path);
+			if (!file || !exercise) continue;
+			await this.app.fileManager.processFrontMatter(
+				file,
+				(fm: Record<string, unknown>) =>
+					applyExerciseToFrontmatter(fm, exercise),
+			);
+		}
 	}
 
 	/** ノートを読む。id が無ければ null、YAML が読めなければ undefined */
@@ -183,6 +203,11 @@ export class ExerciseLibrary extends Events {
 				return undefined;
 			}
 		}
+		if (
+			hasLegacyLabel(frontmatter?.[EXERCISE_KEYS.category], 'category') ||
+			hasLegacyLabel(frontmatter?.[EXERCISE_KEYS.equipment], 'equipment')
+		)
+			this.legacyLabels.add(file.path);
 		return exerciseFromNote({
 			path: file.path,
 			basename: file.basename,
@@ -255,6 +280,7 @@ export class ExerciseLibrary extends Events {
 			}
 		}
 		if (changed) this.publish();
+		await this.rewriteLegacyLabels();
 	}
 
 	private sorted(): Exercise[] {

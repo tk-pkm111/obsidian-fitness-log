@@ -4,6 +4,7 @@ import type { LogRepository } from '../data/log-repository';
 import {
 	appendSet,
 	deleteSet,
+	endManualSession,
 	endPastSession,
 	endSession,
 	ensureExercise,
@@ -22,6 +23,7 @@ import {
 	type SessionMatcher,
 	type SetAddress,
 } from '../lib/log/day-ops';
+import { hasField } from '../lib/model/record-type';
 import { createResolver } from '../lib/model/resolve';
 import type {
 	ActiveSet,
@@ -57,6 +59,11 @@ export interface SessionRef {
 }
 
 export const OTHER_SESSION: SessionRef = { packageId: null, sessionName: null };
+
+/** 単発の種目（パッケージ外）のセクションを指しているか */
+function isOtherRef(ref: SessionRef): boolean {
+	return ref.packageId === null && ref.sessionName === null;
+}
 
 /** そのパッケージをその日に予定しているルーチンを、その日だけスキップする */
 function skipRoutinesOf(
@@ -237,16 +244,23 @@ export class SessionController {
 	/**
 	 * 進行中セットを終えて日ノートに書く。書き込みに失敗したら進行中のまま残す（記録を失わない）。
 	 */
-	finishSet(reps: number | null, note = ''): Promise<DayLog> {
-		this.finishing ??= this.doFinishSet(reps, note).finally(() => {
-			this.finishing = null;
-		});
+	finishSet(
+		reps: number | null,
+		note = '',
+		distance: number | null = null,
+	): Promise<DayLog> {
+		this.finishing ??= this.doFinishSet(reps, note, distance).finally(
+			() => {
+				this.finishing = null;
+			},
+		);
 		return this.finishing;
 	}
 
 	private async doFinishSet(
 		reps: number | null,
 		note: string,
+		distance: number | null,
 	): Promise<DayLog> {
 		const active = this.activeSet;
 		if (!active) throw new SessionError('進行中のセットがありません');
@@ -261,6 +275,7 @@ export class SessionController {
 			end: formatTime(this.now()),
 			note: note.trim(),
 		};
+		if (hasField(exercise.recordType, 'distance')) set.distance = distance;
 		const day = await this.write(active.date, (d) => {
 			appendSet(d, this.target(ref, exercise), set);
 		});
@@ -326,6 +341,9 @@ export class SessionController {
 				target.sessionName,
 			);
 			ensureExercise(session, target.matchExercise, target.exerciseName);
+			// 終えた単発の種目に足したら、続きをやるので終了を消す（終えたままだと足した種目が見えない）
+			if (isOtherRef(ref) && session.end)
+				resumeSession(d, target.matchSession, { manual: true });
 		});
 	}
 
@@ -513,7 +531,10 @@ export class SessionController {
 		});
 	}
 
-	/** 「筋トレを終了」: 終了時刻を書く。そのパッケージでセットが進行中なら先に終えてもらう */
+	/**
+	 * 「筋トレを終了」: 終了時刻を書く。そのパッケージでセットが進行中なら先に終えてもらう。
+	 * 単発の種目は開始の代わりに最初のセットの開始を書く
+	 */
 	async endSession(date: string, ref: SessionRef): Promise<DayLog> {
 		const active = this.activeSet;
 		if (
@@ -528,7 +549,13 @@ export class SessionController {
 		// 過去の日（再開したまま日が変わった等）は、今の時刻ではなく最後のセットの終了で終える
 		const isToday = date === todayString(this.now());
 		return this.write(date, (d) => {
-			if (isToday) endSession(d, match, formatTime(this.now()));
+			if (isOtherRef(ref))
+				endManualSession(
+					d,
+					match,
+					isToday ? formatTime(this.now()) : null,
+				);
+			else if (isToday) endSession(d, match, formatTime(this.now()));
 			else endPastSession(d, match);
 		});
 	}
@@ -538,16 +565,24 @@ export class SessionController {
 		if (date !== todayString(this.now()))
 			throw new SessionError('再開できるのは今日の筋トレだけです');
 		const { match } = this.sessionMatcher(ref);
-		const running = this.index
-			.day(date)
-			?.sessions.find(
-				(s) => s.name !== null && s.start && !s.end && !match(s.name),
-			);
+		// 単発の種目はパッケージと同時に続けられる（筋トレ中が 1 つまでなのはパッケージだけ）
+		const manual = isOtherRef(ref);
+		const running = manual
+			? undefined
+			: this.index
+					.day(date)
+					?.sessions.find(
+						(s) =>
+							s.name !== null &&
+							s.start &&
+							!s.end &&
+							!match(s.name),
+					);
 		if (running?.name)
 			throw new SessionError(
 				`「${running.name}」が筋トレ中です。先に終了してください`,
 			);
-		return this.write(date, (d) => resumeSession(d, match));
+		return this.write(date, (d) => resumeSession(d, match, { manual }));
 	}
 
 	/** 今日の画面でドラッグした種目の並び（その日だけ。パッケージの並びは変えない） */

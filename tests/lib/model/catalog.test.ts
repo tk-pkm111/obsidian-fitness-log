@@ -56,7 +56,7 @@ describe('種目', () => {
 		});
 		expect(bench).toMatchObject({
 			name: 'ベンチプレス',
-			category: 'other',
+			category: '',
 			recordType: 'weight-reps',
 			aliases: ['BP'],
 		});

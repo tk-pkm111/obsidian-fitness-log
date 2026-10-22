@@ -612,6 +612,43 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		]);
 	});
 
+	it('単発の種目も「筋トレを終了」で終え（開始は最初のセット）、再開・種目の追加で続けられる', async () => {
+		const { fake, index, controller, setClock } = await make();
+		const path = 'Fitness/log/2026-10-01.md';
+		await expect(
+			controller.endSession('2026-10-01', OTHER_SESSION),
+		).rejects.toThrow();
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: null,
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		setClock(new Date(2026, 9, 1, 18, 31, 0));
+		await controller.finishSet(12);
+		// 筋トレ中のパッケージがあっても、単発の種目は別に終えられる
+		await controller.startSession('2026-10-01', 'pk_a');
+		setClock(new Date(2026, 9, 1, 18, 40, 0));
+		await controller.endSession('2026-10-01', OTHER_SESSION);
+		expect(fake.vault.text(path)).toContain(
+			'## その他\n- 時間: 18:30:05 – 18:40:00\n',
+		);
+		await controller.resumeSession('2026-10-01', OTHER_SESSION);
+		expect(fake.vault.text(path)).toContain(
+			'## その他\n- 時間: 18:30 – 18:31\n',
+		);
+		await controller.endSession('2026-10-01', OTHER_SESSION);
+		await controller.addExerciseToDay('2026-10-01', OTHER_SESSION, 'ex_d');
+		const other = index
+			.day('2026-10-01')
+			?.sessions.find((s) => s.name === null);
+		expect(other).not.toHaveProperty('end');
+		expect(other?.exercises.map((e) => e.name)).toEqual([
+			'ケーブルYレイズ',
+			'ディップス',
+		]);
+	});
+
 	it('別のパッケージが筋トレ中なら再開できない', async () => {
 		const { controller } = await make();
 		const refA = { packageId: 'pk_a', sessionName: null };

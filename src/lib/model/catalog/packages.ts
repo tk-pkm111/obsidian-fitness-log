@@ -6,6 +6,7 @@ import { parseRepRange } from '../../rep-range';
 import { instantiateSession, PROGRAM_TEMPLATES } from '../defaults';
 import { newId } from '../ids';
 import { aliasesAfterRename, nameKey } from '../resolve';
+import { hasField } from '../record-type';
 import type {
 	Exercise,
 	Package,
@@ -127,9 +128,10 @@ export function deletePackage(data: PluginData, id: string): void {
 export function defaultTargets(
 	recordType: RecordType,
 ): Pick<PackageItem, 'targetSets' | 'targetReps'> {
-	return recordType === 'duration'
-		? { targetSets: 1, targetReps: '' }
-		: { targetSets: 2, targetReps: '6-9' };
+	// 回数の目標は回数を記録する種目だけ
+	return hasField(recordType, 'reps')
+		? { targetSets: 2, targetReps: '6-9' }
+		: { targetSets: 1, targetReps: '' };
 }
 
 export function addPackageItem(

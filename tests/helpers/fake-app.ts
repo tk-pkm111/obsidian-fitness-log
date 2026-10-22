@@ -34,6 +34,10 @@ export class FakeVault extends Events {
 		return this.files.get(path) ?? null;
 	}
 
+	getMarkdownFiles(): TFile[] {
+		return [...this.files.values()].filter((f) => f.extension === 'md');
+	}
+
 	getFolderByPath(path: string): TFolder | null {
 		return this.folders.get(path) ?? null;
 	}
@@ -226,9 +230,51 @@ export class FakeFileManager {
 	}
 }
 
+/**
+ * メタデータ（frontmatter だけ）。'changed' を購読したときだけ vault を見て、ノートが変わると出す
+ * （ほかのテストの vault の購読数を変えない）
+ */
+export class FakeMetadataCache extends Events {
+	private attached = false;
+
+	constructor(private readonly vault: FakeVault) {
+		super();
+	}
+
+	on(name: string, callback: (...data: never[]) => unknown) {
+		if (name === 'changed' && !this.attached) {
+			this.attached = true;
+			const changed = (file: TAbstractFile) => {
+				if (file instanceof TFile)
+					this.trigger(
+						'changed',
+						file,
+						this.vault.text(file.path) ?? '',
+						this.getFileCache(file),
+					);
+			};
+			this.vault.on('create', changed);
+			this.vault.on('modify', changed);
+		}
+		return super.on(name, callback);
+	}
+
+	getFileCache(file: TFile): { frontmatter?: Record<string, unknown> } {
+		try {
+			const frontmatter = FakeFileManager.read(
+				this.vault.text(file.path),
+			);
+			return Object.keys(frontmatter).length > 0 ? { frontmatter } : {};
+		} catch {
+			return {}; // YAML が読めない
+		}
+	}
+}
+
 export interface FakeApp {
 	vault: FakeVault;
 	fileManager: FakeFileManager;
+	metadataCache: FakeMetadataCache;
 	/** src に渡すための App 型 */
 	app: App;
 }
@@ -241,6 +287,12 @@ export function createFakeApp(): FakeApp {
 			callback();
 		},
 	};
-	const app = { vault, fileManager, workspace } as unknown as App;
-	return { vault, fileManager, app };
+	const metadataCache = new FakeMetadataCache(vault);
+	const app = {
+		vault,
+		fileManager,
+		workspace,
+		metadataCache,
+	} as unknown as App;
+	return { vault, fileManager, metadataCache, app };
 }

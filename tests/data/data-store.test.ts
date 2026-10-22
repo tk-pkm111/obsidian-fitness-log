@@ -58,7 +58,7 @@ describe('DataStore', () => {
 			{
 				id: 'ex_old',
 				name: 'ベンチ',
-				category: 'push',
+				category: 'プッシュ',
 				recordType: 'weight-reps',
 				aliases: [],
 				createdAt: '',

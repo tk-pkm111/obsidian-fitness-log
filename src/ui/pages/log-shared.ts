@@ -11,7 +11,7 @@ import type { Package, WeightUnit } from '../../lib/model/types';
 import { weekdayLabel } from '../../lib/schedule/routine';
 import { packageColorIndex } from '../../lib/schedule/calendar';
 import { formatDuration, formatMonthDay, weekdayOf } from '../../lib/time/date';
-import { toDisplayWeight } from '../../lib/units';
+import { DISTANCE_UNIT, toDisplayWeight } from '../../lib/units';
 import type { PageContext } from '../page-context';
 
 /** パッケージの色の数（styles.css の .fitness-log-pkg-color-0〜7。ルーチンのカレンダーと同じ色） */
@@ -110,6 +110,8 @@ export function metricUnit(metric: Metric, unit: WeightUnit): string {
 		case 'totalReps':
 		case 'maxReps':
 			return t('format.reps', { n: '' }).trim();
+		case 'totalDistance':
+			return DISTANCE_UNIT;
 		case 'duration':
 			return '';
 	}
@@ -129,6 +131,8 @@ export function formatDisplay(
 		case 'totalReps':
 		case 'maxReps':
 			return t('format.reps', { n: value });
+		case 'totalDistance':
+			return `${formatNumber(value)} ${DISTANCE_UNIT}`;
 		case 'duration':
 			return formatDuration(value);
 	}
@@ -170,6 +174,14 @@ export function formatDelta(
 			return {
 				kind,
 				text: signed(delta.diff, t('format.reps', { n: abs })),
+			};
+		case 'distance':
+			return {
+				kind,
+				text: signed(
+					delta.diff,
+					`${formatNumber(abs)} ${DISTANCE_UNIT}`,
+				),
 			};
 		case 'duration':
 			return { kind, text: signed(delta.diff, formatDuration(abs)) };

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	metricsFor,
 	newBestFlags,
 	sessionDelta,
 	effectiveMetric,
@@ -333,5 +334,26 @@ describe('metrics', () => {
 		);
 		expect(effectiveMetric('weight-reps', [], 'volume')).toBe('volume');
 		expect(effectiveMetric('reps', [], 'volume')).toBe('totalReps');
+	});
+
+	it('自分で作った記録のしかたは、記録する項目の指標（距離・時間・重量）', () => {
+		expect(metricsFor('distance-duration')).toEqual([
+			'totalDistance',
+			'duration',
+		]);
+		expect(metricsFor('weight-duration')).toEqual([
+			'maxWeight',
+			'duration',
+		]);
+		const run = (km: number) =>
+			stat('2026-09-01', [{ ...s(null, null), distance: km }]);
+		expect(run(5.25).totalDistance).toBe(5.25);
+		expect(sessionDelta(run(5), run(5.5), 'distance-duration')).toEqual({
+			kind: 'distance',
+			diff: 0.5,
+		});
+		expect(effectiveMetric('distance-duration', [run(5)])).toBe(
+			'totalDistance',
+		);
 	});
 });

@@ -4,6 +4,7 @@
  */
 import { parseRepRange } from '../../rep-range';
 import { newId } from '../ids';
+import { categoryName, equipmentName } from '../lists';
 import { exerciseFileName } from '../exercise-note';
 import { createResolver, nameKey } from '../resolve';
 import type { Exercise, Package, PackageItem } from '../types';
@@ -49,8 +50,8 @@ export function createDefaultExercises(
 			id,
 			// 種目名はノートのファイル名になるので、使えない文字（/ など）は全角に
 			name: exerciseFileName(seed.name),
-			category: seed.category,
-			equipment: seed.equipment,
+			category: categoryName(seed.category),
+			equipment: equipmentName(seed.equipment),
 			recordType: seed.recordType ?? 'weight-reps',
 			aliases: [...(seed.aliases ?? [])],
 			createdAt: now,
@@ -99,7 +100,7 @@ export function instantiateSession(
 				exercise = {
 					id: newId('ex', takenExerciseIds),
 					name: exerciseFileName(name),
-					category: 'other',
+					category: categoryName('other'),
 					recordType: 'weight-reps',
 					aliases: [],
 					createdAt: now,

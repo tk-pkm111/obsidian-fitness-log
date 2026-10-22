@@ -1,5 +1,6 @@
 import { Events, normalizePath, type EventRef } from 'obsidian';
 import { DEFAULT_SETTINGS, normalizePluginData } from '../lib/model/data';
+import { defaultLists, type ExerciseLists } from '../lib/model/lists';
 import { PACKAGES_IN_VAULT } from '../lib/model/package-note';
 import type {
 	Exercise,
@@ -41,6 +42,8 @@ export class DataStore extends Events {
 	/** 以前の版の data.json にあった種目（まだノートへ移していないもの） */
 	private legacyExercises: Exercise[] = [];
 	private catalogWriter: CatalogWriter | null = null;
+	/** 種目の選択肢（設定ノートから読んだもの。data.json には保存しない） */
+	private exerciseLists: ExerciseLists = defaultLists();
 
 	constructor(private readonly persistence: DataPersistence) {
 		super();
@@ -96,6 +99,17 @@ export class DataStore extends Events {
 		const legacy = this.legacyExercises;
 		this.legacyExercises = [];
 		return legacy;
+	}
+
+	/** 種目の選択肢（カテゴリ・器具・記録のしかた）。設定ノートが正（ListsLibrary） */
+	get lists(): ExerciseLists {
+		return this.exerciseLists;
+	}
+
+	/** 設定ノートから読んだ選択肢を入れる（保存しない） */
+	setLists(lists: ExerciseLists): void {
+		this.exerciseLists = lists;
+		this.trigger('change');
 	}
 
 	/** 種目ノートから読んだ一覧を入れる（保存しない） */

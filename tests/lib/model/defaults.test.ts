@@ -195,7 +195,7 @@ describe('instantiateSession', () => {
 		expect(createdExercises).toHaveLength(1);
 		expect(createdExercises[0]).toMatchObject({
 			name: '未知の種目',
-			category: 'other',
+			category: 'その他',
 			recordType: 'weight-reps',
 		});
 		expect(pkg.items.map((i) => i.exerciseId)).toEqual([

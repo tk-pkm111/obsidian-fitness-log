@@ -17,6 +17,14 @@ export function fromDisplayWeight(value: number, unit: WeightUnit): number {
 	return Math.round(kg * 1000) / 1000;
 }
 
+/** 距離の単位（日ノートも表示も km） */
+export const DISTANCE_UNIT = 'km';
+
+/** 距離を短く（5 → '5', 5.25 → '5.25'。0.01 km 単位） */
+export function formatDistance(km: number): string {
+	return String(Math.round(km * 100) / 100);
+}
+
 /** '10 kg' / '22 lb'。null は '-' */
 export function formatWeight(kg: number | null, unit: WeightUnit): string {
 	if (kg === null) return '-';

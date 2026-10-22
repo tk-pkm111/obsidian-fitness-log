@@ -6,6 +6,7 @@ import { ExerciseLibrary } from './data/exercise-library';
 import { registerFolderFollow } from './data/folders';
 import { LogIndex } from './data/log-index';
 import { LogRepository } from './data/log-repository';
+import { ListsLibrary } from './data/lists-library';
 import { PackageLibrary } from './data/package-library';
 import {
 	folderRenameMessage,
@@ -44,11 +45,14 @@ export default class FitnessLogPlugin extends Plugin {
 		const library = new ExerciseLibrary(this.app, store);
 		// パッケージ・ルーチンはパッケージノートが正（store.update のたびにノートへ書く）
 		const packages = new PackageLibrary(this.app, store, library);
+		// カテゴリ・器具・記録のしかたの一覧は設定ノートが正
+		const lists = new ListsLibrary(this.app, store, library);
 		this.services = {
 			app: this.app,
 			store,
 			library,
 			packages,
+			lists,
 			repository,
 			index,
 			controller,
@@ -85,7 +89,7 @@ export default class FitnessLogPlugin extends Plugin {
 	}
 
 	private async onLayoutReady(): Promise<void> {
-		const { store, index, library, packages } = this.services;
+		const { store, index, library, packages, lists } = this.services;
 		// フォルダの名前を変えた・移したら設定も追いかける
 		registerFolderFollow(this, this.app, store);
 		// 最初の起動（入れ直した直後を含む）: 保存先を聞くまでは何も作らない・動かさない
@@ -105,6 +109,8 @@ export default class FitnessLogPlugin extends Plugin {
 			new Notice(folderRenameMessage(renamed), 15_000);
 		await library.ensureLoaded();
 		library.registerVaultEvents(this);
+		void lists.ensureLoaded();
+		lists.registerVaultEvents(this);
 		index.registerVaultEvents(this);
 		// 以前の版（種目を data.json に保存していた）からの移行 → 種目ノートを作る
 		const migrated = await library.migrateLegacy();
@@ -179,7 +185,7 @@ export default class FitnessLogPlugin extends Plugin {
 
 	/** ログの保存先・書式・種目フォルダが変わったら読み直す */
 	private onDataChange(): void {
-		const { store, index, library, packages } = this.services;
+		const { store, index, library, packages, lists } = this.services;
 		const key = this.currentLocationKey();
 		if (key !== this.locationKey) {
 			this.locationKey = key;
@@ -188,6 +194,8 @@ export default class FitnessLogPlugin extends Plugin {
 		if (store.settings.exerciseFolder !== this.exerciseFolder) {
 			this.exerciseFolder = store.settings.exerciseFolder;
 			if (library.isLoaded) void library.reload();
+			// 設定ノートは種目フォルダの隣（ほかの端末で作ったものがあれば読む）
+			void lists.reload();
 		}
 		if (store.settings.packageFolder !== this.packageFolder) {
 			this.packageFolder = store.settings.packageFolder;

@@ -45,7 +45,7 @@ export function prepareNewExercise(
 	const exercise: Exercise = {
 		id: id ?? newId('ex', new Set(existing.map((e) => e.id))),
 		name,
-		category: fields.category ?? 'other',
+		category: fields.category ?? '',
 		recordType: fields.recordType ?? 'weight-reps',
 		aliases,
 		createdAt: now,

@@ -79,7 +79,7 @@ describe('normalizePluginData', () => {
 			{
 				id: 'ex_1',
 				name: 'ベンチ',
-				category: 'other',
+				category: 'chest',
 				recordType: 'weight-reps',
 				aliases: ['BP'],
 				createdAt: new Date(0).toISOString(),

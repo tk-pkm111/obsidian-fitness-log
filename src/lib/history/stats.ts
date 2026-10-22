@@ -30,6 +30,8 @@ export interface SessionStat {
 	maxReps: number | null;
 	/** セットの開始〜終了の合計（秒） */
 	durationSec: number;
+	/** 距離の合計（km。距離の記録が無ければ 0） */
+	totalDistance: number;
 }
 
 function round1(value: number): number {
@@ -43,7 +45,9 @@ export function sessionStat(occurrence: ExerciseOccurrence): SessionStat {
 	let totalReps = 0;
 	let maxReps: number | null = null;
 	let durationSec = 0;
+	let totalDistance = 0;
 	for (const set of occurrence.sets) {
+		totalDistance += set.distance ?? 0;
 		if (set.weight !== null)
 			maxWeight =
 				maxWeight === null
@@ -70,5 +74,6 @@ export function sessionStat(occurrence: ExerciseOccurrence): SessionStat {
 		totalReps,
 		maxReps,
 		durationSec,
+		totalDistance: Math.round(totalDistance * 1000) / 1000,
 	};
 }

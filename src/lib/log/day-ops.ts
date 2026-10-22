@@ -33,6 +33,7 @@ function sameSet(a: SetLog, b: SetLog): boolean {
 	return (
 		a.weight === b.weight &&
 		a.reps === b.reps &&
+		(a.distance ?? null) === (b.distance ?? null) &&
 		a.start === b.start &&
 		a.end === b.end &&
 		a.note === b.note
@@ -304,9 +305,35 @@ export function endPastSession(
 	return session;
 }
 
-/** 終了した筋トレを再開する（終了時刻を消す） */
-export function resumeSession(day: DayLog, matches: SessionMatcher): void {
+/**
+ * 単発の種目（パッケージ外）を終える。単発には「筋トレを開始」が無いので、開始は最初のセットの開始。
+ * 終了は time（過去の日は null を渡し、最後のセットの終了にする）。記録が無ければエラー
+ */
+export function endManualSession(
+	day: DayLog,
+	matches: SessionMatcher,
+	time: string | null,
+): SessionLog {
+	const session = findSession(day, matches);
+	const span = session ? sessionSpan(session) : null;
+	if (!session || !span) throw new DayLogError('まだ記録がありません');
+	session.start = span.start;
+	session.end = time ?? span.end;
+	delete session.time;
+	return session;
+}
+
+/**
+ * 終了した筋トレを再開する（終了時刻を消す）。単発の種目は開始も消す
+ * （単発の開始は終えたときに最初のセットから入れたもの。続けるあいだはセットから計算する）
+ */
+export function resumeSession(
+	day: DayLog,
+	matches: SessionMatcher,
+	options: { manual?: boolean } = {},
+): void {
 	const session = findSession(day, matches);
 	if (!session) throw new DayLogError('セッションが見つかりません');
 	delete session.end;
+	if (options.manual) delete session.start;
 }

@@ -58,10 +58,11 @@ describe('ExerciseLibrary', () => {
 			(e) => e.name === '自分の種目',
 		);
 		expect(mine?.id).toMatch(/^ex_/);
-		expect(mine?.category).toBe('legs'); // 振ったのは id だけ（ユーザーの値は消さない）
+		// id を振り、以前の版の英語のキー（legs）は名前に書き直す（ほかのユーザーの値は消さない）
+		expect(mine?.category).toBe('脚');
 		expect(
 			FakeFileManager.read(fake.vault.text(`${folder}/自分の種目.md`)),
-		).toMatchObject({ fitness_id: mine?.id, category: 'legs' });
+		).toMatchObject({ fitness_id: mine?.id, category: '脚' });
 		// 本文には触らない
 		expect(fake.vault.text(`${folder}/ケーブルYレイズ.md`)).toContain(
 			'## フォーム\n肩をすくめない\n',
@@ -240,7 +241,7 @@ describe('ExerciseLibrary', () => {
 		const path = `${folder}/ケーブルベイジアン／インクラインカール.md`;
 		expect(FakeFileManager.read(fake.vault.text(path))).toMatchObject({
 			fitness_id: 'ex_old',
-			category: 'arms',
+			category: '腕',
 			aliases: ['ベイジアン'],
 		});
 		expect(store.current.exercises.map((e) => e.id)).toEqual(['ex_old']);

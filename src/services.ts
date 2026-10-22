@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 import type { DataStore } from './data/data-store';
 import type { ExerciseLibrary } from './data/exercise-library';
+import type { ListsLibrary } from './data/lists-library';
 import type { LogIndex } from './data/log-index';
 import type { LogRepository } from './data/log-repository';
 import type { PackageLibrary } from './data/package-library';
@@ -14,6 +15,8 @@ export interface FitnessServices {
 	library: ExerciseLibrary;
 	/** パッケージノート（1 パッケージ 1 ノート。ルーチンも）の一覧と読み書き */
 	packages: PackageLibrary;
+	/** 種目の選択肢（カテゴリ・器具・記録のしかた）の設定ノート */
+	lists: ListsLibrary;
 	repository: LogRepository;
 	index: LogIndex;
 	controller: SessionController;

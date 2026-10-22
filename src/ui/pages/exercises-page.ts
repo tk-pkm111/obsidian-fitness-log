@@ -1,15 +1,22 @@
-import { t, type MessageKey } from '../../i18n';
+import { t } from '../../i18n';
 import { packagesUsingExercise } from '../../lib/model/catalog';
+import {
+	categoryOrder,
+	defaultRecordType,
+	recordTypeName,
+} from '../../lib/model/lists';
 import { nameKey } from '../../lib/model/resolve';
-import type { Exercise, ExerciseCategory } from '../../lib/model/types';
+import type { Exercise } from '../../lib/model/types';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
 import { ConfirmModal } from '../modals/confirm-modal';
-import { CATEGORIES, ExerciseEditModal } from '../modals/exercise-edit-modal';
+import { ExerciseEditModal } from '../modals/exercise-edit-modal';
+import { ListEditModal } from '../modals/list-edit-modal';
 import type { PageContext } from '../page-context';
 
 interface ExerciseFilter {
 	query: string;
-	category: ExerciseCategory | 'all';
+	/** カテゴリの名前（'' は未設定）か、すべて */
+	category: string | null;
 	showArchived: boolean;
 }
 
@@ -17,7 +24,7 @@ interface ExerciseFilter {
 export function renderExercisesPage(ctx: PageContext, el: HTMLElement): void {
 	const filter = ctx.pageState<ExerciseFilter>('exercises', () => ({
 		query: '',
-		category: 'all',
+		category: null,
 		showArchived: false,
 	}));
 
@@ -57,9 +64,25 @@ export function renderExercisesPage(ctx: PageContext, el: HTMLElement): void {
 				.forEach((c) => c.toggleClass('is-active', c === button));
 		});
 	};
-	chip('all', t('exercises.all'));
-	for (const category of CATEGORIES)
-		chip(category, t(`category.${category}` as MessageKey));
+	// カテゴリの並び: 一覧の順 → 一覧に無いが種目で使っている名前 → 未設定
+	const { lists, store } = ctx.services;
+	const categories = categoryOrder(
+		lists.lists,
+		store.current.exercises.map((e) => e.category),
+	);
+	const label = (category: string) =>
+		category === '' ? t('lists.unset') : category;
+	if (filter.category !== null && !categories.includes(filter.category))
+		filter.category = null;
+	chip(null, t('exercises.all'));
+	for (const category of categories) chip(category, label(category));
+	iconButton(chips, 'pencil', t('lists.editCategories'), () =>
+		new ListEditModal(ctx.app, {
+			kind: 'categories',
+			lists,
+			store,
+		}).open(),
+	);
 	const archivedLabel = chips.createEl('label', {
 		cls: 'fitness-log-checkbox',
 	});
@@ -78,7 +101,7 @@ export function renderExercisesPage(ctx: PageContext, el: HTMLElement): void {
 		const matches = ctx.services.store.current.exercises.filter(
 			(e) =>
 				(filter.showArchived || !e.archived) &&
-				(filter.category === 'all' || e.category === filter.category) &&
+				(filter.category === null || e.category === filter.category) &&
 				(query.length === 0 ||
 					[e.name, ...e.aliases].some((label) =>
 						nameKey(label).includes(query),
@@ -95,12 +118,12 @@ export function renderExercisesPage(ctx: PageContext, el: HTMLElement): void {
 			});
 			return;
 		}
-		for (const category of CATEGORIES) {
+		for (const category of categories) {
 			const group = matches.filter((e) => e.category === category);
 			if (group.length === 0) continue;
 			list.createDiv({
 				cls: 'fitness-log-subheading',
-				text: t(`category.${category}` as MessageKey),
+				text: label(category),
 			});
 			for (const exercise of group)
 				renderExerciseRow(ctx, list, exercise);
@@ -137,10 +160,11 @@ function renderExerciseRow(
 			text: t('exercises.archived'),
 		});
 	const meta: string[] = [];
-	if (exercise.equipment)
-		meta.push(t(`equipment.${exercise.equipment}` as MessageKey));
-	if (exercise.recordType !== 'weight-reps')
-		meta.push(t(`recordType.${exercise.recordType}` as MessageKey));
+	const lists = ctx.services.lists.lists;
+	if (exercise.equipment) meta.push(exercise.equipment);
+	// 記録のしかたは既定（一覧の先頭）と違うときだけ
+	if (exercise.recordType !== defaultRecordType(lists))
+		meta.push(recordTypeName(exercise.recordType, lists));
 	if (exercise.unilateral) meta.push(t('today.unilateral'));
 	if (meta.length > 0)
 		body.createDiv({ cls: 'fitness-log-muted', text: meta.join(' ・ ') });
@@ -194,10 +218,12 @@ function openEditor(
 	exercise: Exercise | undefined,
 	initialName = '',
 ): void {
-	const { library } = ctx.services;
+	const { library, lists, store } = ctx.services;
 	new ExerciseEditModal(ctx.app, {
 		exercise,
 		initialName,
+		lists,
+		store,
 		// 入力した内容は種目ノートの frontmatter に書く（名前を変えるとノートの名前も変わる）
 		onSave: async (fields) => {
 			if (exercise) await library.update(exercise.id, fields);

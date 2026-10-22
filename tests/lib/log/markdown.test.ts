@@ -417,6 +417,114 @@ describe('レビューで見つかった不具合の再発防止', () => {
 		expect(other.ok && other.day.sessions[1]).not.toHaveProperty('start');
 	});
 
+	it('距離を記録した種目の表にだけ「距離」の列を足し、読み戻せる（ほかの表は今までどおり）', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'A',
+					note: '',
+					exercises: [
+						{
+							name: 'ラン',
+							sets: [
+								{
+									weight: null,
+									reps: null,
+									distance: 5.2,
+									start: '07:00:00',
+									end: '07:30:00',
+									note: '',
+								},
+							],
+						},
+						{
+							name: 'X',
+							sets: [
+								{
+									weight: 10,
+									reps: 8,
+									start: '07:40:00',
+									end: '07:41:00',
+									note: '',
+								},
+							],
+						},
+					],
+				},
+			],
+		};
+		const text = formatBlock(day);
+		expect(text).toContain(
+			'| セット | 重量 (kg) | 回数 | 距離 (km) | 開始 | 終了 | コメント |\n| ---: | ---: | ---: | ---: | --- | --- | --- |\n| 1 | - | - | 5.2 | 07:00:00 | 07:30:00 | |',
+		);
+		expect(text).toContain(
+			'### X\n| セット | 重量 (kg) | 回数 | 開始 | 終了 | コメント |',
+		);
+		const parsed = parseBlockContent(
+			text.split('\n').slice(1, -1).join('\n'),
+			'2026-10-01',
+		);
+		if (!parsed.ok) throw new Error(parsed.error);
+		expect(parsed.day.sessions[0]?.exercises).toEqual(
+			day.sessions[0]?.exercises,
+		);
+		const broken = parseBlockContent(
+			'## A\n\n### ラン\n| セット | 重量 (kg) | 回数 | 距離 (km) | 開始 | 終了 | コメント |\n| ---: | ---: | ---: | ---: | --- | --- | --- |\n| 1 | - | - | 五 | - | - | |',
+			'2026-10-01',
+		);
+		expect(broken.ok).toBe(false);
+	});
+
+	it('単発の種目は「筋トレを終了」したときだけ開始・終了（秒まで）を書き、読み戻せる', () => {
+		const sets = [
+			{
+				weight: 10,
+				reps: 12,
+				start: '22:09:00',
+				end: '22:09:30',
+				note: '',
+			},
+		];
+		const open: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{ name: null, note: '', exercises: [{ name: 'X', sets }] },
+			],
+		};
+		// 終えていなければセットから分まで（読み戻しても開始・終了は持たない）
+		const openText = formatBlock(open);
+		expect(openText).toContain('## その他\n- 時間: 22:09 – 22:09\n');
+		const reread = parseBlockContent(
+			openText.split('\n').slice(1, -1).join('\n'),
+			'2026-10-01',
+		);
+		expect(reread.ok && reread.day.sessions[0]).not.toHaveProperty('end');
+		const ended: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: null,
+					note: '',
+					start: '22:09:00',
+					end: '22:27:50',
+					exercises: [{ name: 'X', sets }],
+				},
+			],
+		};
+		const text = formatBlock(ended);
+		expect(text).toContain('- 時間: 22:09:00 – 22:27:50');
+		const parsed = parseBlockContent(
+			text.split('\n').slice(1, -1).join('\n'),
+			'2026-10-01',
+		);
+		expect(parsed.ok && parsed.day.sessions[0]).toMatchObject({
+			name: null,
+			start: '22:09:00',
+			end: '22:27:50',
+		});
+	});
+
 	it('日付をまたいだセッションの時間（23:50 – 00:01）', () => {
 		const day: DayLog = {
 			date: '2026-10-01',

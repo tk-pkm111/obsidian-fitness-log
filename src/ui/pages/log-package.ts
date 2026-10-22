@@ -2,6 +2,7 @@ import { setIcon } from 'obsidian';
 import { t } from '../../i18n';
 import {
 	availableMetrics,
+	metricValue,
 	newBestFlags,
 	type Metric,
 } from '../../lib/history/metrics';
@@ -16,6 +17,7 @@ import {
 	type PackageLogRow,
 } from '../../lib/history/package-log';
 import type { SessionStat } from '../../lib/history/stats';
+import { hasField } from '../../lib/model/record-type';
 import { addDays } from '../../lib/time/date';
 import { toDisplayWeight } from '../../lib/units';
 import {
@@ -427,8 +429,12 @@ function renderStats(
 	if (!last || !first) return;
 	const tiles: Array<{ label: string; value: string; sub: string }> = [];
 	const weighted =
-		exercise.recordType === 'weight-reps' &&
+		hasField(exercise.recordType, 'weight') &&
+		hasField(exercise.recordType, 'reps') &&
 		stats.some((s) => s.estimatedOneRepMax !== null);
+	// 重量 × 回数でなければ、記録のしかたの最初の指標（回数・距離・時間など）で見る
+	const primary =
+		availableMetrics(exercise.recordType, stats)[0] ?? 'duration';
 	if (weighted) {
 		const best = Math.max(...stats.map((s) => s.estimatedOneRepMax ?? 0));
 		tiles.push({
@@ -473,14 +479,15 @@ function renderStats(
 					? t('log.stat.firstTime')
 					: t('log.stat.from', { date: formatDay(firstDate) }),
 		});
-	} else if (exercise.recordType === 'duration') {
-		const best = Math.max(...stats.map((s) => s.durationSec));
+	} else if (primary !== 'totalReps') {
+		const valueOf = (stat: SessionStat) => metricValue(stat, primary) ?? 0;
+		const best = Math.max(...stats.map(valueOf));
 		tiles.push(
 			{
 				label: t('log.stat.lastTime'),
-				value: formatMetric(last.durationSec, 'duration', unit),
+				value: formatMetric(valueOf(last), primary, unit),
 				sub: t('log.stat.best', {
-					value: formatMetric(best, 'duration', unit),
+					value: formatMetric(best, primary, unit),
 				}),
 			},
 			{

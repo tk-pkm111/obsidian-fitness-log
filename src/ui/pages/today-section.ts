@@ -55,7 +55,8 @@ export interface SectionEnv {
  * - 筋トレ中（in-progress）: 進みのバー、種目のリスト（やった順 → まだの種目）、「■ 筋トレを終了」
  * - 終了（finished）: 「お疲れ様でした」とまとめ（種目数・セット数）。「記録を見る」でやった種目だけを開いて修正。
  *   今日なら右下に「筋トレを再開」（筋トレ中の「筋トレを終了」と同じ場所）
- * - 単発の種目（manual）: パッケージ外の種目。いつも開いていて、開始・終了は無い
+ * - 単発の種目（manual）: パッケージ外の種目。開始は無く、いつも開いている。今日は記録があれば右下に
+ *   「筋トレを終了」（終えると finished になり、「お疲れ様でした」と「筋トレを再開」）
  * 名前の行の右端の × で、まとまりをその日から外せる（筋トレ中・終了後も。記録があれば確かめてから消す）
  * 実行中のセットはその種目の行に、休憩は最後にセットを終えた種目のすぐ下に出す（today-card.ts）。
  */
@@ -104,8 +105,12 @@ export function renderSection(
 					? 'timer'
 					: 'manual';
 			renderCards(ctx, box, section, section.cards, mode, env);
+			// 今日の単発の種目も、記録があれば「筋トレを終了」で終えられる（休憩のタイマーも止まる）
 			if (mode !== 'readonly')
-				renderFooter(ctx, box, section, { add: true });
+				renderFooter(ctx, box, section, {
+					add: true,
+					end: env.isToday && sectionProgress(section).sets > 0,
+				});
 			return;
 		}
 	}
@@ -514,8 +519,8 @@ function renderFinished(
 			env.isFuture ? 'readonly' : 'manual',
 			env,
 		);
-	// 再開は今日のパッケージだけ（過去の日はタイマーで続きのセットを計れない）
-	const resume = env.isToday && !section.isOther && section.pkg !== null;
+	// 再開は今日だけ（過去の日はタイマーで続きのセットを計れない）
+	const resume = env.isToday && (section.isOther || section.pkg !== null);
 	const add = open && !env.isFuture;
 	if (add || resume) renderFooter(ctx, box, section, { add, resume });
 }

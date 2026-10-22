@@ -7,12 +7,14 @@
  * - 「マシンorDB」のように器具を選ぶ種目は、先に書かれた方の種目の別名にする（メモに残す）。
  * - 同じ種目か判断できないもの・片側版は別の種目にする（履歴が混ざるより分かれる方が安全）。
  */
-import type { Equipment, ExerciseCategory, RecordType } from '../types';
+import type { CategoryKey, EquipmentKey } from '../lists';
+import type { RecordType } from '../types';
 
 export interface ExerciseSeed {
 	name: string;
-	category: ExerciseCategory;
-	equipment: Equipment;
+	/** 既定のカテゴリ・器具のキー（ノートには既定の名前で書く） */
+	category: CategoryKey;
+	equipment: EquipmentKey;
 	recordType?: RecordType;
 	unilateral?: boolean;
 	aliases?: string[];
@@ -170,7 +172,7 @@ export const DEFAULT_EXERCISES: readonly ExerciseSeed[] = [
 	},
 
 	// PUSH（13）
-	{ name: 'ケーブルYレイズ', category: 'push', equipment: 'cable' },
+	{ name: 'ケーブルYレイズ', category: 'shoulders', equipment: 'cable' },
 	{ name: 'ケーブルチェストフライ', category: 'push', equipment: 'cable' },
 	{
 		name: 'シーテッドケーブルチェストフライ',
@@ -192,10 +194,14 @@ export const DEFAULT_EXERCISES: readonly ExerciseSeed[] = [
 		category: 'push',
 		equipment: 'dumbbell',
 	},
-	{ name: 'ダンベルサイドレイズ', category: 'push', equipment: 'dumbbell' },
+	{
+		name: 'ダンベルサイドレイズ',
+		category: 'shoulders',
+		equipment: 'dumbbell',
+	},
 	{
 		name: 'ニュートラルグリップショルダープレス',
-		category: 'push',
+		category: 'shoulders',
 		equipment: 'machine',
 		aliases: [
 			'ニュートラルグリップマシンショルダープレス',
@@ -217,18 +223,22 @@ export const DEFAULT_EXERCISES: readonly ExerciseSeed[] = [
 	},
 	{
 		name: 'マシンサイドレイズ',
-		category: 'push',
+		category: 'shoulders',
 		equipment: 'machine',
 		aliases: ['マシンorDB サイドレイズ'],
 	},
-	{ name: 'マシンショルダープレス', category: 'push', equipment: 'machine' },
+	{
+		name: 'マシンショルダープレス',
+		category: 'shoulders',
+		equipment: 'machine',
+	},
 	{
 		name: 'マシンチェストプレス',
 		category: 'push',
 		equipment: 'machine',
 		aliases: ['マシンフラットチェストプレス'],
 	},
-	{ name: 'ライイングYレイズ', category: 'push', equipment: 'dumbbell' },
+	{ name: 'ライイングYレイズ', category: 'shoulders', equipment: 'dumbbell' },
 
 	// ARMS（11）
 	{
@@ -350,7 +360,7 @@ export const DEFAULT_EXERCISES: readonly ExerciseSeed[] = [
 	},
 	{
 		name: 'スミスマシン ショルダー/ハイインクラインプレス',
-		category: 'push',
+		category: 'shoulders',
 		equipment: 'smith',
 		aliases: ['スミスマシン ハイインクラインプレス'],
 		fromProgram: true,
@@ -364,7 +374,7 @@ export const DEFAULT_EXERCISES: readonly ExerciseSeed[] = [
 	},
 	{
 		name: 'S/A ケーブルサイドレイズ',
-		category: 'push',
+		category: 'shoulders',
 		equipment: 'cable',
 		unilateral: true,
 		fromProgram: true,

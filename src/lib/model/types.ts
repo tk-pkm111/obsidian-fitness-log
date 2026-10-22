@@ -7,28 +7,21 @@
  * - 実績（セッション・セット）は vault の日ノート（Markdown）が唯一の正。DayLog はその読み書き用の形。
  */
 
-export type ExerciseCategory =
-	'push' | 'pull' | 'legs' | 'arms' | 'core' | 'cardio' | 'other';
-
-export type Equipment =
-	| 'machine'
-	| 'cable'
-	| 'smith'
-	| 'barbell'
-	| 'dumbbell'
-	| 'bodyweight'
-	| 'band'
-	| 'other';
-
-/** 記録タイプ: 重量×回数（既定）/ 回数のみ（自重）/ 時間のみ（有酸素・ストレッチ） */
-export type RecordType = 'weight-reps' | 'reps' | 'duration';
+/**
+ * 記録のしかた: 記録する項目（weight・reps・distance・duration）を決まった順に '-' でつないだもの。
+ * 'weight-reps'（重量 × 回数。既定）・'reps'（回数のみ）・'duration'（時間のみ）・'distance-duration' など。
+ * 項目の読み書きは record-type.ts
+ */
+export type RecordType = string;
 
 export interface Exercise {
 	/** 'ex_' + ランダム 8 文字 */
 	id: string;
 	name: string;
-	category: ExerciseCategory;
-	equipment?: Equipment;
+	/** カテゴリの名前（「肩」。設定ノートの一覧から選ぶ。'' は未設定）。lists.ts */
+	category: string;
+	/** 器具の名前（「ダンベル」）。lists.ts */
+	equipment?: string;
 	recordType: RecordType;
 	/** 片側種目（v1 では表示のみ。左右別の記録は v2） */
 	unilateral?: boolean;
@@ -175,6 +168,8 @@ export interface SetLog {
 	/** kg。空欄は null */
 	weight: number | null;
 	reps: number | null;
+	/** km。距離を記録する種目だけが持つ（日ノートの表に「距離」の列があるとき。空欄は null） */
+	distance?: number | null;
 	/** 'HH:mm:ss'（日ノートの日付のローカル時刻） */
 	start: string | null;
 	end: string | null;

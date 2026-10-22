@@ -23,7 +23,10 @@ const COLUMNS = [
 	'開始',
 	'終了',
 	'コメント',
+	'距離 (km)',
 ] as const;
+/** 距離の列（COLUMNS の位置）。距離を記録した種目の表にだけ、回数の後ろに出す */
+const DISTANCE_COLUMN = 6;
 /** 以前の版の列名（読むときだけ受け付ける。書くときは COLUMNS） */
 const LEGACY_COLUMNS: Readonly<Record<string, number>> = { メモ: 5 };
 const EMPTY_CELL = '-';
@@ -111,7 +114,7 @@ function parseNumberCell(cell: string): number | null | undefined {
 	const normalized = text
 		.normalize('NFKC')
 		.replace(/,/g, '.')
-		.replace(/\s*(kg|回)$/i, '');
+		.replace(/\s*(kg|km|回)$/i, '');
 	if (normalized === '') return undefined;
 	const value = Number(normalized);
 	return Number.isFinite(value) ? value : undefined;
@@ -152,6 +155,8 @@ function isSeparatorRow(cells: string[]): boolean {
 
 const TIME_RANGE =
 	/^(\d{1,2}:\d{2}(?::\d{2})?)\s*[–—~〜-]\s*(\d{1,2}:\d{2}(?::\d{2})?)?$/;
+/** 開始・終了とも秒まで書いた範囲（単発の種目で「筋トレを終了」した時刻。セットからの計算は分まで） */
+const EXACT_RANGE = /^\d{1,2}:\d{2}:\d{2}\s*[–—~〜-]\s*\d{1,2}:\d{2}:\d{2}$/;
 
 /** '22:40:05 – 23:30:12' / '22:40 – ' → 開始・終了（'HH:mm:ss'）。読めなければ null */
 export function parseTimeRange(
@@ -267,27 +272,40 @@ export function parseBlockContent(inner: string, date: string): ParseResult {
 			};
 			const weight = parseNumberCell(cell(1));
 			const reps = parseNumberCell(cell(2));
+			const hasDistance = (columnIndex[DISTANCE_COLUMN] ?? -1) >= 0;
+			const distance = parseNumberCell(cell(DISTANCE_COLUMN));
 			const start = parseTimeCell(cell(3));
 			const end = parseTimeCell(cell(4));
 			if (weight === undefined)
 				return fail(`重量が数値ではありません: ${cell(1)}`);
 			if (reps === undefined)
 				return fail(`回数が数値ではありません: ${cell(2)}`);
+			if (distance === undefined)
+				return fail(
+					`距離が数値ではありません: ${cell(DISTANCE_COLUMN)}`,
+				);
 			if (start === undefined)
 				return fail(`開始時刻が読めません: ${cell(3)}`);
 			if (end === undefined)
 				return fail(`終了時刻が読めません: ${cell(4)}`);
-			exercise.sets.push({ weight, reps, start, end, note: cell(5) });
+			const set: SetLog = { weight, reps, start, end, note: cell(5) };
+			if (hasDistance) set.distance = distance;
+			exercise.sets.push(set);
 			continue;
 		}
 
 		const bullet = parseBullet(line);
 		if (bullet && session && !exercise) {
 			if (bullet.label === TIME_LABEL) {
-				// パッケージのセッションは「筋トレを開始・終了」の時刻。その他はセットから計算し直す。
+				// パッケージのセッションは「筋トレを開始・終了」の時刻。その他（単発の種目）は
+				// 終えたときだけ秒までの開始・終了で、それ以外はセットから計算し直す。
 				// 時刻として読めない手書きの値は消さずに残す
 				const range = parseTimeRange(bullet.value);
-				if (range && session.name !== null) {
+				const ended =
+					range !== null &&
+					range.end !== null &&
+					EXACT_RANGE.test(bullet.value.normalize('NFKC').trim());
+				if (range && (session.name !== null || ended)) {
 					session.start = range.start;
 					if (range.end) session.end = range.end;
 				} else if (!range && bullet.value !== '')
@@ -341,23 +359,51 @@ function oneLine(text: string): string {
 	return text.replace(/\r?\n/g, ' ').trim();
 }
 
-function formatSetRow(set: SetLog, index: number): string {
-	const cells = [
-		String(index + 1),
-		set.weight === null ? EMPTY_CELL : formatNumber(set.weight),
-		set.reps === null ? EMPTY_CELL : formatNumber(set.reps),
-		set.start ?? EMPTY_CELL,
-		set.end ?? EMPTY_CELL,
-		escapeCell(set.note),
-	];
-	return `| ${cells.join(' | ')} |`.replace(/ {2}\|$/, ' |');
+function numberCell(value: number | null | undefined): string {
+	return value === null || value === undefined
+		? EMPTY_CELL
+		: formatNumber(value);
+}
+
+/** 表の列: 距離を記録した種目だけ、回数の後ろに距離の列 */
+function tableColumns(sets: readonly SetLog[]): number[] {
+	const distance = sets.some(
+		(s) => s.distance !== undefined && s.distance !== null,
+	);
+	return distance ? [0, 1, 2, DISTANCE_COLUMN, 3, 4, 5] : [0, 1, 2, 3, 4, 5];
+}
+
+function formatSetRow(
+	set: SetLog,
+	index: number,
+	columns: readonly number[],
+): string {
+	const cellOf = (column: number): string => {
+		switch (column) {
+			case 0:
+				return String(index + 1);
+			case 1:
+				return numberCell(set.weight);
+			case 2:
+				return numberCell(set.reps);
+			case 3:
+				return set.start ?? EMPTY_CELL;
+			case 4:
+				return set.end ?? EMPTY_CELL;
+			case DISTANCE_COLUMN:
+				return numberCell(set.distance);
+			default:
+				return escapeCell(set.note);
+		}
+	};
+	return `| ${columns.map(cellOf).join(' | ')} |`.replace(/ {2}\|$/, ' |');
 }
 
 function formatSession(session: SessionLog): string[] {
 	const lines = [`## ${session.name ?? OTHER_SESSION_HEADING}`];
 	const span = sessionSpan(session);
-	if (session.name !== null && session.start)
-		// 筋トレの開始・終了（進行中は終了が空欄）
+	if (session.start && (session.name !== null || session.end))
+		// 筋トレの開始・終了（進行中は終了が空欄。単発の種目は終えたときだけ）
 		lines.push(
 			`- ${TIME_LABEL}: ${session.start} – ${session.end ?? ''}`.trimEnd(),
 		);
@@ -376,10 +422,13 @@ function formatSession(session: SessionLog): string[] {
 		const offset = counts.get(key) ?? 0;
 		counts.set(key, offset + exercise.sets.length);
 		lines.push('', `### ${exercise.name}`);
-		lines.push(`| ${COLUMNS.join(' | ')} |`);
-		lines.push('| ---: | ---: | ---: | --- | --- | --- |');
+		const columns = tableColumns(exercise.sets);
+		lines.push(`| ${columns.map((c) => COLUMNS[c]).join(' | ')} |`);
+		lines.push(
+			`| ${columns.map((c) => (c <= 2 || c === DISTANCE_COLUMN ? '---:' : '---')).join(' | ')} |`,
+		);
 		exercise.sets.forEach((set, index) =>
-			lines.push(formatSetRow(set, offset + index)),
+			lines.push(formatSetRow(set, offset + index, columns)),
 		);
 	}
 	return lines;

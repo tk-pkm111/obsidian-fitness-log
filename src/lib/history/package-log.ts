@@ -79,6 +79,8 @@ export interface LogData {
 function inferRecordType(sets: readonly SetLog[]): RecordType {
 	if (sets.some((s) => s.weight !== null)) return 'weight-reps';
 	if (sets.some((s) => s.reps !== null)) return 'reps';
+	if (sets.some((s) => s.distance !== undefined && s.distance !== null))
+		return 'distance-duration';
 	return 'duration';
 }
 

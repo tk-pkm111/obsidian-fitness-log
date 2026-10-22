@@ -1,19 +1,20 @@
 import { Modal, setIcon, type App } from 'obsidian';
 import { t, type MessageKey } from '../../i18n';
-import type { ExerciseCategory } from '../../lib/model/types';
+import { categoryName } from '../../lib/model/lists';
 import { textButton } from '../helpers';
-import { CATEGORIES } from './exercise-edit-modal';
 
-/** 部位の補足（プッシュ・プルだけでは分かりにくいので） */
-const CATEGORY_HINTS: Partial<Record<ExerciseCategory, MessageKey>> = {
-	push: 'newExercise.hint.push',
-	pull: 'newExercise.hint.pull',
-};
+/** 部位の補足（既定のプッシュ・プルだけでは分かりにくいので。名前を変えた・足したカテゴリには付けない） */
+const CATEGORY_HINTS: ReadonlyMap<string, MessageKey> = new Map([
+	[categoryName('push'), 'newExercise.hint.push'],
+	[categoryName('pull'), 'newExercise.hint.pull'],
+]);
 
 export interface NewExerciseOptions {
 	name: string;
+	/** カテゴリの一覧（設定ノート） */
+	categories: readonly string[];
 	/** 部位を選んだとき（その場で作る。器具・記録のしかたなどはあとで「種目」から） */
-	onCreate: (category: ExerciseCategory) => void;
+	onCreate: (category: string) => void;
 	/** 「詳細を設定する」: 種目の編集画面（「種目」のページと同じ）を開く */
 	onDetails: () => void;
 }
@@ -36,16 +37,16 @@ export class NewExerciseModal extends Modal {
 		contentEl.addClass('fitness-log-new-exercise');
 		contentEl.createEl('p', { text: t('newExercise.question') });
 		const grid = contentEl.createDiv({ cls: 'fitness-log-category-grid' });
-		for (const category of CATEGORIES) {
+		for (const category of options.categories) {
 			const button = grid.createEl('button', {
 				cls: 'fitness-log-category-choice',
 				attr: { type: 'button' },
 			});
 			button.createSpan({
 				cls: 'fitness-log-category-name',
-				text: t(`category.${category}` as MessageKey),
+				text: category,
 			});
-			const hint = CATEGORY_HINTS[category];
+			const hint = CATEGORY_HINTS.get(category);
 			if (hint)
 				button.createSpan({
 					cls: 'fitness-log-category-hint',

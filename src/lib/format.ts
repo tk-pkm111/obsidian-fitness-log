@@ -10,38 +10,58 @@ import type {
 	WeightUnit,
 } from './model/types';
 import { formatDuration } from './time/date';
-import { toDisplayWeight } from './units';
+import { recordFields } from './model/record-type';
+import { DISTANCE_UNIT, formatDistance, toDisplayWeight } from './units';
 
 function num(value: number | null): string {
 	return value === null ? '-' : String(value);
 }
 
-/** 1 セットの結果: '10 kg × 9 回' / '8 回' / '+10 kg × 8 回' / '20:00' */
+/**
+ * 1 セットの結果。記録のしかたの項目を「×」でつなぐ:
+ * '10 kg × 9 回' / '8 回' / '+10 kg × 8 回'（回数の種目に重りを足した日）/ '20:00' / '5.2 km × 25:00'
+ */
 export function formatSetResult(
 	set: SetLog,
 	unit: WeightUnit,
 	recordType: RecordType,
 ): string {
-	if (recordType === 'duration') return formatDuration(setDurationSec(set));
-	const reps = t('format.reps', { n: num(set.reps) });
-	if (set.weight === null) return reps;
-	const weight = `${toDisplayWeight(set.weight, unit)} ${unit}`;
-	return recordType === 'reps'
-		? t('format.addedWeight', { weight, reps })
-		: t('format.weightReps', { weight, reps });
+	const fields = recordFields(recordType);
+	const parts: string[] = [];
+	if (set.weight !== null) {
+		const weight = `${toDisplayWeight(set.weight, unit)} ${unit}`;
+		if (fields.includes('weight')) parts.push(weight);
+		else if (fields.includes('reps')) parts.push(`+${weight}`);
+	}
+	if (fields.includes('reps'))
+		parts.push(t('format.reps', { n: num(set.reps) }));
+	if (fields.includes('distance')) {
+		const distance = set.distance ?? null;
+		parts.push(
+			`${distance === null ? '-' : formatDistance(distance)} ${DISTANCE_UNIT}`,
+		);
+	}
+	if (fields.includes('duration'))
+		parts.push(formatDuration(setDurationSec(set)));
+	return parts.length > 0 ? parts.join(' × ') : '-';
 }
 
 /**
- * 複数セットの要約（前回のヒント・ログの一覧）。同じ重量が続くセットはまとめる。
- * '10 kg × 9, 8 / 12.5 kg × 6'、自重は '8, 7 回'、時間は '20:00, 15:00'
+ * 複数セットの要約（前回のヒント・ログの一覧）。重量と回数の種目は、同じ重量が続くセットをまとめる:
+ * '10 kg × 9, 8 / 12.5 kg × 6'、自重は '8, 7 回'。ほかは 1 セットずつ '20:00, 15:00'
  */
 export function formatSetsCompact(
 	sets: readonly SetLog[],
 	unit: WeightUnit,
 	recordType: RecordType,
 ): string {
-	if (recordType === 'duration')
-		return sets.map((s) => formatDuration(setDurationSec(s))).join(', ');
+	const fields = recordFields(recordType);
+	if (
+		!fields.includes('reps') ||
+		fields.includes('distance') ||
+		fields.includes('duration')
+	)
+		return sets.map((s) => formatSetResult(s, unit, recordType)).join(', ');
 	const groups: Array<{ weight: number | null; reps: string[] }> = [];
 	for (const set of sets) {
 		const last = groups[groups.length - 1];

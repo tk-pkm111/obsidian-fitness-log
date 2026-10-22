@@ -1,6 +1,7 @@
 /**
  * ログの指標（推移・前回比・自己ベスト）。値は基準の単位（kg・回・秒）で、表示の単位への換算は画面側。
  */
+import { hasField, recordFields } from '../model/record-type';
 import type { RecordType } from '../model/types';
 import type { SessionStat } from './stats';
 
@@ -10,14 +11,27 @@ export type Metric =
 	| 'volume'
 	| 'totalReps'
 	| 'maxReps'
+	| 'totalDistance'
 	| 'duration';
 
-/** 記録タイプごとに選べる指標。先頭が既定（推移・自己ベストの基準） */
-export const METRICS: Record<RecordType, readonly Metric[]> = {
-	'weight-reps': ['estimatedOneRepMax', 'maxWeight', 'volume'],
-	reps: ['totalReps', 'maxReps'],
-	duration: ['duration'],
-};
+/**
+ * 記録のしかたで選べる指標。先頭が既定（推移・自己ベストの基準）。
+ * 重量 × 回数は推定 1RM・最大重量・ボリューム、回数（重量なし）は合計・最大の回数、
+ * 距離は合計の距離、時間は合計の時間（記録する項目の順に並べる）
+ */
+export function metricsFor(recordType: RecordType): Metric[] {
+	const fields = recordFields(recordType);
+	const has = (field: Parameters<typeof hasField>[1]) =>
+		fields.includes(field);
+	const metrics: Metric[] = [];
+	if (has('weight') && has('reps'))
+		metrics.push('estimatedOneRepMax', 'maxWeight', 'volume');
+	else if (has('weight')) metrics.push('maxWeight');
+	else if (has('reps')) metrics.push('totalReps', 'maxReps');
+	if (has('distance')) metrics.push('totalDistance');
+	if (has('duration')) metrics.push('duration');
+	return metrics;
+}
 
 export function metricValue(stat: SessionStat, metric: Metric): number | null {
 	switch (metric) {
@@ -31,6 +45,8 @@ export function metricValue(stat: SessionStat, metric: Metric): number | null {
 			return stat.totalReps > 0 ? stat.totalReps : null;
 		case 'maxReps':
 			return stat.maxReps;
+		case 'totalDistance':
+			return stat.totalDistance > 0 ? stat.totalDistance : null;
 		case 'duration':
 			return stat.durationSec > 0 ? stat.durationSec : null;
 	}
@@ -55,34 +71,45 @@ export function availableMetrics(
 	recordType: RecordType,
 	stats: readonly SessionStat[],
 ): readonly Metric[] {
+	const metrics = metricsFor(recordType);
 	if (
-		recordType === 'weight-reps' &&
+		hasField(recordType, 'weight') &&
+		hasField(recordType, 'reps') &&
 		stats.length > 0 &&
 		stats.every((s) => s.maxWeight === null)
 	)
-		return METRICS.reps;
-	return METRICS[recordType];
+		return [
+			'totalReps',
+			'maxReps',
+			...metrics.filter(
+				(m) =>
+					m !== 'estimatedOneRepMax' &&
+					m !== 'maxWeight' &&
+					m !== 'volume',
+			),
+		];
+	return metrics;
 }
 
 /** 前回との差（事実だけ。良い悪いの判断はしない） */
 export type Delta =
 	| { kind: 'weight'; diff: number }
 	| { kind: 'reps'; diff: number }
+	| { kind: 'distance'; diff: number }
 	| { kind: 'duration'; diff: number };
 
 /**
- * 前回比。重量×回数はトップセットの重量が変わればその差、同じなら合計回数の差。
- * 自重は合計回数、時間は合計時間の差。
+ * 前回比。重量を記録する種目はトップセットの重量が変わればその差、同じなら次の項目
+ * （回数 → 距離 → 時間の順に、記録する項目の合計の差）
  */
 export function sessionDelta(
 	prev: SessionStat,
 	last: SessionStat,
 	recordType: RecordType,
 ): Delta {
-	if (recordType === 'duration')
-		return { kind: 'duration', diff: last.durationSec - prev.durationSec };
+	const fields = recordFields(recordType);
 	if (
-		recordType === 'weight-reps' &&
+		fields.includes('weight') &&
 		last.maxWeight !== null &&
 		prev.maxWeight !== null &&
 		last.maxWeight !== prev.maxWeight
@@ -91,6 +118,17 @@ export function sessionDelta(
 			kind: 'weight',
 			diff: Math.round((last.maxWeight - prev.maxWeight) * 100) / 100,
 		};
+	if (fields.includes('reps'))
+		return { kind: 'reps', diff: last.totalReps - prev.totalReps };
+	if (fields.includes('distance'))
+		return {
+			kind: 'distance',
+			diff:
+				Math.round((last.totalDistance - prev.totalDistance) * 1000) /
+				1000,
+		};
+	if (fields.includes('duration'))
+		return { kind: 'duration', diff: last.durationSec - prev.durationSec };
 	return { kind: 'reps', diff: last.totalReps - prev.totalReps };
 }
 

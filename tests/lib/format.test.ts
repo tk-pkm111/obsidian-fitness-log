@@ -38,6 +38,31 @@ describe('表示用の整形', () => {
 		);
 	});
 
+	it('自分で作った記録のしかたは、項目を「×」でつなぐ（距離・時間）', () => {
+		const run: SetLog = {
+			...s(null, null, '19:20:00', '19:45:00'),
+			distance: 5.25,
+		};
+		expect(formatSetResult(run, 'kg', 'distance-duration')).toBe(
+			'5.25 km × 25:00',
+		);
+		expect(
+			formatSetResult(
+				s(20, null, '19:20:00', '19:21:30'),
+				'kg',
+				'weight-duration',
+			),
+		).toBe('20 kg × 1:30');
+		expect(formatSetResult(s(null, null), 'kg', 'distance')).toBe('- km');
+		expect(
+			formatSetsCompact(
+				[run, { ...run, distance: 3 }],
+				'kg',
+				'distance-duration',
+			),
+		).toBe('5.25 km × 25:00, 3 km × 25:00');
+	});
+
 	it('複数セットは同じ重量をまとめる', () => {
 		expect(
 			formatSetsCompact(

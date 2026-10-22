@@ -45,6 +45,14 @@ export function makeSortable(
 				onMove(from, from + 1);
 			}
 		});
+		// つかむ所のタッチは外側（スマホのモーダルの下へ引いて閉じる動き等）に渡さない
+		handle.addEventListener(
+			'touchstart',
+			(event) => event.stopPropagation(),
+			{
+				passive: true,
+			},
+		);
 		handle.addEventListener('pointerdown', (event) => {
 			if (event.button !== 0 || entries.length < 2) return;
 			event.preventDefault();

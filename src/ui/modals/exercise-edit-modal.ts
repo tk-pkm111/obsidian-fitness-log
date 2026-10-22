@@ -1,36 +1,27 @@
 import { Modal, Setting, type App } from 'obsidian';
+import type { DataStore } from '../../data/data-store';
+import type { ListsLibrary } from '../../data/lists-library';
 import { t, type MessageKey } from '../../i18n';
 import { CatalogError } from '../../lib/model/catalog';
+import {
+	addListName,
+	categoryOrder,
+	defaultRecordType,
+	recordTypeName,
+	type ListKind,
+	type NameListKind,
+} from '../../lib/model/lists';
 import { parseAliasInput } from '../../lib/model/resolve';
-import type {
-	Equipment,
-	Exercise,
-	ExerciseCategory,
-	RecordType,
-} from '../../lib/model/types';
-import { textButton } from '../helpers';
+import type { Exercise } from '../../lib/model/types';
+import { runAction, textButton } from '../helpers';
 import { ConfirmModal } from './confirm-modal';
+import { ListEditModal } from './list-edit-modal';
+import { RecordTypeModal } from './record-type-modal';
+import { TextPromptModal } from './text-prompt-modal';
 
-export const CATEGORIES: readonly ExerciseCategory[] = [
-	'push',
-	'pull',
-	'legs',
-	'arms',
-	'core',
-	'cardio',
-	'other',
-];
-export const EQUIPMENT: readonly Equipment[] = [
-	'machine',
-	'cable',
-	'smith',
-	'barbell',
-	'dumbbell',
-	'bodyweight',
-	'band',
-	'other',
-];
-const RECORD_TYPES: readonly RecordType[] = ['weight-reps', 'reps', 'duration'];
+/** 選択肢の終わりの「＋ 新しい…」「一覧を編集…」（ふつうの値と重ならない値） */
+const ADD_OPTION = '\u0000add';
+const EDIT_OPTION = '\u0000edit';
 
 export type ExerciseFields = Omit<Exercise, 'id' | 'createdAt' | 'path'>;
 
@@ -39,7 +30,10 @@ export interface ExerciseEditOptions {
 	exercise?: Exercise;
 	/** 新規作成時の初期値 */
 	initialName?: string;
-	initialCategory?: ExerciseCategory;
+	initialCategory?: string;
+	/** カテゴリ・器具・記録のしかたの一覧（設定ノート） */
+	lists: ListsLibrary;
+	store: DataStore;
 	/** 保存。CatalogError を投げればモーダルを閉じずに表示する */
 	onSave: (fields: ExerciseFields) => Promise<void>;
 	onDelete?: () => void;
@@ -71,9 +65,10 @@ export class ExerciseEditModal extends Modal {
 		});
 		const fields: ExerciseFields = {
 			name: source?.name ?? options.initialName ?? '',
-			category: source?.category ?? options.initialCategory ?? 'other',
+			category: source?.category ?? options.initialCategory ?? '',
 			equipment: source?.equipment,
-			recordType: source?.recordType ?? 'weight-reps',
+			recordType:
+				source?.recordType ?? defaultRecordType(options.lists.lists),
 			unilateral: source?.unilateral ?? false,
 			aliases: [...(source?.aliases ?? [])],
 			archived: source?.archived ?? false,
@@ -87,39 +82,24 @@ export class ExerciseEditModal extends Modal {
 				text.setValue(fields.name).onChange((v) => (fields.name = v));
 				window.setTimeout(() => text.inputEl.focus(), 0);
 			});
-		new Setting(contentEl)
-			.setName(t('exerciseEdit.category'))
-			.addDropdown((dropdown) => {
-				for (const c of CATEGORIES)
-					dropdown.addOption(c, t(`category.${c}` as MessageKey));
-				dropdown
-					.setValue(fields.category)
-					.onChange((v) => (fields.category = v as ExerciseCategory));
-			});
-		new Setting(contentEl)
-			.setName(t('exerciseEdit.equipment'))
-			.addDropdown((dropdown) => {
-				dropdown.addOption('', t('exerciseEdit.equipmentNone'));
-				for (const e of EQUIPMENT)
-					dropdown.addOption(e, t(`equipment.${e}` as MessageKey));
-				dropdown
-					.setValue(fields.equipment ?? '')
-					.onChange(
-						(v) =>
-							(fields.equipment =
-								v === '' ? undefined : (v as Equipment)),
-					);
-			});
-		new Setting(contentEl)
-			.setName(t('exerciseEdit.recordType'))
-			.setDesc(t('exerciseEdit.recordTypeDesc'))
-			.addDropdown((dropdown) => {
-				for (const r of RECORD_TYPES)
-					dropdown.addOption(r, t(`recordType.${r}` as MessageKey));
-				dropdown
-					.setValue(fields.recordType)
-					.onChange((v) => (fields.recordType = v as RecordType));
-			});
+		this.listDropdown(
+			new Setting(contentEl).setName(t('exerciseEdit.category')),
+			'categories',
+			() => fields.category,
+			(v) => (fields.category = v),
+		);
+		this.listDropdown(
+			new Setting(contentEl).setName(t('exerciseEdit.equipment')),
+			'equipment',
+			() => fields.equipment ?? '',
+			(v) => (fields.equipment = v === '' ? undefined : v),
+		);
+		this.listDropdown(
+			new Setting(contentEl).setName(t('exerciseEdit.recordType')),
+			'recordTypes',
+			() => fields.recordType,
+			(v) => (fields.recordType = v),
+		);
 		new Setting(contentEl)
 			.setName(t('exerciseEdit.unilateral'))
 			.setDesc(t('exerciseEdit.unilateralDesc'))
@@ -213,5 +193,114 @@ export class ExerciseEditModal extends Modal {
 
 	onClose(): void {
 		this.contentEl.empty();
+	}
+
+	/**
+	 * 一覧から選ぶ欄。終わりに「＋ 新しい…」（その場で足して選ぶ）と「一覧を編集…」（名前の変更・並べ替え・削除）。
+	 * 一覧に無い今の値（ノートを手で書き換えた等）も選択肢に残す
+	 */
+	private listDropdown(
+		setting: Setting,
+		kind: ListKind,
+		value: () => string,
+		onChange: (value: string) => void,
+	): void {
+		const { lists, store } = this.options;
+		setting.addDropdown((dropdown) => {
+			const fill = () => {
+				dropdown.selectEl.empty();
+				const current = value();
+				if (kind === 'recordTypes') {
+					const types = lists.lists.recordTypes.map((r) => r.type);
+					if (!types.includes(current)) types.push(current);
+					for (const type of types)
+						dropdown.addOption(
+							type,
+							recordTypeName(type, lists.lists),
+						);
+				} else {
+					dropdown.addOption('', t('lists.unset'));
+					const names =
+						kind === 'categories'
+							? categoryOrder(lists.lists, [current])
+							: [...lists.lists.equipment];
+					if (current !== '' && !names.includes(current))
+						names.push(current);
+					for (const name of names)
+						if (name !== '') dropdown.addOption(name, name);
+				}
+				dropdown.addOption(
+					ADD_OPTION,
+					t(`lists.newOption.${kind}` as MessageKey),
+				);
+				dropdown.addOption(EDIT_OPTION, t('lists.editOption'));
+				dropdown.setValue(current);
+			};
+			fill();
+			dropdown.onChange((v) => {
+				if (v === ADD_OPTION) {
+					dropdown.setValue(value());
+					this.addItem(kind, (added) => {
+						onChange(added);
+						fill();
+					});
+					return;
+				}
+				if (v === EDIT_OPTION) {
+					dropdown.setValue(value());
+					new ListEditModal(this.app, {
+						kind,
+						lists,
+						store,
+						onRenamed: (from, to) => {
+							if (value() === from) onChange(to);
+						},
+						onRemoved: (removed, replacement) => {
+							if (value() === removed)
+								onChange(replacement ?? '');
+						},
+						onDone: fill,
+					}).open();
+					return;
+				}
+				onChange(v);
+			});
+		});
+	}
+
+	/** その場で一覧に足して、足したものを選ぶ */
+	private addItem(kind: ListKind, onAdded: (value: string) => void): void {
+		const { lists } = this.options;
+		if (kind === 'recordTypes') {
+			new RecordTypeModal(this.app, {
+				lists: lists.lists,
+				onSubmit: async (type, name) => {
+					await lists.addRecordType(type, name);
+					onAdded(type);
+				},
+			}).open();
+			return;
+		}
+		const nameKind: NameListKind = kind;
+		new TextPromptModal(this.app, {
+			title: t(`lists.add.${nameKind}` as MessageKey),
+			initial: '',
+			singleLine: true,
+			submitText: t('lists.addSubmit'),
+			validate: (input) => {
+				try {
+					addListName(lists.lists, nameKind, input);
+					return undefined;
+				} catch (error) {
+					return error instanceof Error
+						? error.message
+						: String(error);
+				}
+			},
+			onSubmit: (input) =>
+				runAction(this.app, async () =>
+					onAdded(await lists.addName(nameKind, input)),
+				),
+		}).open();
 	}
 }

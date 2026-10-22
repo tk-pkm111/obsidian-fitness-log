@@ -3723,3 +3723,59 @@ a.fitness-log-cal-entry-name:hover {
 .is-phone .fitness-log-cal-chips button.fitness-log-cal-chip:nth-child(n + 3) {
 	display: none;
 }
+
+/* ---------------------------------------------------------------- 種目の選択肢（カテゴリ・器具・記録のしかた）の編集 */
+
+.fitness-log-list-edit .fitness-log-cards {
+	margin-bottom: var(--size-4-3);
+}
+
+.fitness-log-list-edit-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	min-height: 48px;
+	padding: 0 var(--size-4-2);
+}
+
+.fitness-log-list-edit-row + .fitness-log-list-edit-row {
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* 名前（押すと名前を変える） */
+button.fitness-log-list-edit-name {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0;
+	height: auto;
+	min-height: 44px;
+	padding: var(--size-4-1) var(--size-4-1);
+	background: none;
+	box-shadow: none;
+	border: none;
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	text-align: left;
+	white-space: normal;
+}
+
+button.fitness-log-list-edit-name .fitness-log-muted {
+	font-size: var(--font-ui-smaller);
+}
+
+.fitness-log-list-edit-count {
+	flex-shrink: 0;
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-list-edit-remove {
+	color: var(--text-faint);
+}
+
+.fitness-log-list-edit-remove:hover {
+	color: var(--text-error);
+}

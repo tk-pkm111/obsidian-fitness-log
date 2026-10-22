@@ -1,3 +1,4 @@
+import { defaultRecordType } from '../lib/model/lists';
 import type { Exercise } from '../lib/model/types';
 import { ExerciseEditModal } from './modals/exercise-edit-modal';
 import { ExerciseSuggestModal } from './modals/exercise-suggest-modal';
@@ -34,16 +35,25 @@ function createExercise(
 	name: string,
 	onChoose: (exercise: Exercise) => void,
 ): void {
-	const { library } = ctx.services;
+	const { library, lists, store } = ctx.services;
 	new NewExerciseModal(ctx.app, {
 		name,
+		categories: lists.lists.categories,
 		onCreate: (category) =>
 			ctx.run(async () =>
-				onChoose(await library.create({ name, category })),
+				onChoose(
+					await library.create({
+						name,
+						category,
+						recordType: defaultRecordType(lists.lists),
+					}),
+				),
 			),
 		onDetails: () =>
 			new ExerciseEditModal(ctx.app, {
 				initialName: name,
+				lists,
+				store,
 				onSave: async (fields) =>
 					onChoose(await library.create(fields)),
 			}).open(),

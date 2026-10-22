@@ -100,7 +100,12 @@ describe('carryOver（4 段のフォールバック）', () => {
 				setIndex: 2,
 				currentSets: [s(47.5, 9)],
 			}),
-		).toEqual({ weight: 47.5, reps: 9, source: 'previous-set' });
+		).toEqual({
+			weight: 47.5,
+			reps: 9,
+			distance: null,
+			source: 'previous-set',
+		});
 	});
 
 	it('2. 同じパッケージの直近（表示中の日付より前）のセット n', () => {
@@ -116,6 +121,7 @@ describe('carryOver（4 段のフォールバック）', () => {
 		).toEqual({
 			weight: 40,
 			reps: 9,
+			distance: null,
 			source: 'same-package',
 			date: '2026-09-24',
 		});
@@ -145,6 +151,7 @@ describe('carryOver（4 段のフォールバック）', () => {
 		).toEqual({
 			weight: 45,
 			reps: 10,
+			distance: null,
 			source: 'same-package',
 			date: '2026-10-01',
 		});
@@ -159,6 +166,7 @@ describe('carryOver（4 段のフォールバック）', () => {
 		).toEqual({
 			weight: 50,
 			reps: 8,
+			distance: null,
 			source: 'same-package',
 			date: '2026-09-28',
 		});
@@ -176,6 +184,7 @@ describe('carryOver（4 段のフォールバック）', () => {
 		).toEqual({
 			weight: 45,
 			reps: 10,
+			distance: null,
 			source: 'other-package',
 			date: '2026-10-01',
 		});
@@ -190,7 +199,7 @@ describe('carryOver（4 段のフォールバック）', () => {
 				setIndex: 1,
 				currentSets: [],
 			}),
-		).toEqual({ weight: null, reps: null, source: 'none' });
+		).toEqual({ weight: null, reps: null, distance: null, source: 'none' });
 		expect(
 			carryOver({
 				occurrences,

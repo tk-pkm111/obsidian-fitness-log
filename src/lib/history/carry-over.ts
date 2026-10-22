@@ -62,6 +62,8 @@ export type CarryOverSource =
 export interface CarryOver {
 	weight: number | null;
 	reps: number | null;
+	/** km（距離を記録する種目） */
+	distance: number | null;
 	source: CarryOverSource;
 	/** source が same-package / other-package のときの日付 */
 	date?: string;
@@ -107,6 +109,7 @@ export function carryOver(input: CarryOverInput): CarryOver {
 		return {
 			weight: previous.weight,
 			reps: previous.reps,
+			distance: previous.distance ?? null,
 			source: 'previous-set',
 		};
 	const last = lastPerformance(
@@ -117,10 +120,12 @@ export function carryOver(input: CarryOverInput): CarryOver {
 	const set = last
 		? pickSet(last.occurrence.sets, input.setIndex)
 		: undefined;
-	if (!last || !set) return { weight: null, reps: null, source: 'none' };
+	if (!last || !set)
+		return { weight: null, reps: null, distance: null, source: 'none' };
 	return {
 		weight: set.weight,
 		reps: set.reps,
+		distance: set.distance ?? null,
 		source: last.samePackage ? 'same-package' : 'other-package',
 		date: last.occurrence.date,
 	};

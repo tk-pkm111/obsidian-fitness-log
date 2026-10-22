@@ -6,13 +6,10 @@
  * - 種目の設定は frontmatter が正（Properties 欄で直しても反映される）。本文はノウハウを書く場所で、プラグインは触らない
  * - 別名は Obsidian 標準の `aliases` に入れる（[[旧名]] のリンクも同じノートに繋がる）
  */
+import { DEFAULT_RECORD_TYPE, normalizeRecordType } from './record-type';
 import { createResolver } from './resolve';
-import type {
-	Equipment,
-	Exercise,
-	ExerciseCategory,
-	RecordType,
-} from './types';
+import { categoryName, equipmentName } from './lists';
+import type { Exercise } from './types';
 
 export const EXERCISE_TAG = 'fitness-exercise';
 
@@ -27,27 +24,6 @@ export const EXERCISE_KEYS = {
 	aliases: 'aliases',
 	tags: 'tags',
 } as const;
-
-const CATEGORIES: readonly ExerciseCategory[] = [
-	'push',
-	'pull',
-	'legs',
-	'arms',
-	'core',
-	'cardio',
-	'other',
-];
-const EQUIPMENT: readonly Equipment[] = [
-	'machine',
-	'cable',
-	'smith',
-	'barbell',
-	'dumbbell',
-	'bodyweight',
-	'band',
-	'other',
-];
-const RECORD_TYPES: readonly RecordType[] = ['weight-reps', 'reps', 'duration'];
 
 const FILENAME_REPLACEMENTS: Record<string, string> = {
 	'/': '／',
@@ -72,13 +48,6 @@ export function exerciseFileName(name: string): string {
 		.replace(/[/\\:*?"<>|#^[\]]/g, (ch) => FILENAME_REPLACEMENTS[ch] ?? ch)
 		.replace(/\s+/g, ' ')
 		.replace(/^\.+/, '');
-}
-
-function oneOf<T extends string>(
-	value: unknown,
-	options: readonly T[],
-): T | undefined {
-	return options.find((option) => option === value);
 }
 
 function stringList(value: unknown): string[] {
@@ -117,14 +86,15 @@ export function exerciseFromNote(source: NoteSource): Exercise | null {
 	const exercise: Exercise = {
 		id: id.trim(),
 		name: source.basename,
-		category: oneOf(fm[EXERCISE_KEYS.category], CATEGORIES) ?? 'other',
+		category: categoryName(fm[EXERCISE_KEYS.category]),
 		recordType:
-			oneOf(fm[EXERCISE_KEYS.recordType], RECORD_TYPES) ?? 'weight-reps',
+			normalizeRecordType(fm[EXERCISE_KEYS.recordType]) ??
+			DEFAULT_RECORD_TYPE,
 		aliases: stringList(fm[EXERCISE_KEYS.aliases]),
 		createdAt: source.createdAt,
 		path: source.path,
 	};
-	const equipment = oneOf(fm[EXERCISE_KEYS.equipment], EQUIPMENT);
+	const equipment = equipmentName(fm[EXERCISE_KEYS.equipment]);
 	if (equipment) exercise.equipment = equipment;
 	if (fm[EXERCISE_KEYS.unilateral] === true) exercise.unilateral = true;
 	if (fm[EXERCISE_KEYS.archived] === true) exercise.archived = true;
@@ -154,7 +124,8 @@ export function applyExerciseToFrontmatter(
 		tags.push(EXERCISE_TAG);
 	fm[EXERCISE_KEYS.tags] = tags;
 	fm[EXERCISE_KEYS.id] = exercise.id;
-	fm[EXERCISE_KEYS.category] = exercise.category;
+	if (exercise.category) fm[EXERCISE_KEYS.category] = exercise.category;
+	else delete fm[EXERCISE_KEYS.category];
 	if (exercise.equipment) fm[EXERCISE_KEYS.equipment] = exercise.equipment;
 	else delete fm[EXERCISE_KEYS.equipment];
 	fm[EXERCISE_KEYS.recordType] = exercise.recordType;

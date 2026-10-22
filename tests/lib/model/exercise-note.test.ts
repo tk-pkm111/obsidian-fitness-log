@@ -31,7 +31,7 @@ describe('exerciseFileName', () => {
 });
 
 describe('exerciseFromNote', () => {
-	it('frontmatter から読み、名前はファイル名', () => {
+	it('frontmatter から読み、名前はファイル名。以前の版の英語のキーは既定の名前で読む', () => {
 		const exercise = exerciseFromNote({
 			path: 'Fitness/種目/ケーブルYレイズ.md',
 			basename: 'ケーブルYレイズ',
@@ -49,8 +49,8 @@ describe('exerciseFromNote', () => {
 		expect(exercise).toEqual({
 			id: 'ex_1',
 			name: 'ケーブルYレイズ',
-			category: 'push',
-			equipment: 'cable',
+			category: 'プッシュ',
+			equipment: 'ケーブル',
 			recordType: 'reps',
 			unilateral: true,
 			aliases: ['Yレイズ'],
@@ -59,7 +59,7 @@ describe('exerciseFromNote', () => {
 		});
 	});
 
-	it('id が無ければ null（呼び出し側で振る）。不正な値は既定値', () => {
+	it('id が無ければ null（呼び出し側で振る）。カテゴリは名前をそのまま、不正な値は既定値', () => {
 		expect(
 			exerciseFromNote({
 				path: 'a.md',
@@ -80,7 +80,7 @@ describe('exerciseFromNote', () => {
 			createdAt: '',
 		});
 		expect(loose).toMatchObject({
-			category: 'other',
+			category: '胸',
 			recordType: 'weight-reps',
 			aliases: ['1', 'x'],
 		});

@@ -13,7 +13,10 @@ import {
 	parseDurationInput,
 	secondsToTime,
 } from '../../lib/time/date';
+import { recordFields } from '../../lib/model/record-type';
 import {
+	DISTANCE_UNIT,
+	formatDistance,
 	fromDisplayWeight,
 	parseNumberInput,
 	toDisplayWeight,
@@ -31,7 +34,7 @@ import { ConfirmModal } from '../modals/confirm-modal';
 import { TextPromptModal } from '../modals/text-prompt-modal';
 import { WheelPickerModal } from '../modals/wheel-picker-modal';
 import type { PageContext } from '../page-context';
-import { pickWeightWheel } from './today-actions';
+import { pickDistanceWheel, pickWeightWheel } from './today-actions';
 
 /** 直したセットを日ノートに書く（描き直しで新しい値が出る）。true を返す */
 type SaveSet = (updated: SetLog) => boolean;
@@ -240,7 +243,8 @@ function twoDigits(n: number): string[] {
 }
 
 /**
- * 「15 kg × 5 回」の数字を入力欄にする（スマホはホイール）。時間だけの種目は長さ（開始・終了で直す）
+ * 「15 kg × 5 回」の数字を入力欄にする（スマホはホイール）。記録のしかたの項目を「×」でつなぐ。
+ * 時間は長さを出すだけ（開始・終了で直す）
  */
 function renderResult(
 	el: HTMLElement,
@@ -249,10 +253,13 @@ function renderResult(
 	unit: WeightUnit,
 ): void {
 	const { ctx, set, key, save, title } = field;
-	if (card.recordType === 'duration') {
-		el.setText(formatSetResult(set, unit, card.recordType));
-		return;
-	}
+	const fields = recordFields(card.recordType);
+	let first = true;
+	const part = (render: () => void) => {
+		if (!first) el.appendText(' × ');
+		first = false;
+		render();
+	};
 	const weightText =
 		set.weight === null ? '' : String(toDisplayWeight(set.weight, unit));
 	const commitWeight = (text: string) => {
@@ -289,15 +296,34 @@ function renderResult(
 			onCommit: commitWeight,
 			onPick: pickWeight,
 		});
-	if (card.recordType === 'weight-reps') {
-		weightField();
-		el.appendText(` ${unit} × `);
-	} else if (set.weight !== null) {
+	if (fields.includes('weight'))
+		part(() => {
+			weightField();
+			el.appendText(` ${unit}`);
+		});
+	else if (fields.includes('reps') && set.weight !== null)
 		// 自重＋加重
-		el.appendText('+');
-		weightField();
-		el.appendText(` ${unit} × `);
-	}
+		part(() => {
+			el.appendText('+');
+			weightField();
+			el.appendText(` ${unit}`);
+		});
+	if (fields.includes('reps'))
+		part(() => {
+			repsField(el, field);
+			el.appendText(` ${t('format.reps', { n: '' }).trim()}`);
+		});
+	if (fields.includes('distance'))
+		part(() => {
+			distanceField(el, field);
+			el.appendText(` ${DISTANCE_UNIT}`);
+		});
+	if (fields.includes('duration'))
+		part(() => el.appendText(formatDuration(setDurationSec(set))));
+}
+
+function repsField(el: HTMLElement, field: SetField): void {
+	const { ctx, set, key, save, title } = field;
 	const repsUnit = t('format.reps', { n: '' }).trim();
 	const commitReps = (text: string) => {
 		const value = parseNumberInput(text);
@@ -343,7 +369,41 @@ function renderResult(
 			}).open();
 		},
 	});
-	el.appendText(` ${repsUnit}`);
+}
+
+/** 距離（km）。スマホは「整数 . 小数 1 桁」のホイール */
+function distanceField(el: HTMLElement, field: SetField): void {
+	const { ctx, set, key, save, title } = field;
+	const distance = set.distance ?? null;
+	const text = distance === null ? '' : formatDistance(distance);
+	const label = t('setEdit.distance', { unit: DISTANCE_UNIT });
+	const commit = (input: string) => {
+		const value = parseNumberInput(input);
+		if (value === undefined || (value !== null && value < 0)) {
+			new Notice(t('prompt.invalidNumber'));
+			return false;
+		}
+		return save({ ...set, distance: value });
+	};
+	inlineInput(el, {
+		value: text,
+		placeholder: '-',
+		label,
+		focusKey: `${key}:distance`,
+		inputMode: 'decimal',
+		onCommit: commit,
+		onPick: () =>
+			pickDistanceWheel(ctx, {
+				title: label,
+				hint: title,
+				current: distance,
+				submitText: t('wheel.done'),
+				onPick: (value) => {
+					if (value !== distance) save({ ...set, distance: value });
+				},
+				onType: commit,
+			}),
+	});
 }
 
 /** 開始・終了の時刻。普段は '22:40'、直すときは秒まで '22:40:01'（スマホは時・分・秒のホイール） */

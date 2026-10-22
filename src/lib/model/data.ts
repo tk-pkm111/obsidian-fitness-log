@@ -8,19 +8,18 @@ import {
 	instantiateSession,
 	PROGRAM_TEMPLATES,
 } from './defaults';
+import { categoryName, equipmentName } from './lists';
+import { DEFAULT_RECORD_TYPE, normalizeRecordType } from './record-type';
 import { createResolver, nameKey } from './resolve';
 import type {
 	ActiveSet,
-	Equipment,
 	Exercise,
-	ExerciseCategory,
 	FitnessLogSettings,
 	Package,
 	PackageItem,
 	PackageSection,
 	RemovedPackageItem,
 	PluginData,
-	RecordType,
 	Routine,
 	RoutineRule,
 } from './types';
@@ -49,27 +48,6 @@ export function createEmptyData(): PluginData {
 		migrations: [],
 	};
 }
-
-const CATEGORIES: readonly ExerciseCategory[] = [
-	'push',
-	'pull',
-	'legs',
-	'arms',
-	'core',
-	'cardio',
-	'other',
-];
-const EQUIPMENT: readonly Equipment[] = [
-	'machine',
-	'cable',
-	'smith',
-	'barbell',
-	'dumbbell',
-	'bodyweight',
-	'band',
-	'other',
-];
-const RECORD_TYPES: readonly RecordType[] = ['weight-reps', 'reps', 'duration'];
 
 type Obj = Record<string, unknown>;
 
@@ -165,12 +143,12 @@ function normalizeExercise(raw: unknown): Exercise | null {
 	const exercise: Exercise = {
 		id,
 		name,
-		category: oneOf(raw.category, CATEGORIES) ?? 'other',
-		recordType: oneOf(raw.recordType, RECORD_TYPES) ?? 'weight-reps',
+		category: categoryName(raw.category),
+		recordType: normalizeRecordType(raw.recordType) ?? DEFAULT_RECORD_TYPE,
 		aliases: stringList(raw.aliases),
 		createdAt: str(raw.createdAt) ?? new Date(0).toISOString(),
 	};
-	const equipment = oneOf(raw.equipment, EQUIPMENT);
+	const equipment = equipmentName(raw.equipment);
 	if (equipment) exercise.equipment = equipment;
 	if (raw.unilateral === true) exercise.unilateral = true;
 	if (raw.archived === true) exercise.archived = true;

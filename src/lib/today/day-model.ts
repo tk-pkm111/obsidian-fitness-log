@@ -51,7 +51,7 @@ export interface CardModel {
  * - planned: まだ始めていない（ルーチンの予定・追加しただけ）。畳んで「筋トレを開始」
  * - in-progress: 筋トレ中。種目カードを出す
  * - finished: 終了した（または開始せずに記録だけある）。まとめを出して畳む
- * - manual: パッケージ外（その他）。開始・終了は無く、いつも種目カードを出す
+ * - manual: パッケージ外（単発の種目）。開始は無く、いつも種目カードを出す。「筋トレを終了」すると finished
  */
 export type SectionStatus = 'planned' | 'in-progress' | 'finished' | 'manual';
 
@@ -201,9 +201,13 @@ export function buildDayModel(input: DayModelInput): SectionModel[] {
 				]);
 				continue;
 			}
+			// 単発の種目は「筋トレを終了」したら終了（開始は無く、いつも開いている）
 			sections.push({
 				key: 'other',
-				status: 'manual',
+				status: session.end ? 'finished' : 'manual',
+				...(session.end && session.start
+					? { start: session.start, end: session.end }
+					: {}),
 				pkg: null,
 				sessionName: null,
 				isOther: true,
@@ -321,8 +325,10 @@ export function buildDayModel(input: DayModelInput): SectionModel[] {
 			cards.splice(lastIndex + 1, 0, pending);
 			section.cards = uniqueKeys(cards);
 		}
-		// 進行中のセットがあるセクションは筋トレ中として出す（開始の記録が無い古いノートでも）
-		if (section.status !== 'manual') section.status = 'in-progress';
+		// 進行中のセットがあるセクションは筋トレ中として出す（開始の記録が無い古いノートでも）。
+		// 単発の種目はいつも開いた形（終えたあとにセットを始めていても）
+		if (section.isOther) section.status = 'manual';
+		else if (section.status !== 'manual') section.status = 'in-progress';
 	}
 
 	// パッケージ（ノートの順 → 予定）→ その他

@@ -424,6 +424,22 @@ describe('セクションの状態（筋トレの開始・終了）', () => {
 				sessions: [{ name: null, note: '', exercises: [] }],
 			}),
 		).toEqual([['other', 'manual']]);
+		// 単発の種目も「筋トレを終了」したら終了
+		const ended = build({
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: null,
+					note: '',
+					start: '22:09:00',
+					end: '22:27:00',
+					exercises: [{ name: 'ディップス', sets: [set(8)] }],
+				},
+			],
+		});
+		expect(ended.map((s) => [s.key, s.status, s.start, s.end])).toEqual([
+			['other', 'finished', '22:09:00', '22:27:00'],
+		]);
 	});
 
 	it('開始の記録が無くてもセットがあれば記録済み、進行中のセットがあれば筋トレ中', () => {

@@ -1,4 +1,4 @@
-import { Notice } from 'obsidian';
+import { Notice, Platform } from 'obsidian';
 import { t } from '../../i18n';
 import { formatSetsCompact } from '../../lib/format';
 import { summarizeSession } from '../../lib/log/summary';
@@ -8,12 +8,19 @@ import {
 	type ExerciseOccurrence,
 } from '../../lib/history/carry-over';
 import type { SetLog, WeightUnit } from '../../lib/model/types';
-import { nearestIndex, weightChoices } from '../../lib/picker';
+import { nearestIndex, stepRange, weightChoices } from '../../lib/picker';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
 import { emptyFocus, type FocusState } from '../../lib/today/focus';
 import { formatHm, formatMonthDay } from '../../lib/time/date';
 import { quickReps, quickWeights } from '../../lib/today/quick-values';
-import { fromDisplayWeight, toDisplayWeight } from '../../lib/units';
+import { hasField, keepsWeight } from '../../lib/model/record-type';
+import {
+	DISTANCE_UNIT,
+	formatDistance,
+	fromDisplayWeight,
+	parseNumberInput,
+	toDisplayWeight,
+} from '../../lib/units';
 import {
 	OTHER_SESSION,
 	type SessionRef,
@@ -119,6 +126,55 @@ export function pickWeightWheel(
 		},
 		keyboard: {
 			value: current === null ? '' : String(current),
+			inputMode: 'decimal',
+			onSubmit: options.onType,
+		},
+	}).open();
+}
+
+/**
+ * 距離のホイール（スマホ）: 「整数 . 小数 1 桁 km」の 2 列（0.1 km 刻みの 1 列だと 5 km まで 50 回まわすので）。
+ * キーボードで打ったときは onType（false を返すと閉じない）
+ */
+export function pickDistanceWheel(
+	ctx: PageContext,
+	options: {
+		title: string;
+		hint: string;
+		current: number | null;
+		submitText: string;
+		onPick: (km: number) => void;
+		onType: (text: string) => boolean;
+	},
+): void {
+	const { current } = options;
+	const tenths = Math.round((current ?? 0) * 10);
+	const whole = Math.floor(tenths / 10);
+	const wholes = stepRange(0, Math.max(50, whole), 1);
+	new WheelPickerModal(ctx.app, {
+		title: options.title,
+		hint: options.hint,
+		columns: [
+			{
+				items: wholes.map(String),
+				index: whole,
+				label: t('wheel.distanceWhole', { unit: DISTANCE_UNIT }),
+				width: 3,
+			},
+			{
+				items: Array.from({ length: 10 }, (_, i) => String(i)),
+				index: tenths % 10,
+				label: t('wheel.distanceTenths'),
+				width: 2,
+			},
+		],
+		separators: ['.'],
+		unit: DISTANCE_UNIT,
+		submitText: options.submitText,
+		onSubmit: ([wi = 0, di = 0]) =>
+			options.onPick(Math.round(((wholes[wi] ?? 0) + di / 10) * 10) / 10),
+		keyboard: {
+			value: current === null ? '' : formatDistance(current),
 			inputMode: 'decimal',
 			onSubmit: options.onType,
 		},
@@ -253,8 +309,9 @@ export function startSet(
 			}),
 		);
 
-	// その日の最初のセットだけ「今日は何 kg？」と聞く。2 セット目以降は前のセットを引き継いで即開始（行内で変更できる）
-	if (exercise.recordType === 'weight-reps' && hist.done.length === 0) {
+	// 重量を記録する種目は、その日の最初のセットだけ「今日は何 kg？」と聞く。
+	// 2 セット目以降は前のセットを引き継いで即開始（行内で変更できる）
+	if (hasField(exercise.recordType, 'weight') && hist.done.length === 0) {
 		const initial =
 			carry.weight === null ? null : toDisplayWeight(carry.weight, unit);
 		new NumberPromptModal(ctx.app, {
@@ -274,7 +331,7 @@ export function startSet(
 		}).open();
 		return;
 	}
-	start(exercise.recordType === 'duration' ? null : carry.weight);
+	start(keepsWeight(exercise.recordType) ? carry.weight : null);
 }
 
 export function finishSet(
@@ -285,7 +342,10 @@ export function finishSet(
 	const { controller, store } = ctx.services;
 	const active = store.current.activeSet;
 	if (!active) return;
-	if (card.recordType === 'duration') {
+	// 終えるときに聞くのは回数と距離（記録する項目だけ。どちらも無ければそのまま記録）
+	const askReps = hasField(card.recordType, 'reps');
+	const askDistance = hasField(card.recordType, 'distance');
+	if (!askReps && !askDistance) {
 		ctx.run(() => controller.finishSet(null));
 		return;
 	}
@@ -302,18 +362,62 @@ export function finishSet(
 		active.weight === undefined
 			? null
 			: `${toDisplayWeight(active.weight, unit)} ${unit}`;
+	const title = `${card.name} ・ ${t('today.set', { n: active.setIndex })}`;
+	const hint = [weight, hist.hint].filter((s) => s).join(' ・ ');
+	const askDistanceThen = (reps: number | null) => {
+		if (!askDistance) {
+			ctx.run(() => controller.finishSet(reps));
+			return;
+		}
+		const finish = (distance: number | null) =>
+			ctx.run(() => controller.finishSet(reps, '', distance));
+		if (Platform.isMobile) {
+			pickDistanceWheel(ctx, {
+				title: t('prompt.distanceTitle'),
+				hint: [title, hint].filter((s) => s).join(' ・ '),
+				current: carry.distance,
+				submitText: t('prompt.record'),
+				onPick: finish,
+				onType: (text) => {
+					const value = parseNumberInput(text);
+					if (value === undefined || (value !== null && value < 0))
+						return false;
+					finish(value);
+					return true;
+				},
+			});
+			return;
+		}
+		new NumberPromptModal(ctx.app, {
+			title,
+			question: t('prompt.distanceTitle'),
+			unit: DISTANCE_UNIT,
+			initial: carry.distance,
+			quick: quickWeights(carry.distance, 0.5),
+			step: 0.1,
+			decimal: true,
+			hint,
+			submitText: t('prompt.record'),
+			allowEmpty: false,
+			onSubmit: finish,
+		}).open();
+	};
+	if (!askReps) {
+		askDistanceThen(null);
+		return;
+	}
 	new NumberPromptModal(ctx.app, {
-		title: `${card.name} ・ ${t('today.set', { n: active.setIndex })}`,
+		title,
 		question: t('prompt.repsTitle'),
 		unit: t('format.reps', { n: '' }).trim(),
 		initial: carry.reps,
 		quick: quickReps(carry.reps, card.item?.targetReps),
 		step: 1,
 		decimal: false,
-		hint: [weight, hist.hint].filter((s) => s).join(' ・ '),
-		submitText: t('prompt.record'),
+		hint,
+		submitText: askDistance ? t('prompt.next') : t('prompt.record'),
 		allowEmpty: false,
-		onSubmit: (reps) => ctx.run(() => controller.finishSet(reps)),
+		onSubmit: askDistanceThen,
 	}).open();
 }
 
@@ -344,6 +448,9 @@ export function addSetManually(
 		initial: {
 			weight: carry.weight,
 			reps: carry.reps,
+			...(hasField(card.recordType, 'distance')
+				? { distance: carry.distance }
+				: {}),
 			start: null,
 			end: null,
 			note: '',

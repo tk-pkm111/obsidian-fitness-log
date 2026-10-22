@@ -10,11 +10,23 @@ import { foldersOverlap } from './lib/folders';
 import { validateFileNameFormat } from './data/log-repository';
 import { t } from './i18n';
 import { DEFAULT_SETTINGS } from './lib/model/data';
+import type { ExerciseLists, ListKind } from './lib/model/lists';
 import type { FitnessLogSettings } from './lib/model/types';
 import type FitnessLogPlugin from './main';
 import { checkNoteFolders } from './ui/folder-check';
+import { ListEditModal } from './ui/modals/list-edit-modal';
 
 type SettingsKey = keyof FitnessLogSettings;
+
+/** 一覧の中身を短く（「プッシュ・プル・脚 …」） */
+function listSummary(lists: ExerciseLists, kind: ListKind): string {
+	const names =
+		kind === 'recordTypes'
+			? lists.recordTypes.map((r) => r.name)
+			: lists[kind];
+	const shown = names.slice(0, 5).join('・');
+	return names.length > 5 ? `${shown} …` : shown;
+}
 
 /** 空ならデフォルトに戻し、パス表記を Obsidian 流に揃える */
 export function normalizeLogFolder(value: string): string {
@@ -223,6 +235,24 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 					key: 'packageSections',
 					defaultValue: DEFAULT_SETTINGS.packageSections,
 				},
+			},
+			{
+				// カテゴリ・器具・記録のしかたの一覧（設定ノートに書くので、ほかの端末とそろう）
+				type: 'group',
+				heading: t('settings.group.lists'),
+				items: (
+					['categories', 'equipment', 'recordTypes'] as const
+				).map((kind) => ({
+					name: t(`lists.title.${kind}`),
+					desc: listSummary(services.lists.lists, kind),
+					action: () =>
+						new ListEditModal(this.app, {
+							kind,
+							lists: services.lists,
+							store: services.store,
+							onDone: () => this.update(),
+						}).open(),
+				})),
 			},
 			{
 				type: 'group',
