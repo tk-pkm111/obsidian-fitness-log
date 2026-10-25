@@ -86,6 +86,8 @@ export class MainView extends ItemView {
 	private bodyEl: HTMLElement | null = null;
 	private pageStates = new Map<string, object>();
 	private renderedToday = todayString();
+	/** 前に描いたページ（ページに入ったときを知るため） */
+	private renderedPage: PageId | null = null;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -206,6 +208,14 @@ export class MainView extends ItemView {
 		// 体組成を記録しなくなったら（ほかの端末でオフにしたときも）今日のページへ
 		if (this.viewState.page === 'body' && !this.bodyEnabled)
 			this.viewState = { ...this.viewState, page: 'today', date: null };
+		// 体組成のページに入ったら、前に見ていた測定ではなく最新の測定を出す
+		// （測るのは週に 1 回などなので、開いてまず見たいのは最新の記録）
+		if (this.viewState.page === 'body' && this.renderedPage !== 'body') {
+			const body = this.pageStates.get('body') as
+				{ date: string | null } | undefined;
+			if (body) body.date = null;
+		}
+		this.renderedPage = this.viewState.page;
 
 		// ヘッダー: 左に ☰（メニュー）、中央はページ（今日なら日付ナビ）、右はページの操作
 		const header = contentEl.createDiv({ cls: 'fitness-log-header' });

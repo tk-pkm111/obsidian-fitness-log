@@ -1,5 +1,6 @@
 import { t, type MessageKey } from '../../i18n';
 import { iconButton, textButton } from '../helpers';
+import { BodyCalendarModal } from '../modals/body-calendar-modal';
 import { BodyRecordModal } from '../modals/body-record-modal';
 import type { PageContext } from '../page-context';
 import { renderBodyGoals } from './body-goals';
@@ -11,6 +12,7 @@ import {
 	type BodyPageState,
 } from './body-shared';
 import { renderBodyWhole } from './body-whole';
+import { formatMonthDay } from '../../lib/time/date';
 import { formatDay } from './log-shared';
 
 function openRecord(ctx: PageContext, state: BodyPageState): void {
@@ -55,6 +57,8 @@ export function renderBodyPage(ctx: PageContext, el: HTMLElement): void {
 	}
 	const found = state.date ? ms.findIndex((m) => m.date === state.date) : -1;
 	const index = found >= 0 ? found : ms.length - 1;
+	// 最新の測定を見ているときは、新しい測定が届いたらそちらを見る（日付で止めない）
+	if (index === ms.length - 1) state.date = null;
 	const current = ms[index];
 	if (!current) return;
 	const env = createBodyEnv(ctx, state, ms, index, current);
@@ -72,23 +76,37 @@ export function renderBodyPage(ctx: PageContext, el: HTMLElement): void {
 	);
 	prev.disabled = index === 0;
 	const label = nav.createDiv({ cls: 'fitness-log-body-date' });
+	// 1 行目は日付、2 行目は時刻（スマホの幅でも ‹ › とカレンダーが並ぶように。
+	// 時刻が無い測定は前回の日）
 	label.createDiv({
 		cls: 'fitness-log-body-date-main',
-		text: current.time
-			? `${formatDay(current.date)} ${current.time.replace(/^0/, '')}`
-			: formatDay(current.date),
+		text: formatDay(current.date),
 	});
 	const before = ms[index - 1];
 	label.createDiv({
 		cls: 'fitness-log-body-date-sub',
-		text: before
-			? t('body.previousDate', { date: formatDay(before.date) })
-			: t('body.firstMeasurement'),
+		text: current.time
+			? current.time.replace(/^0/, '')
+			: before
+				? t('body.previousDate', { date: formatMonthDay(before.date) })
+				: t('body.firstMeasurement'),
 	});
 	const next = iconButton(nav, 'chevron-right', t('body.next'), () =>
 		go(index + 1),
 	);
 	next.disabled = index === ms.length - 1;
+	// 測った日のカレンダー（色の付いた日を押すと、その日の測定を見る）
+	iconButton(nav, 'calendar-days', t('body.calendar'), () =>
+		new BodyCalendarModal(ctx.app, {
+			dates: ms.map((m) => m.date),
+			selected: current.date,
+			today: ctx.today,
+			onPick: (date) => {
+				state.date = date;
+				ctx.refresh();
+			},
+		}).open(),
+	);
 	textButton(top, t('body.record'), () => openRecord(ctx, state), {
 		icon: 'plus',
 		cta: true,

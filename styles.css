@@ -3798,6 +3798,7 @@ button.fitness-log-list-edit-name .fitness-log-muted {
 }
 
 .fitness-log-body-date {
+	flex: 0 1 auto;
 	min-width: 0;
 	padding: 0 2px;
 	text-align: center;
@@ -3810,8 +3811,10 @@ button.fitness-log-list-edit-name .fitness-log-muted {
 }
 
 .fitness-log-body-date-sub {
+	overflow: hidden;
 	color: var(--text-faint);
 	font-size: var(--font-ui-smaller);
+	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
@@ -4425,4 +4428,77 @@ button.fitness-log-list-edit-name .fitness-log-muted {
 .fitness-log-body-empty-note {
 	max-width: 36em;
 	font-size: var(--font-ui-smaller);
+}
+
+/* 体組成のカレンダー（測った日に色。押すとその日の測定） */
+.fitness-log-body-calendar .fitness-log-cal-head {
+	justify-content: center;
+	margin-bottom: var(--size-4-2);
+}
+
+.fitness-log-body-cal-grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 4px;
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day {
+	/* Obsidian 1.14 はボタンの角を superellipse にするので丸に戻す */
+	corner-shape: round;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: auto;
+	min-height: 40px;
+	margin: 0;
+	padding: 0;
+	aspect-ratio: 1;
+	border: 1px solid transparent;
+	border-radius: 50%;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-faint);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+	cursor: default;
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day.is-sat {
+	color: var(--color-blue);
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day.is-sun {
+	color: var(--color-red);
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day.is-other-month {
+	opacity: 0.4;
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day.is-today {
+	border-color: var(--text-faint);
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day.is-measured {
+	background: rgba(var(--fitness-log-pkg-rgb), 0.85);
+	color: var(--text-on-accent);
+	font-weight: var(--font-bold);
+	cursor: pointer;
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day.is-measured:hover {
+	background: rgb(var(--fitness-log-pkg-rgb));
+}
+
+.fitness-log-body-calendar button.fitness-log-body-cal-day.is-selected {
+	box-shadow:
+		0 0 0 2px var(--background-primary),
+		0 0 0 4px rgb(var(--fitness-log-pkg-rgb));
+}
+
+.fitness-log-body-cal-hint {
+	margin-top: var(--size-4-3);
+	font-size: var(--font-ui-smaller);
+	text-align: center;
 }
