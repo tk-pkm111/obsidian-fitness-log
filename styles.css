@@ -4497,8 +4497,15 @@ button.fitness-log-list-edit-name .fitness-log-muted {
 		0 0 0 4px rgb(var(--fitness-log-pkg-rgb));
 }
 
-.fitness-log-body-cal-hint {
+.fitness-log-body-cal-footer {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-3);
 	margin-top: var(--size-4-3);
+}
+
+.fitness-log-body-cal-hint {
+	flex: 1;
+	min-width: 0;
 	font-size: var(--font-ui-smaller);
-	text-align: center;
 }

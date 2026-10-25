@@ -205,8 +205,18 @@ export class MainView extends ItemView {
 		this.tickers = [];
 		this.renderedToday = todayString();
 		contentEl.empty();
-		// 体組成を記録しなくなったら（ほかの端末でオフにしたときも）今日のページへ
-		if (this.viewState.page === 'body' && !this.bodyEnabled)
+		// 体組成を記録しなくなったら（ほかの端末でオフにしたときも）今日のページへ。
+		// 起動直後は設定ノートを読むまでオン・オフが分からないので、読み終えるまで待つ
+		// （待たずに切り替えると、体組成のページで閉じても今日のページで開いてしまう）
+		const bodyPending =
+			this.viewState.page === 'body' &&
+			!this.bodyEnabled &&
+			!this.services.lists.isLoaded;
+		if (
+			this.viewState.page === 'body' &&
+			!this.bodyEnabled &&
+			this.services.lists.isLoaded
+		)
 			this.viewState = { ...this.viewState, page: 'today', date: null };
 		// 体組成のページに入ったら、前に見ていた測定ではなく最新の測定を出す
 		// （測るのは週に 1 回などなので、開いてまず見たいのは最新の記録）
@@ -265,7 +275,9 @@ export class MainView extends ItemView {
 				renderSetupPrompt(page, () =>
 					openSetup(this.app, this.services),
 				);
-			else if (renderer) renderer(ctx, page);
+			else if (bodyPending) {
+				// 設定ノートを読み終えたら（store の change）描き直す
+			} else if (renderer) renderer(ctx, page);
 			else
 				page.createDiv({
 					cls: 'fitness-log-empty',

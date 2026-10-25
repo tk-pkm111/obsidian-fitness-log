@@ -3,7 +3,7 @@ import { t } from '../../i18n';
 import { addMonths, monthWeeks } from '../../lib/schedule/calendar';
 import { WEEKDAY_ORDER, weekdayLabel } from '../../lib/schedule/routine';
 import { formatMonthDay, monthOf, weekdayOf } from '../../lib/time/date';
-import { iconButton } from '../helpers';
+import { iconButton, textButton } from '../helpers';
 
 export interface BodyCalendarOptions {
 	/** 測った日（'YYYY-MM-DD'） */
@@ -20,7 +20,7 @@ function weekendClass(weekday: number): string[] {
 
 /**
  * 測った日のカレンダー（月曜始まり）。測った日に色を付け、押すとその日の測定を見る。
- * 測っていない日は押せない
+ * 測っていない日は押せない。右下の「最新」で最新の測定に戻る
  */
 export class BodyCalendarModal extends Modal {
 	private month: string;
@@ -100,9 +100,18 @@ export class BodyCalendarModal extends Modal {
 						options.onPick(date);
 					});
 			}
-		contentEl.createDiv({
+		const footer = contentEl.createDiv({
+			cls: 'fitness-log-body-cal-footer',
+		});
+		footer.createDiv({
 			cls: 'fitness-log-muted fitness-log-body-cal-hint',
 			text: t('body.calendarHint'),
 		});
+		const latest = [...this.measured].sort().pop();
+		if (latest)
+			textButton(footer, t('body.latest'), () => {
+				this.close();
+				options.onPick(latest);
+			});
 	}
 }

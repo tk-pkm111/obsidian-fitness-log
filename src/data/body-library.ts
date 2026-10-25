@@ -28,6 +28,8 @@ import { ensureFolder } from './folders';
 export class BodyLibrary extends Events {
 	private measurements: BodyMeasurement[] = [];
 	private loaded = false;
+	/** 読み始めてから、メタデータの最初の「そろった」をまだ見ていない */
+	private waitingResolved = false;
 	private readonly reloadLater = debounce(() => this.load(), 300, true);
 
 	constructor(
@@ -50,9 +52,17 @@ export class BodyLibrary extends Events {
 		return this.measurements;
 	}
 
-	/** まだ読んでいなければ読む（体組成のページを開いたとき） */
+	/**
+	 * まだ読んでいなければ読む（体組成のページを開いたとき）。
+	 * 起動直後（スマホは特に）は vault のファイルの一覧とノートのメタデータがそろっていないので、
+	 * レイアウトの準備完了を待って読み、メタデータがそろったとき（resolved）にもう一度読む
+	 * （起動前からあるノートは変わらないので、changed では読み直せない）
+	 */
 	ensureLoaded(): void {
-		if (!this.loaded) this.load();
+		if (this.loaded) return;
+		this.loaded = true;
+		this.waitingResolved = true;
+		this.app.workspace.onLayoutReady(() => this.load());
 	}
 
 	/** 保存先が変わったとき（読んでいれば読み直す） */
@@ -79,6 +89,13 @@ export class BodyLibrary extends Events {
 		};
 		component.registerEvent(
 			metadataCache.on('changed', (file) => touched(file.path)),
+		);
+		component.registerEvent(
+			metadataCache.on('resolved', () => {
+				if (!this.loaded || !this.waitingResolved) return;
+				this.waitingResolved = false;
+				this.reloadLater();
+			}),
 		);
 		component.registerEvent(
 			vault.on('delete', (file) => touched(file.path)),

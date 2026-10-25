@@ -54,6 +54,7 @@ export const LISTS_NOTE_NAME = 'Fitness Log 設定';
  */
 export class ListsLibrary {
 	private path: string | null = null;
+	private loadedOnce = false;
 	private loading: Promise<void> | null = null;
 	private readonly reloadLater = debounce(() => void this.load(), 300, true);
 
@@ -73,6 +74,11 @@ export class ListsLibrary {
 				? `${parent}/${LISTS_NOTE_NAME}.md`
 				: `${LISTS_NOTE_NAME}.md`,
 		);
+	}
+
+	/** 設定ノートを一度読み終えたか（それまでは体組成のオン・オフが分からない） */
+	get isLoaded(): boolean {
+		return this.loadedOnce;
 	}
 
 	get lists(): ExerciseLists {
@@ -122,6 +128,11 @@ export class ListsLibrary {
 		const fm = file ? await this.readFrontmatter(file) : null;
 		this.publish(listsFromFrontmatter(fm));
 		this.publishBody(bodySettingsFromFrontmatter(fm));
+		if (!this.loadedOnce) {
+			this.loadedOnce = true;
+			// 読み終えたことを画面に知らせる（体組成のオン・オフが分かる）
+			this.store.trigger('change');
+		}
 	}
 
 	/** 既定の場所のノート → タグの付いたノート（パスの順で最初のもの） */

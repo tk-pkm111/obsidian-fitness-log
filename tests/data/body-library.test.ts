@@ -47,6 +47,35 @@ describe('BodyLibrary', () => {
 		expect(body.all[0]?.time).toBe('07:02');
 	});
 
+	it('起動直後（準備完了の前）に開いても、準備完了・メタデータがそろったときに読む', async () => {
+		const { fake, body } = await setup();
+		let ready: (() => void) | null = null;
+		(fake.app as unknown as { workspace: unknown }).workspace = {
+			onLayoutReady: (callback: () => void) => {
+				ready = callback;
+			},
+		};
+		body.registerVaultEvents(
+			new Component() as unknown as ObsidianComponent,
+		);
+		body.ensureLoaded();
+		expect(body.isLoaded).toBe(true);
+		expect(body.all).toEqual([]);
+		(ready as (() => void) | null)?.();
+		expect(body.all.map((m) => m.date)).toEqual([
+			'2026-10-15',
+			'2026-10-22',
+		]);
+		// メタデータがそろったとき（起動前からあるノートの情報が後から届く）にもう一度読む
+		await fake.vault.create(
+			`${folder}/2026-10-29.md`,
+			'---\n体重: 66\n---\n',
+		);
+		fake.metadataCache.trigger('resolved');
+		await new Promise((resolve) => setTimeout(resolve, 400));
+		expect(body.all.map((m) => m.date)).toContain('2026-10-29');
+	});
+
 	it('新しい日はノートを作り、同じ日は入れた項目だけを書き換える（本文は残す）', async () => {
 		const { fake, body } = await setup();
 		body.ensureLoaded();
