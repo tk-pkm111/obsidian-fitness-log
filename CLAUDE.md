@@ -44,6 +44,7 @@ docs/              設計メモ
 | `npm run e2e -- launch\|eval '<js>'\|click '<selector>'\|drag '<selector>' <dy>\|shot <png>\|quit` | 隔離した Obsidian（専用プロファイル・dev-vault のみ）を起動して自動操作・スクリーンショット。使い方は `docs/harness.md` の「E2E」 |
 | `npm run vault:dummy -- --folder Fitness-dummy` | dev-vault にダミーの日ノートを作る（チャート・性能の確認用） |
 | `npm run vault:setup` | dev-vault と hot-reload の再セットアップ |
+| `npm run docs:shots` / `docs:bundle` / `docs:export -- <フォルダ>` | 使い方ドキュメントの画像の撮り直し・全ページのまとめ・Publish 用フォルダへの書き出し（`docs/guide/README.md`） |
 | `npm run references:fetch` | references/ を最新に更新 |
 
 ## 作業の進め方
@@ -51,8 +52,9 @@ docs/              設計メモ
 1. Obsidian API に触る変更は、先に `.claude/skills/obsidian-plugin-dev/SKILL.md` の手順で公式ドキュメントと `node_modules/obsidian/obsidian.d.ts` を確認する。記憶で API を書かない。
 2. ロジックは `src/lib/` に置いてテストを書く。Obsidian API に触る層（コマンド・ビュー・設定）は薄く保つ。
 3. 終わる前に `npm run check` を通す。ESLint の警告（`obsidianmd/*`）も直す。
-4. UI の変更は `npm run build` の後に `npm run e2e` で隔離した Obsidian を操作して確かめる（スクリーンショットを見る・`window.__errs` が空か確認する）。そのうえで、`npm run dev` を動かした状態で dev-vault を開いて目視してもらうよう、確認手順を具体的に書いて依頼する（実機・手触りは自動では分からない）。
-5. commit / push は頼まれたときだけ。リポジトリは GitHub の公開リポジトリ `tk-pkm111/obsidian-fitness-log`（コミットしたものは誰でも見られる。個人的なデータを入れない）。スマホ確認用の版は `npm version patch` → `git push --follow-tags` で出す（`docs/harness.md` の「スマホで確認（BRAT）」）。
+4. 機能・画面を変えたら、使い方ドキュメント（`docs/guide/`）の説明も直し、画面が変わったら `npm run docs:shots` で画像を撮り直して `npm run docs:bundle` でまとめを作り直す（書き方は `docs/guide/README.md`）。
+5. UI の変更は `npm run build` の後に `npm run e2e` で隔離した Obsidian を操作して確かめる（スクリーンショットを見る・`window.__errs` が空か確認する）。そのうえで、`npm run dev` を動かした状態で dev-vault を開いて目視してもらうよう、確認手順を具体的に書いて依頼する（実機・手触りは自動では分からない）。
+6. commit / push は頼まれたときだけ。リポジトリは GitHub の公開リポジトリ `tk-pkm111/obsidian-fitness-log`（コミットしたものは誰でも見られる。個人的なデータを入れない）。スマホ確認用の版は `npm version patch` → `git push --follow-tags` で出す（`docs/harness.md` の「スマホで確認（BRAT）」）。
 
 ## 守ること
 

@@ -305,20 +305,35 @@ export function renderSeriesChart(
 	});
 	if (single) {
 		const plotted = geometry.series[0];
+		// 値のラベル同士が重なるとき（最新と最高が隣の点で同じ高さなど）は、先に書いたほうだけにする
+		const drawn: Array<{ left: number; right: number; y: number }> = [];
 		for (const date of options.labelDates ?? []) {
 			const point = plotted?.points.find((p) => p.date === date);
 			if (!point) continue;
 			const nearRight = point.x > plot.right - 40;
-			svgText(
-				svg,
-				'fitness-log-chart-value',
-				options.formatValue(point.value),
-				{
-					x: nearRight ? point.x - 6 : point.x + 6,
-					y: point.y - 9,
-					'text-anchor': nearRight ? 'end' : 'start',
-				},
-			);
+			const text = options.formatValue(point.value);
+			const width = textWidth(text);
+			const x = nearRight ? point.x - 6 : point.x + 6;
+			const box = {
+				left: nearRight ? x - width : x,
+				right: nearRight ? x : x + width,
+				y: point.y - 9,
+			};
+			if (
+				drawn.some(
+					(d) =>
+						Math.abs(d.y - box.y) < 14 &&
+						box.left < d.right &&
+						d.left < box.right,
+				)
+			)
+				continue;
+			drawn.push(box);
+			svgText(svg, 'fitness-log-chart-value', text, {
+				x,
+				y: box.y,
+				'text-anchor': nearRight ? 'end' : 'start',
+			});
 		}
 	}
 

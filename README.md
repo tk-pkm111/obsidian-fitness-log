@@ -3,6 +3,7 @@
 筋トレの記録を Obsidian で取るためのプラグイン。ジムでスマホから「開始 → 終了 → 回数」だけで記録でき、記録は vault の Markdown ノート（1 日 1 ノート）に残る。名前・id（`fitness-log`）は仮。
 
 - 設計: [docs/implementation-plan.md](docs/implementation-plan.md)（データ設計・画面設計・フェーズ）、体組成のページ: [docs/body-composition-plan.md](docs/body-composition-plan.md)
+- 使い方: [docs/guide/](docs/guide/README.md)（画像つきの使い方。全ページのまとめは [docs/fitness-log-guide.md](docs/fitness-log-guide.md)）
 - 開発環境: [docs/harness.md](docs/harness.md)
 - 前提資料（Notion から書き出したメニュー・種目）: [context/notion/README.md](context/notion/README.md)
 - AI（Claude Code）向けの運用ルール: [CLAUDE.md](CLAUDE.md)

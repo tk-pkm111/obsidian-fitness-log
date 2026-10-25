@@ -20,6 +20,9 @@
 		"vault:setup": "bash scripts/setup-dev-vault.sh",
 		"vault:open": "open \"obsidian://open?vault=dev-vault\"",
 		"vault:dummy": "node scripts/generate-dummy-logs.mjs",
+		"docs:bundle": "node scripts/docs-guide.mjs bundle",
+		"docs:export": "node scripts/docs-guide.mjs export",
+		"docs:shots": "node scripts/docs-shots.mjs",
 		"e2e": "node scripts/e2e-obsidian.mjs",
 		"references:fetch": "bash scripts/fetch-references.sh"
 	},

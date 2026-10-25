@@ -26,10 +26,11 @@ const days = Number(args.days ?? 300);
 const folder = args.folder ?? (bodyMode ? 'Fitness/body-composition' : 'Fitness/log');
 const devVault = path.resolve('dev-vault');
 const vault = args.vault && args.vault !== '--body' ? path.resolve(args.vault) : devVault;
-const temp = realpathSync(os.tmpdir());
+// 一時フォルダ（macOS は /var/folders/… が /private/var/folders/… の別名なので、両方の書き方で見る）
+const tempRoots = [os.tmpdir(), realpathSync(os.tmpdir()), '/private/tmp', '/tmp'];
 const allowed = (dir) =>
 	dir === devVault ||
-	[temp, '/private/tmp', '/tmp'].some((root) => realpathSafe(dir).startsWith(root + path.sep));
+	[dir, realpathSafe(dir)].some((d) => tempRoots.some((root) => d.startsWith(root + path.sep)));
 function realpathSafe(dir) {
 	try {
 		return realpathSync(dir);
