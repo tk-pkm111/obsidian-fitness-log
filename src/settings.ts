@@ -13,7 +13,7 @@ import { DEFAULT_SETTINGS } from './lib/model/data';
 import type { ExerciseLists, ListKind } from './lib/model/lists';
 import type { FitnessLogSettings } from './lib/model/types';
 import type FitnessLogPlugin from './main';
-import { checkNoteFolders } from './ui/folder-check';
+import { checkBodyFolderMove, checkNoteFolders } from './ui/folder-check';
 import { BodyItemsModal } from './ui/modals/body-items-modal';
 import { ListEditModal } from './ui/modals/list-edit-modal';
 import type { BodyItem } from './lib/body/items';
@@ -159,9 +159,18 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 				this.foldersBefore[key] !== undefined &&
 				this.foldersBefore[key] !== store.settings[key],
 		);
+		const bodyBefore = this.foldersBefore.bodyFolder;
 		this.foldersBefore = {};
-		if (changed.length > 0)
-			void checkNoteFolders(this.app, this.plugin.services, changed);
+		const others = changed.filter((key) => key !== 'bodyFolder');
+		if (others.length > 0)
+			void checkNoteFolders(this.app, this.plugin.services, others);
+		// 体組成は前の保存先の中のノートだけを見る（ほかの日付の名前のノートを数えない）
+		if (changed.includes('bodyFolder') && bodyBefore !== undefined)
+			void checkBodyFolderMove(
+				this.app,
+				this.plugin.services,
+				bodyBefore,
+			);
 	}
 
 	/** 体組成のオン・オフ（設定ノートに書くので、ほかの端末とそろう）。保存先と項目の行を出し直す */

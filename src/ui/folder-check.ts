@@ -1,6 +1,7 @@
 import { Notice, type App } from 'obsidian';
 import {
 	FOLDER_KEYS,
+	findBodyNotePaths,
 	findNotePaths,
 	folderName,
 	moveNotes,
@@ -39,9 +40,9 @@ async function check(
 ): Promise<boolean> {
 	let found = false;
 	for (const key of keys) {
-		// 体組成を記録していない人には聞かない（日付の名前のノートを体組成と見間違えないように）
-		if (key === 'bodyFolder' && !services.store.bodySettings.enabled)
-			continue;
+		// 体組成のノートは vault 全体からは探さない（ほかの日付の名前のノートと見分けられないので、
+		// 保存先を変えたときに前の保存先の中だけを checkBodyFolderMove で見る）
+		if (key === 'bodyFolder') continue;
 		const mismatch = folderMismatch(
 			services.store.settings[key],
 			findNotePaths(app, key),
@@ -51,6 +52,30 @@ async function check(
 		await ask(app, services, key, mismatch);
 	}
 	return found;
+}
+
+/**
+ * 体組成の保存先を変えたとき: 前の保存先にある体組成のノートを、新しい保存先へ移すか聞く。
+ * 探すのは前の保存先の中だけ（vault のほかの場所の日付の名前のノートは数えない）
+ */
+export function checkBodyFolderMove(
+	app: App,
+	services: FitnessServices,
+	previous: string,
+): Promise<boolean> {
+	const next = queue.then(async () => {
+		const { store } = services;
+		if (!store.bodySettings.enabled) return false;
+		const mismatch = folderMismatch(
+			store.settings.bodyFolder,
+			findBodyNotePaths(app, previous),
+		);
+		if (!mismatch) return false;
+		await ask(app, services, 'bodyFolder', mismatch);
+		return true;
+	});
+	queue = next.catch(() => undefined);
+	return next;
 }
 
 function ask(
@@ -128,6 +153,8 @@ function ask(
 							// 移したノートを読み直す（vault の変更でも追いつくが、確実に）
 							if (key === 'exerciseFolder')
 								await services.library.reload();
+							else if (key === 'bodyFolder')
+								services.body.reload();
 							else if (services.index.isBuilt)
 								await services.index.rebuild();
 						}),

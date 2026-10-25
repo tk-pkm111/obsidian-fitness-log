@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Component as ObsidianComponent } from 'obsidian';
 import { BodyLibrary } from '../../src/data/body-library';
 import { DataStore } from '../../src/data/data-store';
-import { findNotePaths } from '../../src/data/folders';
+import { findBodyNotePaths, findNotePaths } from '../../src/data/folders';
 import { Component, Plugin } from '../__mocks__/obsidian';
 import { createFakeApp, FakeFileManager } from '../helpers/fake-app';
 
@@ -107,16 +107,27 @@ describe('BodyLibrary', () => {
 		expect(body.all[0]?.values).toEqual({ 体重: 61 });
 	});
 
-	it('保存先の確かめでは、日付の名前で数字の項目のあるノートだけを体組成と数える', async () => {
+	it('体組成のノートは vault 全体からは探さない（ほかのプラグインの日付の名前のノートを数えない）', async () => {
 		const { fake } = await setup();
+		await fake.vault.createFolder('TaskChute');
+		await fake.vault.create(
+			'TaskChute/2026-10-22.md',
+			'---\ntotal_minutes: 480\ntasks: 12\n---\n',
+		);
 		await fake.vault.createFolder('Fitness/log');
 		await fake.vault.create(
 			'Fitness/log/2026-10-22.md',
 			'---\ntags: [fitness-log]\nsets: 12\n---\n',
 		);
-		expect(findNotePaths(fake.app, 'bodyFolder').sort()).toEqual([
+		expect(findNotePaths(fake.app, 'bodyFolder')).toEqual([]);
+		// 保存先を変えたときは、前の保存先の中だけを探す
+		expect(findBodyNotePaths(fake.app, folder).sort()).toEqual([
 			`${folder}/2026-10-15.md`,
 			`${folder}/2026-10-22.md`,
+		]);
+		expect(findBodyNotePaths(fake.app, 'Fitness/log')).toEqual([]);
+		expect(findBodyNotePaths(fake.app, 'TaskChute')).toEqual([
+			'TaskChute/2026-10-22.md',
 		]);
 	});
 });

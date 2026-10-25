@@ -1,7 +1,7 @@
 import { Notice, TFolder, type App, type Component } from 'obsidian';
 import { t } from '../i18n';
 import { measurementFromNote } from '../lib/body/note';
-import { followRename, movedPath } from '../lib/folders';
+import { followRename, isInside, movedPath } from '../lib/folders';
 import { LOG_TAG } from '../lib/log/summary';
 import { EXERCISE_KEYS, EXERCISE_TAG } from '../lib/model/exercise-note';
 import { PACKAGE_KEYS, PACKAGE_TAG } from '../lib/model/package-note';
@@ -48,19 +48,17 @@ function hasTag(value: unknown, tag: string): boolean {
 }
 
 /**
- * vault の中の種目ノート・日ノート・パッケージノート（frontmatter のタグと id で見分ける）・
- * 体組成のノート（名前が日付で、数字の項目がある。日ノートは除く）
+ * vault の中の種目ノート・日ノート・パッケージノート（frontmatter のタグと id で見分ける）。
+ * 体組成のノートは vault 全体からは探さない（印が無く、ほかのプラグインの日付の名前のノート
+ * （TaskChute の分析など）と見分けられない）。保存先を変えたときに前の保存先の中だけを findBodyNotePaths で探す
  */
 export function findNotePaths(app: App, key: FolderKey): string[] {
+	if (key === 'bodyFolder') return [];
 	return app.vault
 		.getMarkdownFiles()
 		.filter((file) => {
 			const fm = app.metadataCache.getFileCache(file)?.frontmatter;
 			if (!fm) return false;
-			if (key === 'bodyFolder')
-				return (
-					measurementFromNote(file.path, file.basename, fm) !== null
-				);
 			if (key === 'exerciseFolder')
 				return (
 					typeof fm[EXERCISE_KEYS.id] === 'string' &&
@@ -73,6 +71,22 @@ export function findNotePaths(app: App, key: FolderKey): string[] {
 				);
 			return hasTag(fm.tags, LOG_TAG);
 		})
+		.map((file) => file.path);
+}
+
+/** folder の中の体組成のノート（名前が日付で、数字の項目がある。日ノートは除く） */
+export function findBodyNotePaths(app: App, folder: string): string[] {
+	return app.vault
+		.getMarkdownFiles()
+		.filter(
+			(file) =>
+				isInside(file.path, folder) &&
+				measurementFromNote(
+					file.path,
+					file.basename,
+					app.metadataCache.getFileCache(file)?.frontmatter,
+				) !== null,
+		)
 		.map((file) => file.path);
 }
 
