@@ -48,6 +48,8 @@ export interface GeometryOptions {
 	height: number;
 	/** 左（y 目盛りの文字）・下（日付）などの余白 */
 	padding?: { left: number; right: number; top: number; bottom: number };
+	/** 点が無くても y の範囲に含める値（目標の線など） */
+	include?: readonly number[];
 }
 
 export interface SeriesInput {
@@ -78,6 +80,8 @@ export interface ChartGeometry {
 	series: PlottedSeries[];
 	yTicks: Array<{ y: number; value: number }>;
 	xTicks: XTick[];
+	/** include に渡した値の y */
+	guides: Array<{ y: number; value: number }>;
 }
 
 /** これより長い期間は、日付の代わりに月の初めに目盛りを付ける */
@@ -125,7 +129,11 @@ export function buildChartGeometry(
 	};
 	const all = series.flatMap((s) => s.points);
 	const dates = [...new Set(all.map((p) => p.date))].sort();
-	const values = all.map((p) => p.value);
+	const include = options.include ?? [];
+	const values = [
+		...all.map((p) => p.value),
+		...(all.length > 0 ? include : []),
+	];
 	const ticks =
 		values.length > 0
 			? niceTicks(Math.min(...values), Math.max(...values))
@@ -193,6 +201,10 @@ export function buildChartGeometry(
 		series: plotted,
 		yTicks: ticks.map((value) => ({ value, y: yOf(value) })),
 		xTicks,
+		guides:
+			all.length > 0
+				? include.map((value) => ({ value, y: yOf(value) }))
+				: [],
 	};
 }
 

@@ -90,4 +90,41 @@ describe('ListsLibrary', () => {
 		await new Promise((resolve) => setTimeout(resolve, 400));
 		expect(store.lists.categories).toEqual(['肩']);
 	});
+	it('体組成の設定を書いても一覧のキーはそのまま。オンにするとノートを作る', async () => {
+		const { fake, store, lists } = await setup();
+		await lists.ensureLoaded();
+		expect(store.bodySettings.enabled).toBe(false);
+		await lists.setBodyEnabled(true);
+		let fm = FakeFileManager.read(fake.vault.text(notePath));
+		expect(fm.tags).toEqual(['fitness-settings']);
+		expect(fm.body_composition).toBe(true);
+		expect(fm).not.toHaveProperty('categories');
+		expect(store.lists).toEqual(defaultLists());
+
+		await lists.addName('categories', '胸');
+		await lists.setBodyGoal('体重', 68, '2026-10-25');
+		await lists.addBodyItem('骨格筋率', '%');
+		fm = FakeFileManager.read(fake.vault.text(notePath));
+		expect(fm.categories).toContain('胸');
+		expect(fm.body_goals).toEqual([
+			{ name: '体重', target: 68, since: '2026-10-25' },
+		]);
+		expect(store.bodySettings.items.map((i) => i.name)).toContain(
+			'骨格筋率',
+		);
+		expect(store.bodySettings.enabled).toBe(true);
+	});
+
+	it('ほかの端末で書いた体組成の設定を読む', async () => {
+		const { fake, store, lists } = await setup();
+		await fake.vault.create(
+			notePath,
+			'---\ntags: [fitness-settings]\nbody_composition: true\nbody_items:\n  - name: 体重\n    unit: kg\n---\n',
+		);
+		await lists.ensureLoaded();
+		expect(store.bodySettings.enabled).toBe(true);
+		expect(store.bodySettings.items).toEqual([
+			{ name: '体重', unit: 'kg' },
+		]);
+	});
 });

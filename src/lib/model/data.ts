@@ -29,6 +29,7 @@ export const DEFAULT_SETTINGS: FitnessLogSettings = {
 	logFolder: 'Fitness/log',
 	exerciseFolder: 'Fitness/exercise',
 	packageFolder: 'Fitness/package',
+	bodyFolder: 'Fitness/body-composition',
 	fileNameFormat: 'YYYY-MM-DD',
 	weightUnit: 'kg',
 	weightStep: 2.5,
@@ -91,9 +92,14 @@ function oneOf<T extends string>(
  * どの端末も同じ種目の保存先なら、同じパッケージの保存先になる
  */
 export function siblingPackageFolder(exerciseFolder: string): string {
+	return siblingFolder(exerciseFolder, 'package');
+}
+
+/** 種目フォルダの隣のフォルダ（'Fitness/exercise' → 'Fitness/{name}'） */
+export function siblingFolder(exerciseFolder: string, name: string): string {
 	const trimmed = exerciseFolder.replace(/^\/+|\/+$/g, '');
 	const slash = trimmed.lastIndexOf('/');
-	return slash < 0 ? 'package' : `${trimmed.slice(0, slash)}/package`;
+	return slash < 0 ? name : `${trimmed.slice(0, slash)}/${name}`;
 }
 
 function normalizeSettings(raw: unknown, legacy: Obj): FitnessLogSettings {
@@ -113,6 +119,12 @@ function normalizeSettings(raw: unknown, legacy: Obj): FitnessLogSettings {
 			(nonEmpty(s.exerciseFolder)
 				? siblingPackageFolder(exerciseFolder)
 				: DEFAULT_SETTINGS.packageFolder),
+		// 体組成は種目フォルダの隣（以前の版の data.json には無い）
+		bodyFolder:
+			nonEmpty(s.bodyFolder) ??
+			(nonEmpty(s.exerciseFolder)
+				? siblingFolder(exerciseFolder, 'body-composition')
+				: DEFAULT_SETTINGS.bodyFolder),
 		fileNameFormat:
 			nonEmpty(s.fileNameFormat) ?? DEFAULT_SETTINGS.fileNameFormat,
 		weightUnit:

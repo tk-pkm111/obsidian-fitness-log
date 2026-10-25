@@ -1,14 +1,17 @@
 import type { App } from 'obsidian';
 import type { FitnessServices } from '../services';
 
-export type PageId = 'today' | 'packages' | 'exercises' | 'routines' | 'log';
+export type PageId =
+	'today' | 'packages' | 'exercises' | 'routines' | 'log' | 'body';
 
+/** メニューの並び。体組成は「体組成を記録する」がオンのときだけ出す */
 export const PAGE_IDS: readonly PageId[] = [
 	'today',
 	'packages',
 	'exercises',
 	'routines',
 	'log',
+	'body',
 ];
 
 /** ビューの状態（ワークスペースに保存され、再起動後も同じページに戻る） */

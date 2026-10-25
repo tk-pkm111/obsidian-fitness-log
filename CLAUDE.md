@@ -9,6 +9,7 @@
 - 目的: Obsidian 上で筋トレのログを記録するプラグイン（id: `fitness-log`、名前は仮）。
 - 状態: 2026-10-01 にハーネス（開発環境）を構築し、上流設計を固め、**実装計画のフェーズ 0〜7 を実装した**（実装状況と計画からの変更点は `docs/implementation-plan.md` の冒頭）。残りはユーザーによる実機（iPhone）確認と、公開前の決めごと（下の「未決事項」）。
 - **実装計画: `docs/implementation-plan.md`**（データ設計・画面設計・使う API・フェーズ 0〜7）。経緯とハーネスの構成は `docs/harness.md`。
+- **体組成のページ: `docs/body-composition-plan.md`**（ノートの形・画面・フェーズ 1〜8。2026-10-25 に実装）。触れる見本は `docs/body-composition/mock.html`（数値は作りもの）。
 - 設計の前提資料: `context/notion/README.md`（Notion から書き出したメニュー・種目一覧・計測項目）。Notion には「計画」と「種目一覧」しかなく、重量×回数の実績ログは存在しない。
 
 ## レイアウト
@@ -20,7 +21,7 @@ src/settings.ts    設定タブ（宣言的。getControlValue/setControlValue �
 src/services.ts    画面・コマンドに渡すサービスのまとまり
 src/i18n/          UI 文言（t('key')）。日ノートの見出し・列名はファイル形式なので src/lib/log/markdown.ts の定数
 src/lib/           Obsidian 非依存の純粋ロジック（'obsidian' の import は ESLint で禁止）
-src/data/          data.json（DataStore）・日ノート（LogRepository）・履歴索引（LogIndex）・種目ノート（ExerciseLibrary）・パッケージノート（PackageLibrary）・設定ノート（ListsLibrary）
+src/data/          data.json（DataStore）・日ノート（LogRepository）・履歴索引（LogIndex）・種目ノート（ExerciseLibrary）・パッケージノート（PackageLibrary）・設定ノート（ListsLibrary）・体組成のノート（BodyLibrary）
 src/session/       開始・終了・修正の手順（SessionController）
 src/ui/            メインビュー（ItemView）・各ページ・モーダル・SVG チャート
 tests/             vitest。'obsidian' は tests/__mocks__/obsidian.ts、vault は tests/helpers/fake-app.ts の仮想 vault
@@ -62,6 +63,7 @@ docs/              設計メモ
 - 日ノートは `Fitness/log/YYYY-MM-DD.md`（設定で変更可）。以前の既定（`Fitness/` 直下、`…/ログ`・`…/種目`）のノートは初回起動時に `src/data/migrations.ts` が移す（一度きり、`data.json` の `migrations` に印）。フォルダ名は英語（`log`・`exercise`）。
 - 種目は種目ノート（`Fitness/exercise/*.md`）の frontmatter が正。data.json には保存しない（`DataStore.update` が保存時に外す）。ノートの本文には触らない。
 - 種目の選択肢（カテゴリ・器具・記録のしかた）は設定ノート（種目フォルダの隣の `Fitness Log 設定.md`、タグ `fitness-settings`）の frontmatter が正（`src/data/lists-library.ts`、形式は `src/lib/model/lists.ts`）。種目ノートの category・equipment は名前（「肩」）で書く。記録のしかたは項目（weight・reps・distance・duration）の組み合わせの文字列（`src/lib/model/record-type.ts`）で、動き（何を聞く・何を出す・どの指標）は項目で決める。`recordType === 'duration'` のような比較は書かない。
+- 体組成は 1 測定 1 ノート（`{bodyFolder}/YYYY-MM-DD.md`、`src/data/body-library.ts`、形式は `src/lib/body/note.ts`）。frontmatter のプロパティ名が項目名（日本語）、値は数字だけ、部位は「左腕 筋肉量」。読むのは日付の名前のノートだけ。オン／オフ・丸に出す項目・目標は設定ノートの `body_composition`・`body_items`・`body_goals`。体組成計の評価（標準など）は出さない。個人の体組成の値をリポジトリ・テスト・dev-vault に入れない（ダミーは `npm run vault:dummy -- --body` の作りもの）。
 - パッケージとルーチンはパッケージノート（`Fitness/package/*.md`、1 パッケージ 1 ノート）の frontmatter が正（`src/data/package-library.ts`、形式は `src/lib/model/package-note.ts`）。画面は今までどおり `DataStore.update` で `data.packages` / `data.routines` を変え、update の中でノートと違うパッケージだけを書く。data.json には保存しない（移行済みの印 `packages-in-vault`）。今あるノートはそのフォルダのまま（保存先を変えても勝手に移さない）。ユーザーは Obsidian Sync でプラグインの設定を同期していないので、端末間でそろえたいものは必ず vault のノートに置く。
 - dev-vault をユーザーが Obsidian で開いて `npm run dev` を動かしているときは、ソースを保存するたびにその dev-vault に反映される（移行などの処理も走る）。E2E は dev-vault のコピー（`E2E_VAULT`）で行う。
 - ユーザーの本番 Vault（`~/Documents/Obsidian Vaults/` 配下など）と本番の Obsidian（起動中のアプリ・Obsidian CLI）には絶対に触らない。動作確認は `dev-vault/` と `npm run e2e` の隔離インスタンスのみ。

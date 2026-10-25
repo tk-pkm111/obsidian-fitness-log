@@ -48,6 +48,8 @@ export interface SeriesChartOptions {
 	labelDates?: readonly string[];
 	/** 同じ点をもう一度押したとき（その日の記録を開く） */
 	onSelect?: (series: ChartSeries, point: ChartPoint) => void;
+	/** 横の点線（目標の値など。値の範囲に含める）。cls は線の色のクラス */
+	guides?: ReadonlyArray<{ value: number; label: string; cls: string }>;
 	formatDate: (date: string) => string;
 }
 
@@ -154,9 +156,11 @@ export function renderSeriesChart(
 				28 + Math.max(...options.series.map((s) => textWidth(s.label))),
 			)
 		: 0;
+	const guides = options.guides ?? [];
 	const geometry = buildChartGeometry(options.series, {
 		width,
 		height: HEIGHT,
+		include: guides.map((g) => g.value),
 		padding: {
 			left: 40,
 			right: endLabels ? labelWidth : 20,
@@ -206,6 +210,19 @@ export function renderSeriesChart(
 			x: tick.x,
 			y: HEIGHT - 8,
 			'text-anchor': anchor,
+		});
+	});
+
+	geometry.guides.forEach((guide, i) => {
+		const def = guides[i];
+		if (!def) return;
+		svg.createSvg('line', {
+			cls: ['fitness-log-chart-guide', def.cls],
+			attr: { x1: plot.left, x2: plot.right, y1: guide.y, y2: guide.y },
+		});
+		svgText(svg, 'fitness-log-chart-guide-label', def.label, {
+			x: plot.left + 4,
+			y: guide.y < plot.top + 14 ? guide.y + 13 : guide.y - 5,
 		});
 	});
 

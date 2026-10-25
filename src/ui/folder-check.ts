@@ -39,6 +39,9 @@ async function check(
 ): Promise<boolean> {
 	let found = false;
 	for (const key of keys) {
+		// 体組成を記録していない人には聞かない（日付の名前のノートを体組成と見間違えないように）
+		if (key === 'bodyFolder' && !services.store.bodySettings.enabled)
+			continue;
 		const mismatch = folderMismatch(
 			services.store.settings[key],
 			findNotePaths(app, key),

@@ -10,10 +10,23 @@ import {
 } from 'obsidian';
 import { t } from '../i18n';
 import {
+	addBodyItem,
+	applyBodySettingsToFrontmatter,
+	bodySettingsFromFrontmatter,
+	moveBodyItem,
+	removeBodyGoal,
+	removeBodyItem,
+	setBodyEnabled,
+	setBodyGoal,
+	setBodyItemUnit,
+	type BodySettings,
+} from '../lib/body/settings';
+import {
 	addListName,
 	addRecordType,
 	applyListsToFrontmatter,
 	defaultRecordType,
+	ensureSettingsTag,
 	isListsNote,
 	listsFromFrontmatter,
 	moveListItem,
@@ -31,8 +44,8 @@ import type { ExerciseLibrary } from './exercise-library';
 export const LISTS_NOTE_NAME = 'Fitness Log 設定';
 
 /**
- * 種目の選択肢（カテゴリ・器具・記録のしかた）の設定ノートの読み書き。
- * 一覧の正はノートの frontmatter で、DataStore.lists はその写し（data.json には保存しない）。
+ * 設定ノートの読み書き: 種目の選択肢（カテゴリ・器具・記録のしかた）と、体組成の設定（オン・オフ・項目・目標）。
+ * 正はノートの frontmatter で、DataStore.lists・DataStore.bodySettings はその写し（data.json には保存しない）。
  *
  * - ノートが無いあいだは既定の一覧。最初に一覧を変えたときに、種目フォルダの隣にノートを作る
  * - ほかの端末での変更（Obsidian Sync）・Properties 欄での編集は、メタデータの変更を見て読み直す
@@ -106,11 +119,9 @@ export class ListsLibrary {
 		);
 		const file = this.findNote();
 		this.path = file?.path ?? null;
-		this.publish(
-			listsFromFrontmatter(
-				file ? await this.readFrontmatter(file) : null,
-			),
-		);
+		const fm = file ? await this.readFrontmatter(file) : null;
+		this.publish(listsFromFrontmatter(fm));
+		this.publishBody(bodySettingsFromFrontmatter(fm));
 	}
 
 	/** 既定の場所のノート → タグの付いたノート（パスの順で最初のもの） */
@@ -156,30 +167,48 @@ export class ListsLibrary {
 		this.store.setLists(lists);
 	}
 
-	private async save(next: ExerciseLists): Promise<void> {
+	private publishBody(body: BodySettings): void {
+		if (JSON.stringify(body) === JSON.stringify(this.store.bodySettings))
+			return;
+		this.store.setBodySettings(body);
+	}
+
+	/** 設定ノートに書く（無ければ作る）。書くのは apply が変えるキーだけで、ほかのキーは残す */
+	private async write(
+		apply: (fm: Record<string, unknown>) => void,
+	): Promise<void> {
 		await this.ensureLoaded();
 		const existing = this.path
 			? this.app.vault.getFileByPath(this.path)
 			: null;
-		if (existing)
-			await this.app.fileManager.processFrontMatter(
-				existing,
-				(fm: Record<string, unknown>) =>
-					applyListsToFrontmatter(fm, next),
-			);
-		else {
-			const path = this.defaultPath;
-			const slash = path.lastIndexOf('/');
-			if (slash > 0) await this.ensureFolder(path.slice(0, slash));
-			const fm: Record<string, unknown> = {};
-			applyListsToFrontmatter(fm, next);
-			const file = await this.app.vault.create(
-				path,
-				`---\n${stringifyYaml(fm)}---\n${t('lists.noteBody')}\n`,
-			);
-			this.path = file.path;
+		const update = (fm: Record<string, unknown>) => {
+			ensureSettingsTag(fm);
+			apply(fm);
+		};
+		if (existing) {
+			await this.app.fileManager.processFrontMatter(existing, update);
+			return;
 		}
+		const path = this.defaultPath;
+		const slash = path.lastIndexOf('/');
+		if (slash > 0) await this.ensureFolder(path.slice(0, slash));
+		const fm: Record<string, unknown> = {};
+		update(fm);
+		const file = await this.app.vault.create(
+			path,
+			`---\n${stringifyYaml(fm)}---\n${t('lists.noteBody')}\n`,
+		);
+		this.path = file.path;
+	}
+
+	private async save(next: ExerciseLists): Promise<void> {
+		await this.write((fm) => applyListsToFrontmatter(fm, next));
 		this.publish(next);
+	}
+
+	private async saveBody(next: BodySettings): Promise<void> {
+		await this.write((fm) => applyBodySettingsToFrontmatter(fm, next));
+		this.publishBody(next);
 	}
 
 	private async ensureFolder(path: string): Promise<void> {
@@ -265,6 +294,49 @@ export class ListsLibrary {
 		return exercises.filter(
 			(e) => (kind === 'categories' ? e.category : e.equipment) === name,
 		).length;
+	}
+
+	// -------------------------------------------------------------------------
+	// 体組成の設定の変更
+
+	get body(): BodySettings {
+		return this.store.bodySettings;
+	}
+
+	async setBodyEnabled(enabled: boolean): Promise<void> {
+		await this.ensureLoaded();
+		if (this.body.enabled === enabled) return;
+		await this.saveBody(setBodyEnabled(this.body, enabled));
+	}
+
+	async addBodyItem(name: string, unit: string): Promise<void> {
+		await this.saveBody(addBodyItem(this.body, name, unit));
+	}
+
+	async removeBodyItem(index: number): Promise<void> {
+		await this.saveBody(removeBodyItem(this.body, index));
+	}
+
+	async moveBodyItem(from: number, to: number): Promise<void> {
+		const next = moveBodyItem(this.body, from, to);
+		if (next !== this.body) await this.saveBody(next);
+	}
+
+	async setBodyItemUnit(index: number, unit: string): Promise<void> {
+		await this.saveBody(setBodyItemUnit(this.body, index, unit));
+	}
+
+	/** 目標を決める・変える（新しい目標の起点は today） */
+	async setBodyGoal(
+		name: string,
+		target: number,
+		today: string,
+	): Promise<void> {
+		await this.saveBody(setBodyGoal(this.body, name, target, today));
+	}
+
+	async removeBodyGoal(name: string): Promise<void> {
+		await this.saveBody(removeBodyGoal(this.body, name));
 	}
 
 	private async updateExercises(

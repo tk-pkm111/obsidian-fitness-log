@@ -14,6 +14,7 @@ describe('registerCommands', () => {
 		expect(commands.map((c) => c.id)).toEqual([
 			'open-today',
 			'open-log',
+			'open-body-composition',
 			'setup',
 			'create-bases-file',
 		]);
@@ -36,5 +37,23 @@ describe('registerCommands', () => {
 		).find((c) => c.id === 'create-bases-file');
 		command?.callback();
 		expect(createBasesFile).toHaveBeenCalledTimes(1);
+	});
+
+	it('「体組成を開く」は体組成を記録するときだけ出す', () => {
+		const plugin = new Plugin() as unknown as FitnessLogPlugin;
+		const bodySettings = { enabled: false };
+		plugin.services = {
+			store: { bodySettings },
+		} as unknown as FitnessLogPlugin['services'];
+		registerCommands(plugin);
+		const command = (
+			(plugin as unknown as Plugin).commands as Array<{
+				id: string;
+				checkCallback: (checking: boolean) => boolean;
+			}>
+		).find((c) => c.id === 'open-body-composition');
+		expect(command?.checkCallback(true)).toBe(false);
+		bodySettings.enabled = true;
+		expect(command?.checkCallback(true)).toBe(true);
 	});
 });

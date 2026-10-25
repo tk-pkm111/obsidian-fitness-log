@@ -123,6 +123,8 @@ export interface FitnessLogSettings {
 	exerciseFolder: string;
 	/** パッケージノート（1 パッケージ 1 ノート。ルーチンもここに書く）を置く vault 内フォルダ */
 	packageFolder: string;
+	/** 体組成のノート（1 測定 1 ノート）を置く vault 内フォルダ */
+	bodyFolder: string;
 	/** 日ノートのファイル名（moment 書式。'/' を含めるとサブフォルダ） */
 	fileNameFormat: string;
 	weightUnit: WeightUnit;

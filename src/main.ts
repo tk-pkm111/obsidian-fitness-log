@@ -1,5 +1,6 @@
 import { Notice, Plugin } from 'obsidian';
 import { registerCommands } from './commands';
+import { BodyLibrary } from './data/body-library';
 import { ensureBasesFile } from './data/bases-file';
 import { DataStore } from './data/data-store';
 import { ExerciseLibrary } from './data/exercise-library';
@@ -35,6 +36,7 @@ export default class FitnessLogPlugin extends Plugin {
 	private locationKey = '';
 	private exerciseFolder = '';
 	private packageFolder = '';
+	private bodyFolder = '';
 
 	async onload(): Promise<void> {
 		const store = new DataStore(this);
@@ -47,12 +49,15 @@ export default class FitnessLogPlugin extends Plugin {
 		const packages = new PackageLibrary(this.app, store, library);
 		// カテゴリ・器具・記録のしかたの一覧は設定ノートが正
 		const lists = new ListsLibrary(this.app, store, library);
+		// 体組成のノート（「体組成を記録する」がオンの人だけ、ページを開いたときに読む）
+		const body = new BodyLibrary(this.app, store);
 		this.services = {
 			app: this.app,
 			store,
 			library,
 			packages,
 			lists,
+			body,
 			repository,
 			index,
 			controller,
@@ -62,6 +67,7 @@ export default class FitnessLogPlugin extends Plugin {
 		this.locationKey = this.currentLocationKey();
 		this.exerciseFolder = store.settings.exerciseFolder;
 		this.packageFolder = store.settings.packageFolder;
+		this.bodyFolder = store.settings.bodyFolder;
 
 		this.registerView(
 			VIEW_TYPE_MAIN,
@@ -89,7 +95,7 @@ export default class FitnessLogPlugin extends Plugin {
 	}
 
 	private async onLayoutReady(): Promise<void> {
-		const { store, index, library, packages, lists } = this.services;
+		const { store, index, library, packages, lists, body } = this.services;
 		// フォルダの名前を変えた・移したら設定も追いかける
 		registerFolderFollow(this, this.app, store);
 		// 最初の起動（入れ直した直後を含む）: 保存先を聞くまでは何も作らない・動かさない
@@ -111,6 +117,7 @@ export default class FitnessLogPlugin extends Plugin {
 		library.registerVaultEvents(this);
 		void lists.ensureLoaded();
 		lists.registerVaultEvents(this);
+		body.registerVaultEvents(this);
 		index.registerVaultEvents(this);
 		// 以前の版（種目を data.json に保存していた）からの移行 → 種目ノートを作る
 		const migrated = await library.migrateLegacy();
@@ -185,7 +192,7 @@ export default class FitnessLogPlugin extends Plugin {
 
 	/** ログの保存先・書式・種目フォルダが変わったら読み直す */
 	private onDataChange(): void {
-		const { store, index, library, packages, lists } = this.services;
+		const { store, index, library, packages, lists, body } = this.services;
 		const key = this.currentLocationKey();
 		if (key !== this.locationKey) {
 			this.locationKey = key;
@@ -200,6 +207,10 @@ export default class FitnessLogPlugin extends Plugin {
 		if (store.settings.packageFolder !== this.packageFolder) {
 			this.packageFolder = store.settings.packageFolder;
 			if (packages.isReady) void packages.reload().catch(() => undefined);
+		}
+		if (store.settings.bodyFolder !== this.bodyFolder) {
+			this.bodyFolder = store.settings.bodyFolder;
+			body.reload();
 		}
 	}
 

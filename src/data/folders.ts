@@ -1,5 +1,6 @@
 import { Notice, TFolder, type App, type Component } from 'obsidian';
 import { t } from '../i18n';
+import { measurementFromNote } from '../lib/body/note';
 import { followRename, movedPath } from '../lib/folders';
 import { LOG_TAG } from '../lib/log/summary';
 import { EXERCISE_KEYS, EXERCISE_TAG } from '../lib/model/exercise-note';
@@ -13,21 +14,25 @@ import type { DataStore } from './data-store';
  *   （聞くのは src/ui/folder-check.ts。ここはノートを探す・移す）
  */
 
-export type FolderKey = 'exerciseFolder' | 'logFolder' | 'packageFolder';
+export type FolderKey =
+	'exerciseFolder' | 'logFolder' | 'packageFolder' | 'bodyFolder';
 export const FOLDER_KEYS: readonly FolderKey[] = [
 	'exerciseFolder',
 	'logFolder',
 	'packageFolder',
+	'bodyFolder',
 ];
 
-/** 保存先の呼び名（「記録」「種目」「パッケージ」） */
+/** 保存先の呼び名（「記録」「種目」「パッケージ」「体組成」） */
 export function folderName(key: FolderKey): string {
 	return t(
 		key === 'exerciseFolder'
 			? 'folders.exercise'
 			: key === 'packageFolder'
 				? 'folders.package'
-				: 'folders.log',
+				: key === 'bodyFolder'
+					? 'folders.body'
+					: 'folders.log',
 	);
 }
 
@@ -42,13 +47,20 @@ function hasTag(value: unknown, tag: string): boolean {
 	);
 }
 
-/** vault の中の種目ノート・日ノート・パッケージノート（frontmatter のタグと id で見分ける） */
+/**
+ * vault の中の種目ノート・日ノート・パッケージノート（frontmatter のタグと id で見分ける）・
+ * 体組成のノート（名前が日付で、数字の項目がある。日ノートは除く）
+ */
 export function findNotePaths(app: App, key: FolderKey): string[] {
 	return app.vault
 		.getMarkdownFiles()
 		.filter((file) => {
 			const fm = app.metadataCache.getFileCache(file)?.frontmatter;
 			if (!fm) return false;
+			if (key === 'bodyFolder')
+				return (
+					measurementFromNote(file.path, file.basename, fm) !== null
+				);
 			if (key === 'exerciseFolder')
 				return (
 					typeof fm[EXERCISE_KEYS.id] === 'string' &&

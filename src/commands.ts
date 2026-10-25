@@ -17,6 +17,20 @@ export function registerCommands(plugin: FitnessLogPlugin): void {
 		callback: () => void activateMainView(plugin.app, { page: 'log' }),
 	});
 	plugin.addCommand({
+		id: 'open-body-composition',
+		name: t('command.openBody'),
+		// 「体組成を記録する」がオンのときだけ出す
+		checkCallback: (checking) => {
+			if (!plugin.services.store.bodySettings.enabled) return false;
+			if (!checking)
+				void activateMainView(plugin.app, {
+					page: 'body',
+					selectedId: null,
+				});
+			return true;
+		},
+	});
+	plugin.addCommand({
 		id: 'setup',
 		name: t('command.setup'),
 		callback: () => openSetup(plugin.app, plugin.services),

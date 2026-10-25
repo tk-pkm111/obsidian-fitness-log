@@ -190,17 +190,22 @@ export function listsFromFrontmatter(
 	};
 }
 
-/** 一覧を frontmatter に書く（processFrontMatter のコールバック内で）。ほかのキー・タグは残す */
-export function applyListsToFrontmatter(
-	fm: Record<string, unknown>,
-	lists: ExerciseLists,
-): void {
+/** 設定ノートのタグを付ける（ほかのタグは残す。移した・名前を変えたノートもタグで見つける） */
+export function ensureSettingsTag(fm: Record<string, unknown>): void {
 	const tags = Array.isArray(fm[LISTS_KEYS.tags])
 		? (fm[LISTS_KEYS.tags] as unknown[]).map(text).filter((v) => v !== '')
 		: [];
 	if (!tags.some((tag) => tag.replace(/^#/, '') === LISTS_TAG))
 		tags.push(LISTS_TAG);
 	fm[LISTS_KEYS.tags] = tags;
+}
+
+/** 一覧を frontmatter に書く（processFrontMatter のコールバック内で）。ほかのキー・タグは残す */
+export function applyListsToFrontmatter(
+	fm: Record<string, unknown>,
+	lists: ExerciseLists,
+): void {
+	ensureSettingsTag(fm);
 	fm[LISTS_KEYS.categories] = [...lists.categories];
 	fm[LISTS_KEYS.equipment] = [...lists.equipment];
 	fm[LISTS_KEYS.recordTypes] = lists.recordTypes.map((r) => ({

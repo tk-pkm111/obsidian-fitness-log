@@ -1,5 +1,6 @@
 import { Events, normalizePath, type EventRef } from 'obsidian';
 import { DEFAULT_SETTINGS, normalizePluginData } from '../lib/model/data';
+import { defaultBodySettings, type BodySettings } from '../lib/body/settings';
 import { defaultLists, type ExerciseLists } from '../lib/model/lists';
 import { PACKAGES_IN_VAULT } from '../lib/model/package-note';
 import type {
@@ -44,6 +45,8 @@ export class DataStore extends Events {
 	private catalogWriter: CatalogWriter | null = null;
 	/** 種目の選択肢（設定ノートから読んだもの。data.json には保存しない） */
 	private exerciseLists: ExerciseLists = defaultLists();
+	/** 体組成の設定（設定ノートから読んだもの。data.json には保存しない） */
+	private body: BodySettings = defaultBodySettings();
 
 	constructor(private readonly persistence: DataPersistence) {
 		super();
@@ -112,6 +115,17 @@ export class DataStore extends Events {
 		this.trigger('change');
 	}
 
+	/** 体組成の設定（オン・オフ・項目・目標）。設定ノートが正（ListsLibrary） */
+	get bodySettings(): BodySettings {
+		return this.body;
+	}
+
+	/** 設定ノートから読んだ体組成の設定を入れる（保存しない） */
+	setBodySettings(settings: BodySettings): void {
+		this.body = settings;
+		this.trigger('change');
+	}
+
 	/** 種目ノートから読んだ一覧を入れる（保存しない） */
 	setExercises(exercises: Exercise[]): void {
 		this.data.exercises = exercises;
@@ -168,6 +182,7 @@ export function normalizeStoredData(raw: unknown): PluginData {
 	const data = normalizePluginData(raw);
 	data.settings.logFolder = normalizePath(data.settings.logFolder);
 	data.settings.packageFolder = normalizePath(data.settings.packageFolder);
+	data.settings.bodyFolder = normalizePath(data.settings.bodyFolder);
 	if (validateFileNameFormat(data.settings.fileNameFormat) !== undefined)
 		data.settings.fileNameFormat = DEFAULT_SETTINGS.fileNameFormat;
 	return data;

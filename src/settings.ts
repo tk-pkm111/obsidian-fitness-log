@@ -14,9 +14,26 @@ import type { ExerciseLists, ListKind } from './lib/model/lists';
 import type { FitnessLogSettings } from './lib/model/types';
 import type FitnessLogPlugin from './main';
 import { checkNoteFolders } from './ui/folder-check';
+import { BodyItemsModal } from './ui/modals/body-items-modal';
 import { ListEditModal } from './ui/modals/list-edit-modal';
+import type { BodyItem } from './lib/body/items';
 
 type SettingsKey = keyof FitnessLogSettings;
+/** 設定ノートに書く設定（data.json の settings ではない） */
+const BODY_ENABLED_KEY = 'bodyComposition';
+type ControlKey = SettingsKey | typeof BODY_ENABLED_KEY;
+
+/** 体組成の項目を短く（「体重・体脂肪率・筋肉量 ほか 6 項目」） */
+export function bodyItemsSummary(items: readonly BodyItem[]): string {
+	if (items.length === 0) return t('settings.bodyItems.none');
+	const names = items
+		.slice(0, 3)
+		.map((item) => item.name)
+		.join('・');
+	return items.length > 3
+		? t('settings.bodyItems.more', { names, n: items.length - 3 })
+		: names;
+}
 
 /** 一覧の中身を短く（「プッシュ・プル・脚 …」） */
 function listSummary(lists: ExerciseLists, kind: ListKind): string {
@@ -48,6 +65,7 @@ export function coerceSetting(
 				: {};
 		case 'exerciseFolder':
 		case 'packageFolder':
+		case 'bodyFolder':
 			return typeof value === 'string' && value.trim().length > 0
 				? { [key]: normalizePath(value.trim()) }
 				: {};
@@ -84,16 +102,40 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 		private readonly plugin: FitnessLogPlugin,
 	) {
 		super(app, plugin);
+		// 説明（一覧の中身）と出す行（体組成のオン・オフ）は定義を作ったときの値なので、
+		// 設定ノートを読んだ・ほかの画面や端末で変えたときに作り直す
+		const { store } = plugin.services;
+		let last = this.notesKey();
+		plugin.registerEvent(
+			store.onChange(() => {
+				const key = this.notesKey();
+				if (key === last) return;
+				last = key;
+				this.update();
+			}),
+		);
+	}
+
+	private notesKey(): string {
+		const { store } = this.plugin.services;
+		return JSON.stringify([store.lists, store.bodySettings]);
 	}
 
 	/** この画面を開いてから変えた保存先の、変える前の値（閉じたときにノートを移すか聞く） */
 	private foldersBefore: Partial<Record<FolderKey, string>> = {};
 
 	getControlValue(key: string): unknown {
+		if (key === BODY_ENABLED_KEY)
+			return this.plugin.services.store.bodySettings.enabled;
 		return this.plugin.services.store.settings[key as SettingsKey];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (key === BODY_ENABLED_KEY) {
+			if (typeof value !== 'boolean') return;
+			await this.setBodyEnabled(value);
+			return;
+		}
 		const folderKey = FOLDER_KEYS.find((k) => k === key);
 		if (folderKey && !(folderKey in this.foldersBefore))
 			this.foldersBefore[folderKey] =
@@ -122,7 +164,23 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 			void checkNoteFolders(this.app, this.plugin.services, changed);
 	}
 
-	/** 保存先の入力の確かめ: 空でないこと、ほかの保存先と重ならないこと（記録・種目・パッケージは別々） */
+	/** 体組成のオン・オフ（設定ノートに書くので、ほかの端末とそろう）。保存先と項目の行を出し直す */
+	private async setBodyEnabled(enabled: boolean): Promise<void> {
+		const { lists } = this.plugin.services;
+		try {
+			await lists.setBodyEnabled(enabled);
+		} catch (error) {
+			new Notice(
+				t('notice.unexpected', {
+					message:
+						error instanceof Error ? error.message : String(error),
+				}),
+			);
+		}
+		this.update();
+	}
+
+	/** 保存先の入力の確かめ: 空でないこと、ほかの保存先と重ならないこと（記録・種目・パッケージ・体組成は別々） */
 	private validateFolder(key: FolderKey, value: string): string | undefined {
 		if (value.trim().length === 0) return t('settings.logFolder.empty');
 		const folder = normalizePath(value.trim());
@@ -134,8 +192,9 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 			: undefined;
 	}
 
-	getSettingDefinitions(): SettingDefinitionItem<SettingsKey>[] {
+	getSettingDefinitions(): SettingDefinitionItem<ControlKey>[] {
 		const { services } = this.plugin;
+		const bodyEnabled = () => services.store.bodySettings.enabled;
 		return [
 			{
 				name: t('settings.logFolder.name'),
@@ -253,6 +312,47 @@ export class FitnessLogSettingTab extends PluginSettingTab {
 							onDone: () => this.update(),
 						}).open(),
 				})),
+			},
+			{
+				// 体組成（オン・オフと項目は設定ノート、保存先は端末ごとの data.json）
+				type: 'group',
+				heading: t('settings.group.body'),
+				items: [
+					{
+						name: t('settings.bodyEnabled.name'),
+						desc: t('settings.bodyEnabled.desc'),
+						control: {
+							type: 'toggle',
+							key: BODY_ENABLED_KEY,
+							defaultValue: false,
+						},
+					},
+					{
+						name: t('settings.bodyFolder.name'),
+						desc: t('settings.bodyFolder.desc'),
+						visible: bodyEnabled,
+						control: {
+							type: 'folder',
+							key: 'bodyFolder',
+							placeholder: DEFAULT_SETTINGS.bodyFolder,
+							defaultValue: DEFAULT_SETTINGS.bodyFolder,
+							validate: (value) =>
+								this.validateFolder('bodyFolder', value),
+						},
+					},
+					{
+						name: t('settings.bodyItems.name'),
+						desc: bodyItemsSummary(
+							services.store.bodySettings.items,
+						),
+						visible: bodyEnabled,
+						action: () =>
+							new BodyItemsModal(this.app, {
+								services,
+								onDone: () => this.update(),
+							}).open(),
+					},
+				],
 			},
 			{
 				type: 'group',

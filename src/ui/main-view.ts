@@ -15,6 +15,7 @@ import {
 	type PageContext,
 	type PageId,
 } from './page-context';
+import { renderBodyPage } from './pages/body-page';
 import { renderExercisesPage } from './pages/exercises-page';
 import { renderLogPage } from './pages/log-page';
 import { renderPackagesPage } from './pages/packages-page';
@@ -29,6 +30,7 @@ const PAGE_ICONS: Record<PageId, string> = {
 	exercises: 'dumbbell',
 	routines: 'repeat',
 	log: 'line-chart',
+	body: 'person-standing',
 };
 
 type PageRenderer = (ctx: PageContext, el: HTMLElement) => void;
@@ -40,6 +42,7 @@ const PAGES: Partial<Record<PageId, PageRenderer>> = {
 	exercises: renderExercisesPage,
 	routines: renderRoutinesPage,
 	log: renderLogPage,
+	body: renderBodyPage,
 };
 
 export function parseViewState(raw: unknown): MainViewState {
@@ -111,6 +114,11 @@ export class MainView extends ItemView {
 		this.registerEvent(
 			this.services.index.onChange(() => this.requestRender()),
 		);
+		this.registerEvent(
+			this.services.body.onChange(() => {
+				if (this.viewState.page === 'body') this.requestRender();
+			}),
+		);
 		this.registerInterval(window.setInterval(() => this.tick(), 1000));
 		this.registerDomEvent(this.contentEl, 'keydown', (event) => {
 			if (event.key === 'Escape' && this.drawerOpen) {
@@ -128,9 +136,10 @@ export class MainView extends ItemView {
 		]).then(() => this.render());
 	}
 
-	/** ログのチャートは幅に合わせて描くので、幅が変わったら描き直す */
+	/** ログ・体組成のチャート（と丸の列の数）は幅に合わせて描くので、幅が変わったら描き直す */
 	onResize(): void {
-		if (this.viewState.page === 'log') this.requestRender();
+		if (this.viewState.page === 'log' || this.viewState.page === 'body')
+			this.requestRender();
 	}
 
 	async onClose(): Promise<void> {
@@ -194,6 +203,9 @@ export class MainView extends ItemView {
 		this.tickers = [];
 		this.renderedToday = todayString();
 		contentEl.empty();
+		// 体組成を記録しなくなったら（ほかの端末でオフにしたときも）今日のページへ
+		if (this.viewState.page === 'body' && !this.bodyEnabled)
+			this.viewState = { ...this.viewState, page: 'today', date: null };
 
 		// ヘッダー: 左に ☰（メニュー）、中央はページ（今日なら日付ナビ）、右はページの操作
 		const header = contentEl.createDiv({ cls: 'fitness-log-header' });
@@ -296,6 +308,7 @@ export class MainView extends ItemView {
 
 		const list = drawer.createDiv({ cls: 'fitness-log-drawer-list' });
 		for (const id of PAGE_IDS) {
+			if (id === 'body' && !this.bodyEnabled) continue;
 			const selected = id === this.viewState.page;
 			const item = list.createEl('button', {
 				cls: 'fitness-log-drawer-item',
@@ -334,6 +347,10 @@ export class MainView extends ItemView {
 			this.services.openSettings();
 		});
 		this.setDrawer(this.drawerOpen);
+	}
+
+	private get bodyEnabled(): boolean {
+		return this.services.store.bodySettings.enabled;
 	}
 
 	private setDrawer(open: boolean): void {

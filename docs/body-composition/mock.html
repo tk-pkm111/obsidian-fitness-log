@@ -1,0 +1,1158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Fitness Log 体組成</title>
+<style>
+/* Layout: 説明（上）→ 左にスマホの見本・右にノートの形と説明。スマホの中は Obsidian とプラグインの見た目に合わせる */
+:root {
+  --page-bg: #eceef1;
+  --page-fg: #1d2024;
+  --page-muted: #59606a;
+  --page-card: #ffffff;
+  --page-line: #d6dae0;
+  --bezel: #101114;
+  --code-bg: #f4f5f7;
+
+  --bg: #ffffff;
+  --bg2: #f5f5f5;
+  --border: #e1e1e1;
+  --hover: rgba(0, 0, 0, 0.05);
+  --text: #222222;
+  --muted: #5c5c5c;
+  --faint: #737373;
+  --accent: #c2414f;
+  --on-accent: #ffffff;
+  --knob: #ffffff;
+  --series: #2a78d6;
+  --series2: #eb6834;
+  --series3: #1baf7a;
+  --up: #2a78d6;
+  --down: #eb6834;
+  --fig: #dadada;
+  --sel: rgba(42, 120, 214, 0.12);
+  --scrim: rgba(0, 0, 0, 0.35);
+  --shadow: rgba(0, 0, 0, 0.14);
+
+  --font: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fs-xs: 11px;
+  --fs-s: 12px;
+  --fs-m: 13px;
+  --fs-b: 15px;
+  --fs-l: 20px;
+  --r-s: 6px;
+  --r-m: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page-bg: #0f1012;
+    --page-fg: #e4e6e9;
+    --page-muted: #9ba1a9;
+    --page-card: #17181b;
+    --page-line: #2b2d32;
+    --bezel: #000000;
+    --code-bg: #1b1c20;
+    --bg: #1e1e1e;
+    --bg2: #262626;
+    --border: #383838;
+    --hover: rgba(255, 255, 255, 0.06);
+    --text: #dadada;
+    --muted: #a8a8a8;
+    --faint: #8c8c8c;
+    --accent: #d45b68;
+    --on-accent: #ffffff;
+    --knob: #ffffff;
+    --series: #3987e5;
+    --series2: #d95926;
+    --series3: #199e70;
+    --up: #3987e5;
+    --down: #d95926;
+    --fig: #3d3d3d;
+    --sel: rgba(57, 135, 229, 0.2);
+    --scrim: rgba(0, 0, 0, 0.55);
+    --shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page-bg: #0f1012;
+  --page-fg: #e4e6e9;
+  --page-muted: #9ba1a9;
+  --page-card: #17181b;
+  --page-line: #2b2d32;
+  --bezel: #000000;
+  --code-bg: #1b1c20;
+  --bg: #1e1e1e;
+  --bg2: #262626;
+  --border: #383838;
+  --hover: rgba(255, 255, 255, 0.06);
+  --text: #dadada;
+  --muted: #a8a8a8;
+  --faint: #8c8c8c;
+  --accent: #d45b68;
+  --on-accent: #ffffff;
+  --knob: #ffffff;
+  --series: #3987e5;
+  --series2: #d95926;
+  --series3: #199e70;
+  --up: #3987e5;
+  --down: #d95926;
+  --fig: #3d3d3d;
+  --sel: rgba(57, 135, 229, 0.2);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+body { background: var(--page-bg); color: var(--page-fg); font-family: var(--font); }
+button { font: inherit; }
+:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; }
+.intro h1 { margin: 0 0 6px; font-size: 22px; line-height: 1.35; text-wrap: balance; }
+.intro p { margin: 0; max-width: 62ch; color: var(--page-muted); font-size: 14px; line-height: 1.7; }
+
+.stage { display: grid; grid-template-columns: 412px minmax(0, 1fr); gap: 40px; align-items: start; margin-top: 24px; }
+@media (max-width: 920px) { .stage { grid-template-columns: minmax(0, 1fr); gap: 32px; } .phone { justify-self: center; } }
+
+/* スマホ */
+.phone { width: 412px; max-width: 100%; padding: 11px; border-radius: 46px; background: var(--bezel); box-shadow: 0 18px 40px var(--shadow); }
+.screen { position: relative; display: flex; flex-direction: column; height: 780px; overflow: hidden; border-radius: 36px; background: var(--bg); color: var(--text); font-size: var(--fs-b); }
+@media (max-width: 480px) {
+  .phone { width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  .screen { height: min(760px, calc(100vh - 32px)); border: 1px solid var(--page-line); border-radius: 14px; }
+}
+.v-header { display: flex; flex: none; align-items: center; gap: 4px; height: 52px; padding: 10px 8px 0; border-bottom: 1px solid var(--border); }
+.v-title { flex: 1; min-width: 0; text-align: center; font-weight: 700; }
+.hdr-spacer { width: 40px; flex: none; }
+.v-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 12px 16px 32px; }
+
+.icon-btn { display: grid; flex: none; place-items: center; width: 38px; height: 38px; padding: 0; border: 0; border-radius: var(--r-m); background: transparent; color: var(--muted); cursor: pointer; }
+.icon-btn:hover { background: var(--hover); color: var(--text); }
+.icon-btn:disabled { opacity: 0.3; cursor: default; background: transparent; }
+.icon-btn svg { width: 20px; height: 20px; }
+.btn { height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-m); background: var(--bg2); color: var(--text); font-size: var(--fs-m); white-space: nowrap; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.cta { border-color: transparent; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+
+.date-row { display: flex; align-items: center; gap: 8px; }
+.date-nav { display: flex; flex: 1; align-items: center; min-width: 0; }
+.date-text { min-width: 0; padding: 0 2px; text-align: center; }
+.date-main { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.date-sub { color: var(--faint); font-size: var(--fs-s); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); margin: 12px 0; padding: 3px; border-radius: var(--r-m); background: var(--bg2); }
+.seg button { height: 32px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: var(--fs-m); font-weight: 600; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bg); color: var(--text); box-shadow: 0 0 0 1px var(--border), 0 1px 2px var(--shadow); }
+
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 6px; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 2px 0; border: 0; border-radius: var(--r-m); background: transparent; color: var(--text); text-align: center; cursor: pointer; }
+.tile-label { max-width: 100%; overflow: hidden; color: var(--muted); font-size: var(--fs-s); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.disc { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 88px; max-width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--bg2); }
+.disc svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.disc-track { fill: none; stroke: var(--border); stroke-width: 5; }
+.disc-arc { fill: none; stroke: var(--up); stroke-width: 5; stroke-linecap: round; }
+.disc-arc.is-down { stroke: var(--down); }
+.tile:hover .disc-track { stroke: var(--muted); }
+.tile[aria-expanded="true"] .disc { background: var(--sel); }
+.tile[aria-expanded="true"] .tile-label { color: var(--text); }
+.disc-value { position: relative; font-size: var(--fs-l); font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.disc-unit { position: relative; min-height: 1.2em; color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
+.tile-unit { margin-left: 3px; color: var(--muted); font-size: var(--fs-s); font-weight: 600; }
+.tile-sub { min-height: 1.4em; color: var(--faint); font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+
+.panel { position: relative; grid-column: 1 / -1; margin-top: 4px; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-m); background: var(--bg2); }
+.panel.has-caret::before { content: ""; position: absolute; top: -7px; left: calc(var(--caret, 50%) - 6px); width: 11px; height: 11px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); background: var(--bg2); transform: rotate(45deg); }
+.panel-title { font-weight: 700; }
+.panel-unit { margin-left: 2px; color: var(--muted); font-size: var(--fs-s); font-weight: 600; }
+.panel-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 10px; }
+.panel-stats.has-goal { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stat-label { color: var(--muted); font-size: var(--fs-s); }
+.stat-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-sub { overflow: hidden; color: var(--faint); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { min-height: 28px; padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--muted); font-size: var(--fs-s); cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--muted); background: var(--bg); color: var(--text); font-weight: 700; }
+.link-btn { padding: 8px 0 0; border: 0; background: transparent; color: var(--muted); font-size: var(--fs-s); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.foot-row { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+.chart { position: relative; margin-top: 8px; touch-action: pan-y; }
+.chart svg { display: block; width: 100%; height: 180px; overflow: visible; }
+.chart-empty { padding: 32px 0; color: var(--faint); font-size: var(--fs-s); text-align: center; }
+.grid-line { stroke: var(--border); stroke-width: 1; }
+.axis-text { fill: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }
+.series-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dot { stroke: var(--bg2); stroke-width: 2; }
+.value-label { fill: var(--text); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.goal-line { stroke: var(--up); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.goal-line.is-down { stroke: var(--down); }
+.goal-text { fill: var(--muted); font-size: 10px; font-weight: 700; }
+.crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 3; }
+.tooltip { position: absolute; top: 0; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--r-s); background: var(--bg); box-shadow: 0 2px 8px var(--shadow); font-size: var(--fs-s); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; transform: translateX(-50%); }
+.tooltip b { display: block; }
+.legend { display: flex; gap: 14px; margin-top: 8px; color: var(--muted); font-size: var(--fs-s); }
+.legend i { display: inline-block; width: 14px; height: 2px; margin-right: 5px; vertical-align: middle; border-radius: 1px; }
+
+/* 部位別 */
+.body-grid { display: grid; grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr); grid-template-rows: auto auto auto; gap: 10px 8px; align-items: center; margin-top: 12px; }
+.part { min-width: 0; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--r-m); background: var(--bg); color: var(--text); text-align: left; cursor: pointer; }
+.part:hover { background: var(--hover); }
+.part[aria-expanded="true"] { border-color: var(--series); box-shadow: inset 0 0 0 1px var(--series); }
+.part.is-empty { cursor: default; opacity: 0.55; }
+.part.is-empty:hover { background: var(--bg); }
+.part-trunk { grid-column: 1 / -1; justify-self: center; width: 44%; }
+.part-la { grid-column: 1; grid-row: 2; }
+.part-ra { grid-column: 3; grid-row: 2; }
+.part-ll { grid-column: 1; grid-row: 3; }
+.part-rl { grid-column: 3; grid-row: 3; }
+.figure { grid-column: 2; grid-row: 2 / 4; justify-self: center; width: 84px; }
+.figure svg { display: block; width: 100%; height: auto; }
+.fig-part { fill: none; stroke: var(--fig); stroke-linecap: round; cursor: pointer; }
+.fig-fill { fill: var(--fig); stroke: none; cursor: pointer; }
+.fig-part.is-on { stroke: var(--series); }
+.fig-fill.is-on { fill: var(--series); }
+.part-name { display: block; color: var(--muted); font-size: var(--fs-s); }
+.part-value { display: block; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.part-sub { display: block; min-height: 1.4em; color: var(--faint); font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+.balance { margin-top: 16px; }
+.balance-head { margin-bottom: 4px; color: var(--muted); font-size: var(--fs-s); font-weight: 700; }
+.bal-row { display: grid; grid-template-columns: 2em 1fr 1fr 1.4fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--border); font-size: var(--fs-m); font-variant-numeric: tabular-nums; }
+.bal-row span:first-child { color: var(--muted); }
+.bal-row span:last-child { text-align: right; }
+.part-panel { margin-top: 12px; }
+
+/* 目標 */
+.goal-list { display: flex; flex-direction: column; margin-top: 4px; }
+.goal-row { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 12px 4px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.goal-row:hover { background: var(--hover); }
+.goal-top { display: flex; align-items: baseline; gap: 8px; }
+.goal-name { font-weight: 700; }
+.goal-now { flex: 1; min-width: 0; color: var(--muted); font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+.goal-left { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.goal-bar { display: block; height: 6px; overflow: hidden; border-radius: 3px; background: var(--border); }
+.goal-bar i { display: block; height: 100%; border-radius: 3px; background: var(--up); }
+.goal-bar.is-down i { margin-left: auto; background: var(--down); }
+.dir { margin-right: 4px; font-size: 0.75em; vertical-align: 0.1em; }
+.dir-up { color: var(--up); }
+.dir-down { color: var(--down); }
+.goal-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--faint); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.goal-empty { padding: 28px 8px; color: var(--muted); font-size: var(--fs-m); line-height: 1.7; text-align: center; }
+.goal-empty .btn { margin-top: 12px; }
+
+/* メニュー・シート・設定 */
+.scrim { position: absolute; inset: 0; z-index: 5; background: var(--scrim); }
+.drawer { position: absolute; top: 0; bottom: 0; left: 0; z-index: 6; display: flex; flex-direction: column; gap: 2px; width: 78%; padding: 20px 10px; background: var(--bg2); box-shadow: 2px 0 14px var(--shadow); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 12px 12px; font-size: 18px; font-weight: 800; }
+.drawer-item { display: flex; align-items: center; gap: 14px; height: 46px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: var(--fs-b); text-align: left; cursor: pointer; }
+.drawer-item:hover { background: var(--hover); }
+.drawer-item.is-active { background: var(--hover); color: var(--text); font-weight: 700; }
+.drawer-item svg { flex: none; width: 20px; height: 20px; }
+.drawer-sep { height: 1px; margin: 8px 6px; background: var(--border); }
+
+.sheet { position: absolute; right: 0; bottom: 0; left: 0; z-index: 8; max-height: 86%; overflow-y: auto; padding: 18px 16px 22px; border-radius: 16px 16px 0 0; background: var(--bg); box-shadow: 0 -4px 20px var(--shadow); }
+.sheet-title { margin-bottom: 8px; font-size: 17px; font-weight: 800; }
+.hint { margin: 6px 0 8px; color: var(--muted); font-size: var(--fs-s); line-height: 1.6; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dt { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: var(--fs-s); }
+.dt input, .dt select, .field input, .set-input { height: 34px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--r-s); background: var(--bg2); color: var(--text); font: inherit; font-size: var(--fs-b); font-variant-numeric: tabular-nums; }
+.field { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.field-name { flex: 1; min-width: 0; font-size: var(--fs-m); }
+.field input { width: 92px; text-align: right; }
+.field input::placeholder { color: var(--faint); }
+.goal-form { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 8px; align-items: end; }
+.goal-value { display: flex; align-items: center; gap: 6px; }
+.goal-value input { width: 100%; min-width: 0; text-align: right; }
+.sheet-actions .spacer { flex: 1; }
+.panel-links { display: flex; justify-content: space-between; gap: 12px; }
+.field-unit { width: 2.6em; color: var(--muted); font-size: var(--fs-s); }
+.sheet-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.item-row { display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--border); }
+.handle { width: 18px; color: var(--faint); text-align: center; letter-spacing: -2px; cursor: grab; }
+.item-name { flex: 1; min-width: 0; }
+.item-unit { width: 3em; color: var(--muted); font-size: var(--fs-s); }
+.sub-head { margin: 16px 0 2px; color: var(--muted); font-size: var(--fs-s); font-weight: 700; }
+.new-item { margin-top: 12px; }
+
+.set-title { margin: 6px 0 4px; font-size: 17px; font-weight: 800; }
+.set-group { margin: 22px 0 2px; font-weight: 700; }
+.set-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.set-info { flex: 1; min-width: 0; }
+.set-desc { margin-top: 2px; color: var(--muted); font-size: var(--fs-s); line-height: 1.55; }
+.set-input { width: 128px; flex: none; overflow: hidden; font-size: var(--fs-s); text-overflow: ellipsis; }
+.toggle { position: relative; flex: none; width: 44px; height: 26px; padding: 0; border: 0; border-radius: 13px; background: var(--border); cursor: pointer; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--knob); box-shadow: 0 1px 2px var(--shadow); transition: transform 0.15s; }
+.toggle[aria-checked="true"] { background: var(--accent); }
+.toggle[aria-checked="true"]::after { transform: translateX(18px); }
+.placeholder { padding: 40px 8px; color: var(--muted); font-size: var(--fs-m); line-height: 1.7; text-align: center; }
+.placeholder .btn { margin-top: 12px; }
+
+.toast { position: absolute; bottom: 26px; left: 50%; z-index: 9; max-width: 86%; padding: 8px 14px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: var(--fs-s); text-align: center; opacity: 0; pointer-events: none; transform: translateX(-50%); transition: opacity 0.2s; }
+.toast.show { opacity: 1; }
+
+/* 右側の説明 */
+.notes { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.notes h2 { margin: 0 0 4px; font-size: 16px; }
+.notes .lead { margin: 0 0 10px; color: var(--page-muted); font-size: 14px; line-height: 1.7; }
+.try-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.try { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid var(--page-line); border-radius: 10px; background: var(--page-card); color: var(--page-fg); font-size: 14px; font-weight: 700; text-align: left; cursor: pointer; }
+.try:hover { border-color: var(--page-muted); }
+.try small { color: var(--page-muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
+.code-card { overflow: hidden; border: 1px solid var(--page-line); border-radius: 10px; background: var(--page-card); }
+.code-path { overflow-x: auto; padding: 8px 12px; border-bottom: 1px solid var(--page-line); color: var(--page-muted); font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.code-card pre { max-height: 340px; margin: 0; overflow: auto; padding: 10px 12px; background: var(--code-bg); font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+.rules { margin: 12px 0 0; padding-left: 1.2em; font-size: 14px; line-height: 1.75; }
+.rules li + li { margin-top: 2px; }
+.rules code { padding: 1px 4px; border-radius: 4px; background: var(--code-bg); font-family: var(--mono); font-size: 12.5px; }
+.footnote { margin: 0; color: var(--page-muted); font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) { .toggle::after, .toast { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <h1>体組成ページの見本</h1>
+    <p>Fitness Log に足す「体組成」のページを、スマホの大きさで触れるようにしたものです。タイルやグラフをタップして動きを確かめてください。数値はすべて作りものの見本です。</p>
+  </header>
+
+  <div class="stage">
+    <div class="phone" id="phone">
+      <div class="screen" id="screen">
+        <div class="v-header" id="v-header"></div>
+        <div class="v-body" id="v-body"></div>
+        <div id="overlay"></div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <section>
+        <h2>触ってみる</h2>
+        <p class="lead">押すと見本の画面がその状態になります。画面の中を直接触っても同じです。</p>
+        <ul class="try-list">
+          <li><button class="try" data-demo="tile">タイルを開く<small>タップすると下にグラフ。もう一度で閉じる</small></button></li>
+          <li><button class="try" data-demo="parts">部位別を見る<small>左右の筋肉量・脂肪率を人の形に並べる</small></button></li>
+          <li><button class="try" data-demo="goals">目標を見る<small>目標まであとどのくらいか。丸の縁にも出る</small></button></li>
+          <li><button class="try" data-demo="record">測定を記録する<small>手で入れる人向け。空欄の項目は記録しない</small></button></li>
+          <li><button class="try" data-demo="items">項目を編集する<small>タイルに出す項目を足す・外す</small></button></li>
+          <li><button class="try" data-demo="menu">メニューを開く<small>「体組成」が増える</small></button></li>
+          <li><button class="try" data-demo="settings">設定を開く<small>オフにすると、メニューから消える</small></button></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>ノートの形</h2>
+        <p class="lead">今見ている測定は、このノートから読んでいます。自動取得の側では、この形で 1 回ごとにノートを書いてください。</p>
+        <div class="code-card">
+          <div class="code-path" id="yaml-path"></div>
+          <pre id="yaml"></pre>
+        </div>
+        <ul class="rules">
+          <li>1 回の測定で 1 ノート。名前は日付（<code>2026-10-22.md</code>）。同じ日にもう一度測ったら、そのノートを書き換える</li>
+          <li>プロパティの名前は項目名（日本語）、値は数字だけ。単位は書かない（単位は項目の一覧が持つ）</li>
+          <li>部位別の値は <code>左腕 筋肉量</code> のように、部位と項目を半角スペースでつなぐ。部位は 体幹部・左腕・右腕・左脚・右脚</li>
+          <li>測っていない項目は書かない</li>
+          <li>「標準」などの評価・評価値・左右バランスの文章・体型は書かない</li>
+          <li>プラグインは日付の名前のノートだけを読むので、同じフォルダのほかのノート（全部の測定の一覧など）はそのままでよい</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>目標の保存先</h2>
+        <p class="lead">目標は画面から決めて、設定ノートに書きます（PC と iPhone でそろいます）。自動取得の側では書きません。</p>
+        <div class="code-card">
+          <div class="code-path">Fitness/Fitness Log 設定.md</div>
+          <pre id="goal-yaml"></pre>
+        </div>
+        <ul class="rules">
+          <li>「あと」は、今見ている測定の値と目標の差</li>
+          <li>丸の縁とバーは、目標を決めた日の値から目標までの進み具合。目標から離れたときは空のまま</li>
+          <li>増やす目標は青・▲・「増」、減らす目標は橙・▼・「減」。バーは数の小さいほうが左で、増やす目標は右へ、減らす目標は左へ伸びる。丸の縁は、増やす目標は時計回り、減らす目標は反時計回り</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>出さないもの</h2>
+        <p class="lead">TANITA の評価（標準・少ない）、標準範囲、体型マップ、増えた・減ったの色分けは出しません。測った値と、その差、自分で決めた目標までの差だけを出します。</p>
+      </section>
+
+      <p class="footnote">数値はすべて見本です。実際の記録ではありません。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const WD = ['日', '月', '火', '水', '木', '金', '土'];
+  const TODAY = '2026-10-25';
+  const META = {
+    '体重': { u: 'kg', d: 1 }, '体脂肪率': { u: '%', d: 1 }, '筋肉量': { u: 'kg', d: 1 },
+    '内臓脂肪レベル': { u: '', d: 0 }, 'BMI': { u: '', d: 1 }, '基礎代謝量': { u: 'kcal', d: 0 },
+    '体内年齢': { u: '才', d: 0 }, '推定骨量': { u: 'kg', d: 1 }, '体水分率': { u: '%', d: 1 },
+    '筋質点数': { u: '点', d: 0 }, '脂肪量': { u: 'kg', d: 1 }, '除脂肪量': { u: 'kg', d: 1 },
+    '体水分量': { u: 'kg', d: 1 }, 'タンパク質量': { u: 'kg', d: 1 }, 'SMI': { u: '', d: 2 },
+    'アスリート指数': { u: '', d: 0 },
+  };
+  const WHOLE_ALL = Object.keys(META);
+  const PARTS = ['体幹部', '左腕', '右腕', '左脚', '右脚'];
+  const PART_MEASURES = [
+    { n: '筋肉量', u: 'kg', d: 1 }, { n: '脂肪量', u: 'kg', d: 1 },
+    { n: '脂肪率', u: '%', d: 1 }, { n: '筋質点数', u: '点', d: 0 },
+  ];
+  const PERIODS = [['1m', '1か月', 31], ['3m', '3か月', 92], ['6m', '半年', 183], ['1y', '1年', 365], ['all', 'すべて', null]];
+
+  // ---- 見本のデータ（毎週木曜。夏に 2 週と 6 月に 1 週あき） ----
+  let seed = 11;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed / 2147483647) * 2 - 1; };
+  const rd = (v, d) => Math.round(v * 10 ** d) / 10 ** d;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const isoOf = (dt) => `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+  const parse = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+  const dayNum = (iso) => Math.round(parse(iso).getTime() / 86400000);
+
+  const skip = new Set(['2026-06-11', '2026-08-06', '2026-08-13']);
+  const dates = [];
+  for (let k = 0; k < 27; k++) {
+    const dt = new Date(2026, 3, 23 + k * 7);
+    const iso = isoOf(dt);
+    if (!skip.has(iso)) dates.push(iso);
+  }
+  const PART_RANGE = {
+    '筋肉量': { '体幹部': [25.9, 26.9], '左腕': [2.7, 2.9], '右腕': [2.8, 2.9], '左脚': [9.2, 9.5], '右脚': [9.6, 9.9] },
+    '脂肪量': { '体幹部': [6.5, 7.2], '左腕': [0.4, 0.5], '右腕': [0.4, 0.5], '左脚': [2.4, 2.6], '右脚': [2.4, 2.6] },
+    '脂肪率': { '体幹部': [19.0, 20.4], '左腕': [12.6, 13.4], '右腕': [12.9, 13.6], '左脚': [19.5, 20.6], '右脚': [18.8, 19.8] },
+    '筋質点数': { '左腕': [76, 79], '右腕': [72, 74], '左脚': [60, 62], '右脚': [59, 61] },
+  };
+  const ms = dates.map((iso, i) => {
+    const t = i / (dates.length - 1);
+    const w = rd(lerp(64.0, 66.8, t) + rnd() * 0.35, 1);
+    const fat = rd(18.0 + 1.6 * Math.sin(Math.PI * t * 0.9) + rnd() * 0.25, 1);
+    const water = rd(lerp(55.2, 54.5, t) + rnd() * 0.2, 1);
+    const v = {
+      '体重': w, '体脂肪率': fat, '筋肉量': rd(lerp(49.6, 51.2, t) + rnd() * 0.25, 1),
+      '内臓脂肪レベル': Math.round(lerp(6, 7.2, t) + rnd() * 0.3), 'BMI': rd(w / (1.72 * 1.72), 1),
+      '基礎代謝量': Math.round(lerp(1500, 1542, t) + rnd() * 6), '体内年齢': Math.round(lerp(24, 23, t) + rnd() * 0.4),
+      '推定骨量': rd(lerp(2.8, 2.9, t) + rnd() * 0.03, 1), '体水分率': water,
+      '筋質点数': Math.round(lerp(70, 72, t) + rnd() * 1.2), '脂肪量': rd((w * fat) / 100, 1),
+      '除脂肪量': rd(w - (w * fat) / 100, 1), '体水分量': rd((w * water) / 100, 1),
+      'タンパク質量': rd(lerp(14.4, 14.8, t) + rnd() * 0.08, 1), 'SMI': rd(lerp(8.2, 8.38, t) + rnd() * 0.03, 2),
+      'アスリート指数': Math.round(lerp(48, 50, t) + rnd() * 0.6),
+    };
+    for (const pm of PART_MEASURES) {
+      for (const p of PARTS) {
+        const r = PART_RANGE[pm.n][p];
+        if (!r) continue;
+        const amp = Math.max(Math.abs(r[1] - r[0]) * 0.2, pm.d === 0 ? 0.6 : 0.04);
+        v[`${p} ${pm.n}`] = rd(lerp(r[0], r[1], t) + rnd() * amp, pm.d);
+      }
+    }
+    return { date: iso, time: `7:${pad2(5 + Math.floor((rnd() + 1) * 10))}`, v };
+  });
+
+  const state = {
+    page: 'body', enabled: true, view: 'whole', current: ms.length - 1, open: '体重',
+    period: '1m', partMeasure: '筋肉量', openPart: null, drawer: false, modal: null, goalEdit: '',
+    tiles: ['体重', '体脂肪率', '筋肉量', '内臓脂肪レベル', 'BMI', '基礎代謝量', '体内年齢', '推定骨量', '体水分率'],
+    goals: {
+      '体重': { target: 68.0, since: '2026-07-02' },
+      '体脂肪率': { target: 17.0, since: '2026-08-27' },
+      '筋肉量': { target: 52.5, since: '2026-07-02' },
+    },
+  };
+
+  // ---- 書式 ----
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const metaOf = (name) => {
+    if (META[name]) return META[name];
+    const [p, m] = name.split(' ');
+    const pm = PARTS.includes(p) && PART_MEASURES.find((x) => x.n === m);
+    return pm ? { u: pm.u, d: pm.d } : { u: '', d: 1 };
+  };
+  const fmt = (name, v) => (v == null ? '—' : v.toFixed(metaOf(name).d));
+  const withUnit = (name, v) => { const u = metaOf(name).u; return fmt(name, v) + (u ? ` ${u}` : ''); };
+  const fmtDelta = (name, dv) => {
+    const d = metaOf(name).d;
+    const x = Number(dv.toFixed(d));
+    if (x === 0) return `±${(0).toFixed(d)}`;
+    return (x > 0 ? '+' : '−') + Math.abs(x).toFixed(d);
+  };
+  const md = (iso) => { const dt = parse(iso); return `${dt.getMonth() + 1}/${dt.getDate()}`; };
+  const mdw = (iso) => `${md(iso)} (${WD[parse(iso).getDay()]})`;
+  const prevWith = (i, name) => { for (let j = i - 1; j >= 0; j--) if (ms[j].v[name] != null) return j; return -1; };
+  const firstWith = (name) => ms.findIndex((m) => m.v[name] != null);
+  const lastWith = (name) => { for (let j = ms.length - 1; j >= 0; j--) if (ms[j].v[name] != null) return j; return -1; };
+  const lastAtOrBefore = (i, name) => { for (let j = i; j >= 0; j--) if (ms[j].v[name] != null) return j; return -1; };
+
+  // 目標: 決めた日（以前で最後）の測定から、目標までの進み具合
+  function goalInfo(name, i) {
+    const g = state.goals[name];
+    if (!g) return null;
+    const cj = lastAtOrBefore(i, name);
+    if (cj < 0) return null;
+    let sj = -1;
+    for (let j = ms.length - 1; j >= 0; j--) if (ms[j].date <= g.since && ms[j].v[name] != null) { sj = j; break; }
+    if (sj < 0) sj = firstWith(name);
+    const cur = ms[cj].v[name];
+    const start = ms[sj].v[name];
+    const dir = Math.sign(g.target - start) || Math.sign(g.target - cur);
+    const left = g.target - cur;
+    const reached = dir === 0 ? Math.abs(left) < 1e-9 : (cur - g.target) * dir >= 0;
+    const p = reached ? 1 : dir === 0 ? 0 : Math.min(1, Math.max(0, (cur - start) / (g.target - start)));
+    return { target: g.target, since: g.since, start, cur, left, reached, p, dir };
+  }
+  const glyph = (gi) => (gi.dir < 0 ? '<span class="dir dir-down" aria-hidden="true">▼</span>' : '<span class="dir dir-up" aria-hidden="true">▲</span>');
+  const amount = (name, gi) => `${Math.abs(gi.left).toFixed(metaOf(name).d)}${metaOf(name).u ? ` ${metaOf(name).u}` : ''} ${gi.dir < 0 ? '減' : '増'}`;
+  const leftText = (name, gi) => (gi.reached ? '目標に届いています' : `${glyph(gi)}あと ${amount(name, gi)}`);
+  const order = (n) => { const k = state.tiles.indexOf(n); return k < 0 ? 999 : k; };
+
+  const ICON = {
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    left: '<path d="M15 18l-6-6 6-6"/>',
+    right: '<path d="M9 18l6-6-6-6"/>',
+    x: '<path d="M18 6L6 18M6 6l12 12"/>',
+    trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    today: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15.5l2 2 4-4"/>',
+    package: '<path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/>',
+    dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+    repeat: '<path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/>',
+    chart: '<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
+    person: '<circle cx="12" cy="4.5" r="2"/><path d="M12 8v6M6.5 9.5l5.5 1.5 5.5-1.5M9 21l3-7 3 7"/>',
+    gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+  };
+  const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+
+  // ---- 描画 ----
+  const $ = (sel) => document.querySelector(sel);
+  const screen = $('#screen');
+  const vHeader = $('#v-header');
+  const vBody = $('#v-body');
+  const overlay = $('#overlay');
+  let lastKey = '';
+
+  function render() {
+    const key = `${state.page}|${state.view}`;
+    const scroll = key === lastKey ? vBody.scrollTop : 0;
+    lastKey = key;
+    const title = state.page === 'body' ? '体組成' : state.page === 'settings' ? '設定' : state.page;
+    vHeader.innerHTML = `<button class="icon-btn" data-act="drawer" aria-label="メニュー">${icon('menu')}</button><div class="v-title">${esc(title)}</div><span class="hdr-spacer"></span>`;
+    vBody.innerHTML = state.page === 'body' ? bodyPage() : state.page === 'settings' ? settingsPage() : otherPage();
+    overlay.innerHTML = overlays();
+    vBody.scrollTop = scroll;
+    drawCharts();
+    updateYaml();
+  }
+
+  function bodyPage() {
+    const i = state.current;
+    const m = ms[i];
+    const prev = i > 0 ? ms[i - 1] : null;
+    return `
+      <div class="date-row">
+        <div class="date-nav">
+          <button class="icon-btn" data-act="prev" aria-label="前の測定" ${i === 0 ? 'disabled' : ''}>${icon('left')}</button>
+          <div class="date-text">
+            <div class="date-main">${mdw(m.date)} ${esc(m.time)}</div>
+            <div class="date-sub">${prev ? `前回 ${mdw(prev.date)}` : '初めての測定'}</div>
+          </div>
+          <button class="icon-btn" data-act="next" aria-label="次の測定" ${i === ms.length - 1 ? 'disabled' : ''}>${icon('right')}</button>
+        </div>
+        <button class="btn cta" data-act="record">＋ 測定を記録</button>
+      </div>
+      <div class="seg" role="group" aria-label="表示">
+        <button data-act="view" data-v="whole" aria-pressed="${state.view === 'whole'}">全身</button>
+        <button data-act="view" data-v="parts" aria-pressed="${state.view === 'parts'}">部位別</button>
+        <button data-act="view" data-v="goals" aria-pressed="${state.view === 'goals'}">目標</button>
+      </div>
+      ${state.view === 'whole' ? wholeView() : state.view === 'parts' ? partsView() : goalsView()}`;
+  }
+
+  function wholeView() {
+    const cols = 3;
+    const openIdx = state.tiles.indexOf(state.open);
+    const rowEnd = openIdx < 0 ? -1 : Math.min(state.tiles.length - 1, Math.floor(openIdx / cols) * cols + cols - 1);
+    let html = '<div class="tiles">';
+    state.tiles.forEach((name, k) => {
+      html += tile(name);
+      if (k === rowEnd) html += panel(state.open, openIdx % cols);
+    });
+    html += '</div><div class="foot-row"><button class="btn" data-act="items">項目を編集</button></div>';
+    return html;
+  }
+
+  function tile(name) {
+    const i = state.current;
+    const v = ms[i].v[name];
+    const u = metaOf(name).u;
+    const pj = prevWith(i, name);
+    const sub = v == null ? '記録なし' : pj < 0 ? '初回' : fmtDelta(name, v - ms[pj].v[name]);
+    const gi = goalInfo(name, i);
+    const R = 46;
+    const C = 2 * Math.PI * R;
+    const arc = gi && gi.p > 0.005
+      ? `<circle class="disc-arc${gi.dir < 0 ? ' is-down' : ''}" cx="50" cy="50" r="${R}" stroke-dasharray="${(gi.p * C).toFixed(1)} ${C.toFixed(1)}"${gi.dir < 0 ? ' transform="translate(0 100) scale(1 -1)"' : ''}/>` : '';
+    return `<button class="tile" data-act="tile" data-name="${esc(name)}" aria-expanded="${state.open === name}">
+      <span class="tile-label">${esc(name)}</span>
+      <span class="disc"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="disc-track" cx="50" cy="50" r="${R}"/>${arc}</svg>
+        <span class="disc-value">${fmt(name, v)}</span><span class="disc-unit">${v != null ? u : ''}</span></span>
+      <span class="tile-sub">${sub}</span></button>`;
+  }
+
+  function panel(name, col) {
+    const i = state.current;
+    const v = ms[i].v[name];
+    const u = metaOf(name).u ? ` ${metaOf(name).u}` : '';
+    const pj = prevWith(i, name);
+    const f = firstWith(name);
+    const gi = goalInfo(name, i);
+    const prevTxt = v == null || pj < 0 ? '—' : fmtDelta(name, v - ms[pj].v[name]) + u;
+    const firstTxt = v == null || f < 0 || f === i ? '—' : fmtDelta(name, v - ms[f].v[name]) + u;
+    return `<div class="panel has-caret" style="--caret:${((col + 0.5) / 3) * 100}%">
+      <div class="panel-title">${esc(name)}${metaOf(name).u ? `<span class="panel-unit">（${metaOf(name).u}）</span>` : ''}</div>
+      <div class="panel-stats${gi ? ' has-goal' : ''}">
+        <div><div class="stat-label">前回から</div><div class="stat-value">${prevTxt}</div>
+          <div class="stat-sub">${pj >= 0 ? `前回 ${withUnit(name, ms[pj].v[name])}` : ''}</div></div>
+        <div><div class="stat-label">初回から</div><div class="stat-value">${firstTxt}</div>
+          <div class="stat-sub">${f >= 0 ? `初回 ${md(ms[f].date)}  ${withUnit(name, ms[f].v[name])}` : ''}</div></div>
+        ${gi ? `<div><div class="stat-label">目標まで</div><div class="stat-value">${gi.reached ? '届いています' : glyph(gi) + amount(name, gi)}</div>
+          <div class="stat-sub">目標 ${withUnit(name, gi.target)}</div></div>` : ''}
+      </div>
+      ${periodChips()}
+      <div class="chart" data-chart="whole" data-name="${esc(name)}"></div>
+      <div class="panel-links">
+        <button class="link-btn" data-act="open-note">${md(ms[i].date)} のノートを開く</button>
+        <button class="link-btn" data-act="goal-edit" data-name="${esc(name)}">${gi ? '目標を変える' : '目標を決める'}</button>
+      </div>
+    </div>`;
+  }
+
+  function periodChips() {
+    return `<div class="chips" role="group" aria-label="期間">${PERIODS.map(([k, label]) =>
+      `<button class="chip" data-act="period" data-v="${k}" aria-pressed="${state.period === k}">${label}</button>`).join('')}</div>`;
+  }
+
+  const groupOf = (p) => (p === '体幹部' ? '体幹部' : p.slice(1));
+
+  function partsView() {
+    const m = state.partMeasure;
+    let html = `<div class="chips" role="group" aria-label="項目">${PART_MEASURES.map((x) =>
+      `<button class="chip" data-act="pm" data-v="${x.n}" aria-pressed="${x.n === m}">${x.n}</button>`).join('')}</div>`;
+    html += `<div class="body-grid">${partBox('体幹部', 'trunk')}${partBox('左腕', 'la')}${figure()}${partBox('右腕', 'ra')}${partBox('左脚', 'll')}${partBox('右脚', 'rl')}</div>`;
+    html += balance();
+    if (state.openPart) html += partPanel();
+    return html;
+  }
+
+  function partBox(p, cls) {
+    const i = state.current;
+    const name = `${p} ${state.partMeasure}`;
+    const v = ms[i].v[name];
+    const u = metaOf(name).u;
+    if (v == null) {
+      return `<div class="part part-${cls} is-empty"><span class="part-name">${p}</span><span class="part-value">—</span><span class="part-sub">記録なし</span></div>`;
+    }
+    const pj = prevWith(i, name);
+    const g = groupOf(p);
+    return `<button class="part part-${cls}" data-act="part" data-v="${g}" aria-expanded="${state.openPart === g}">
+      <span class="part-name">${p}</span>
+      <span class="part-value">${fmt(name, v)}<span class="tile-unit">${u}</span></span>
+      <span class="part-sub">${pj < 0 ? '初回' : fmtDelta(name, v - ms[pj].v[name])}</span></button>`;
+  }
+
+  function figure() {
+    const g = state.openPart;
+    const on = (k) => (g === k ? ' is-on' : '');
+    return `<div class="figure"><svg viewBox="0 0 100 170" aria-hidden="true">
+      <circle class="fig-fill" cx="50" cy="15" r="11"/>
+      <rect class="fig-fill${on('体幹部')}" data-act="part" data-v="体幹部" x="33" y="31" width="34" height="56" rx="9"/>
+      <path class="fig-part${on('腕')}" data-act="part" data-v="腕" stroke-width="10" d="M30 40 L15 82 M70 40 L85 82"/>
+      <path class="fig-part${on('脚')}" data-act="part" data-v="脚" stroke-width="12" d="M42 92 L39 160 M58 92 L61 160"/>
+    </svg></div>`;
+  }
+
+  function balance() {
+    const i = state.current;
+    const m = state.partMeasure;
+    const rows = ['腕', '脚'].map((g) => {
+      const ln = `左${g} ${m}`;
+      const rn = `右${g} ${m}`;
+      const l = ms[i].v[ln];
+      const r = ms[i].v[rn];
+      if (l == null || r == null) return '';
+      const d = Number((r - l).toFixed(metaOf(ln).d));
+      const u = metaOf(ln).u;
+      const diff = d === 0 ? '同じ' : `${d > 0 ? '右' : '左'}が ${Math.abs(d).toFixed(metaOf(ln).d)} ${u} 多い`;
+      return `<div class="bal-row"><span>${g}</span><span>左 ${fmt(ln, l)}</span><span>右 ${fmt(rn, r)}</span><span>${diff}</span></div>`;
+    }).join('');
+    return `<div class="balance"><div class="balance-head">左右の差</div>${rows}</div>`;
+  }
+
+  function partPanel() {
+    const g = state.openPart;
+    const m = state.partMeasure;
+    const i = state.current;
+    const names = g === '体幹部' ? [['体幹部', `体幹部 ${m}`]] : [['左', `左${g} ${m}`], ['右', `右${g} ${m}`]];
+    const stats = names.map(([label, name]) => {
+      const v = ms[i].v[name];
+      const pj = prevWith(i, name);
+      const u = metaOf(name).u ? ` ${metaOf(name).u}` : '';
+      return `<div><div class="stat-label">${label} 前回から</div><div class="stat-value">${v == null || pj < 0 ? '—' : fmtDelta(name, v - ms[pj].v[name]) + u}</div>
+        <div class="stat-sub">${v == null ? '' : `今回 ${withUnit(name, v)}`}</div></div>`;
+    }).join('');
+    const title = g === '体幹部' ? `体幹部 ${m}` : `${g} ${m}`;
+    return `<div class="panel part-panel">
+      <div class="panel-title">${title}${metaOf(names[0][1]).u ? `<span class="panel-unit">（${metaOf(names[0][1]).u}）</span>` : ''}</div>
+      <div class="panel-stats">${stats}</div>
+      ${periodChips()}
+      <div class="chart" data-chart="parts"></div>
+      <button class="link-btn" data-act="open-note">${md(ms[i].date)} のノートを開く</button>
+    </div>`;
+  }
+
+  function goalsView() {
+    const i = state.current;
+    const names = Object.keys(state.goals).sort((a, b) => order(a) - order(b));
+    if (!names.length) {
+      return `<div class="goal-empty">目標の値を決めると、今の値からあとどのくらいかを出します。<br>
+        <button class="btn cta" data-act="goal-edit" data-name="">＋ 目標を決める</button></div>`;
+    }
+    const rows = names.map((name) => {
+      const gi = goalInfo(name, i);
+      if (!gi) return '';
+      return `<button class="goal-row" data-act="goal-edit" data-name="${esc(name)}">
+        <span class="goal-top"><span class="goal-name">${esc(name)}</span><span class="goal-now">今 ${withUnit(name, gi.cur)}</span><span class="goal-left">${leftText(name, gi)}</span></span>
+        <span class="goal-bar${gi.dir < 0 ? ' is-down' : ''}"><i style="width:${(gi.p * 100).toFixed(0)}%"></i></span>
+        <span class="goal-meta">${gi.dir < 0
+          ? `<span>目標 ${withUnit(name, gi.target)}</span><span>${md(gi.since)} に決めたとき ${withUnit(name, gi.start)}</span>`
+          : `<span>${md(gi.since)} に決めたとき ${withUnit(name, gi.start)}</span><span>目標 ${withUnit(name, gi.target)}</span>`}</span>
+      </button>`;
+    }).join('');
+    return `<div class="goal-list">${rows}</div><div class="foot-row"><button class="btn" data-act="goal-edit" data-name="">＋ 目標を決める</button></div>`;
+  }
+
+  const goalHint = (name) => { const j = lastWith(name); return j >= 0 ? `今は ${withUnit(name, ms[j].v[name])}（${md(ms[j].date)} の測定）` : 'まだ記録がありません'; };
+
+  function goalSheet() {
+    const preset = state.goalEdit;
+    const editing = Boolean(preset && state.goals[preset]);
+    const choices = editing ? [preset] : state.tiles.filter((n) => !state.goals[n]);
+    const sel = preset && choices.includes(preset) ? preset : choices[0];
+    const title = editing ? '目標を変える' : '目標を決める';
+    if (!sel) {
+      return `<div class="scrim" data-act="modal-close"></div><div class="sheet" role="dialog" aria-label="${title}">
+        <div class="sheet-title">${title}</div><p class="hint">タイルにあるすべての項目に、目標が決まっています。</p>
+        <div class="sheet-actions"><button class="btn cta" data-act="modal-close">閉じる</button></div></div>`;
+    }
+    const lj = lastWith(sel);
+    return `<div class="scrim" data-act="modal-close"></div>
+      <div class="sheet" role="dialog" aria-label="${title}">
+        <div class="sheet-title">${title}</div>
+        <div class="goal-form">
+          <label class="dt">項目<select id="goal-item" ${editing ? 'disabled' : ''}>${choices.map((n) =>
+            `<option value="${esc(n)}" ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+          <label class="dt">目標の値<span class="goal-value"><input id="goal-value" inputmode="decimal" autocomplete="off"
+            value="${editing ? fmt(sel, state.goals[sel].target) : ''}" placeholder="${lj >= 0 ? fmt(sel, ms[lj].v[sel]) : ''}"><span class="field-unit" id="goal-unit">${metaOf(sel).u}</span></span></label>
+        </div>
+        <p class="hint" id="goal-hint">${goalHint(sel)}</p>
+        <div class="sheet-actions">${editing ? '<button class="btn" data-act="goal-remove">目標を消す</button><span class="spacer"></span>' : ''}<button class="btn" data-act="modal-close">キャンセル</button><button class="btn cta" data-act="goal-save">保存</button></div>
+      </div>`;
+  }
+
+  function saveGoal() {
+    const name = $('#goal-item').value;
+    const raw = $('#goal-value').value.trim().replace(',', '.');
+    const x = Number(raw);
+    if (raw === '' || !Number.isFinite(x)) { toast('目標の値を数字で入れてください'); return; }
+    const prev = state.goals[name];
+    state.goals[name] = { target: x, since: prev ? prev.since : TODAY };
+    state.modal = null;
+    toast(`${name}の目標を ${withUnit(name, x)} にしました`);
+    render();
+  }
+
+  function settingsPage() {
+    const extra = state.tiles.length - 3;
+    const summary = `${state.tiles.slice(0, 3).join('・')}${extra > 0 ? ` ほか ${extra} 項目` : ''}`;
+    return `<div class="set-title">Fitness Log</div>
+      ${setRow('記録の保存先', 'トレーニングの記録（1 日 1 ノート）を保存するフォルダ。', '<input class="set-input" id="set-log" value="Fitness/log" readonly>')}
+      ${setRow('種目の保存先', '種目のノート（1 種目 1 ノート）を保存するフォルダ。', '<input class="set-input" id="set-ex" value="Fitness/exercise" readonly>')}
+      <div class="set-group">体組成</div>
+      ${setRow('体組成を記録する', '体重や体脂肪率などの推移を見られるようにします。オンにすると、メニューに「体組成」が出ます。',
+        `<button class="toggle" role="switch" data-act="toggle-enabled" aria-checked="${state.enabled}" aria-label="体組成を記録する"></button>`)}
+      ${state.enabled ? setRow('体組成の保存先', '測定のノート（1 日 1 ノート）を保存するフォルダ。', '<input class="set-input" id="set-bc" value="Fitness/body-composition" readonly>')
+        + setRow('体組成の項目', esc(summary), '<button class="btn" data-act="items">一覧を編集…</button>') : ''}`;
+  }
+  const setRow = (name, desc, control) =>
+    `<div class="set-row"><div class="set-info"><div>${name}</div><div class="set-desc">${desc}</div></div>${control}</div>`;
+
+  function otherPage() {
+    return `<div class="placeholder">この見本で動くのは「体組成」と「設定」だけです。<br>
+      ${state.enabled ? '<button class="btn" data-act="nav" data-v="body">体組成を開く</button>' : '<button class="btn" data-act="nav" data-v="settings">設定を開く</button>'}</div>`;
+  }
+
+  function overlays() {
+    let h = '';
+    if (state.drawer) {
+      const nav = [['今日', 'today', '今日'], ['パッケージ', 'package', 'パッケージ'], ['種目', 'dumbbell', '種目'],
+        ['ルーチン', 'repeat', 'ルーチン'], ['ログ', 'chart', 'ログ']];
+      if (state.enabled) nav.push(['体組成', 'person', 'body']);
+      const item = ([label, ic, page]) =>
+        `<button class="drawer-item${state.page === page ? ' is-active' : ''}" data-act="nav" data-v="${page}">${icon(ic)}${label}</button>`;
+      h += `<div class="scrim" data-act="drawer-close"></div><nav class="drawer" aria-label="メニュー">
+        <div class="drawer-head"><span>Fitness Log</span><button class="icon-btn" data-act="drawer-close" aria-label="閉じる">${icon('x')}</button></div>
+        ${nav.map(item).join('')}<div class="drawer-sep"></div>${item(['設定', 'gear', 'settings'])}</nav>`;
+    }
+    if (state.modal === 'record') h += recordSheet();
+    if (state.modal === 'items') h += itemsSheet();
+    if (state.modal === 'goal') h += goalSheet();
+    return h;
+  }
+
+  function recordSheet() {
+    const fields = state.tiles.map((name, k) => {
+      const j = lastWith(name);
+      return `<label class="field"><span class="field-name">${esc(name)}</span>
+        <input id="rec-${k}" inputmode="decimal" autocomplete="off" placeholder="${j >= 0 ? fmt(name, ms[j].v[name]) : ''}">
+        <span class="field-unit">${metaOf(name).u}</span></label>`;
+    }).join('');
+    return `<div class="scrim" data-act="modal-close"></div>
+      <div class="sheet" role="dialog" aria-label="測定を記録">
+        <div class="sheet-title">測定を記録</div>
+        <div class="field-row">
+          <label class="dt">日付<input type="date" id="rec-date" value="${TODAY}"></label>
+          <label class="dt">時刻<input type="time" id="rec-time" value="14:30"></label>
+        </div>
+        <p class="hint">空欄の項目は記録しません。薄い数字は前回の値です。</p>
+        <div>${fields}</div>
+        <div class="sheet-actions"><button class="btn" data-act="modal-close">キャンセル</button><button class="btn cta" data-act="record-save">保存</button></div>
+      </div>`;
+  }
+
+  function itemsSheet() {
+    const rows = state.tiles.map((name) => `<div class="item-row"><span class="handle" aria-hidden="true">⋮⋮</span>
+      <span class="item-name">${esc(name)}</span><span class="item-unit">${metaOf(name).u}</span>
+      <button class="icon-btn" data-act="item-remove" data-name="${esc(name)}" aria-label="${esc(name)}を外す">${icon('trash')}</button></div>`).join('');
+    const inNotes = WHOLE_ALL.filter((n) => !state.tiles.includes(n) && ms.some((m) => m.v[n] != null));
+    const add = inNotes.length
+      ? inNotes.map((n) => `<div class="item-row"><span class="item-name">${esc(n)}</span><span class="item-unit">${metaOf(n).u}</span>
+        <button class="icon-btn" data-act="item-add" data-name="${esc(n)}" aria-label="${esc(n)}を足す">${icon('plus')}</button></div>`).join('')
+      : '<p class="hint">ノートにある項目は、すべて一覧に入っています。</p>';
+    return `<div class="scrim" data-act="modal-close"></div>
+      <div class="sheet" role="dialog" aria-label="体組成の項目">
+        <div class="sheet-title">体組成の項目</div>
+        <p class="hint">タイルに出す項目と、その並び順です。⋮⋮ で並べ替えます（この見本では並べ替えは動きません）。</p>
+        ${rows}
+        <div class="sub-head">ノートにある項目</div>
+        ${add}
+        <button class="btn new-item" data-act="item-new">＋ 新しい項目…</button>
+        <div class="sheet-actions"><button class="btn cta" data-act="modal-close">完了</button></div>
+      </div>`;
+  }
+
+  // ---- グラフ ----
+  function niceTicks(lo, hi) {
+    if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+    const raw = (hi - lo) / 3;
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    const n = raw / mag;
+    const step = (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+    const a = Math.floor(lo / step) * step;
+    const b = Math.ceil(hi / step) * step;
+    const out = [];
+    for (let v = a; v <= b + step * 1e-6; v += step) out.push(Number(v.toFixed(6)));
+    if (out.length < 2) out.push(Number((a + step).toFixed(6)));
+    return { ticks: out, dec: step >= 1 ? 0 : Math.min(2, Math.ceil(-Math.log10(step) - 1e-9)) };
+  }
+
+  function drawCharts() {
+    vBody.querySelectorAll('[data-chart]').forEach((el) => {
+      if (el.dataset.chart === 'whole') {
+        const name = el.dataset.name;
+        const gi = goalInfo(name, state.current);
+        drawChart(el, [{ label: name, name, color: '--series' }], name, gi ? { value: gi.target, down: gi.dir < 0 } : null);
+      } else {
+        const g = state.openPart;
+        const m = state.partMeasure;
+        const defs = g === '体幹部'
+          ? [{ label: '体幹部', name: `体幹部 ${m}`, color: '--series' }]
+          : [{ label: '左', name: `左${g} ${m}`, color: '--series' }, { label: '右', name: `右${g} ${m}`, color: '--series3' }];
+        drawChart(el, defs, defs[0].name);
+      }
+    });
+  }
+
+  function drawChart(el, defs, unitName, goal = null) {
+    const W = Math.max(240, Math.round(el.clientWidth));
+    const H = 180;
+    const P = { l: 36, r: 16, t: 20, b: 22 };
+    const endIso = ms[ms.length - 1].date;
+    const endN = dayNum(endIso);
+    const per = PERIODS.find((p) => p[0] === state.period);
+    let startN = per[2] ? endN - per[2] : dayNum(ms[0].date);
+    if (startN >= endN) startN = endN - 7;
+    const series = defs.map((d) => ({
+      ...d,
+      pts: ms.map((m, idx) => ({ idx, n: dayNum(m.date), iso: m.date, v: m.v[d.name] }))
+        .filter((p) => p.v != null && p.n >= startN && p.n <= endN),
+    }));
+    const all = series.flatMap((s) => s.pts);
+    const legend = defs.length > 1
+      ? `<div class="legend">${defs.map((d) => `<span><i style="background:var(${d.color})"></i>${d.label}</span>`).join('')}</div>` : '';
+    if (!all.length) { el.innerHTML = `${legend}<div class="chart-empty">この期間の記録はありません</div>`; return; }
+
+    const vals = all.map((p) => p.v).concat(goal ? [goal.value] : []);
+    const { ticks, dec } = niceTicks(Math.min(...vals), Math.max(...vals));
+    const y0 = ticks[0];
+    const y1 = ticks[ticks.length - 1];
+    const X = (n) => P.l + ((n - startN) / (endN - startN)) * (W - P.l - P.r);
+    const Y = (v) => P.t + (1 - (v - y0) / (y1 - y0)) * (H - P.t - P.b);
+    const u = metaOf(unitName).u;
+
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(defs.map((d) => d.name).join('・'))} の推移">`;
+    ticks.forEach((t) => {
+      const y = Y(t).toFixed(1);
+      s += `<line class="grid-line" x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}"/>`;
+      s += `<text class="axis-text" x="${P.l - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${t.toFixed(dec)}</text>`;
+    });
+    if (u) s += `<text class="axis-text" x="${P.l - 6}" y="${P.t - 9}" text-anchor="end">${u}</text>`;
+    if (goal) {
+      const gy = Y(goal.value);
+      s += `<line class="goal-line${goal.down ? ' is-down' : ''}" x1="${P.l}" x2="${W - P.r}" y1="${gy.toFixed(1)}" y2="${gy.toFixed(1)}"/>`;
+      s += `<text class="goal-text" x="${P.l + 4}" y="${(gy < P.t + 12 ? gy + 13 : gy - 5).toFixed(1)}">目標 ${fmt(unitName, goal.value)}</text>`;
+    }
+
+    let xt = [];
+    if (endN - startN <= 45) {
+      xt = series[0].pts.map((p) => ({ n: p.n, t: md(p.iso) }));
+    } else {
+      const s0 = parse(endIso);
+      s0.setDate(s0.getDate() - (endN - startN));
+      let d = new Date(s0.getFullYear(), s0.getMonth() + 1, 1);
+      while (dayNum(isoOf(d)) <= endN) {
+        xt.push({ n: dayNum(isoOf(d)), t: `${d.getMonth() + 1}月` });
+        d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      }
+      if (xt.length > 7) xt = xt.filter((_, k) => k % 2 === 0);
+    }
+    xt.filter((x) => X(x.n) >= P.l + 10 && X(x.n) <= W - P.r).forEach((x) => {
+      s += `<text class="axis-text" x="${X(x.n).toFixed(1)}" y="${H - 5}" text-anchor="middle">${x.t}</text>`;
+    });
+
+    series.forEach((se) => {
+      const d = se.pts.map((p, k) => `${k ? 'L' : 'M'}${X(p.n).toFixed(1)},${Y(p.v).toFixed(1)}`).join('');
+      s += `<path class="series-line" stroke="var(${se.color})" d="${d}"/>`;
+      const dense = se.pts.length > 16;
+      se.pts.forEach((p, k) => {
+        const isCur = p.idx === state.current;
+        if (dense && !isCur && k !== 0 && k !== se.pts.length - 1) return;
+        s += `<circle class="dot" fill="var(${se.color})" cx="${X(p.n).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${isCur ? 5.5 : 4}"/>`;
+      });
+    });
+
+    if (series.length === 1) {
+      const pts = series[0].pts;
+      const marks = pts.length > 1 ? [pts[0], pts[pts.length - 1]] : [pts[0]];
+      marks.forEach((p) => {
+        const x = X(p.n);
+        const anchor = x < P.l + 24 ? 'start' : x > W - P.r - 24 ? 'end' : 'middle';
+        const y = Y(p.v) - 10 < 10 ? Y(p.v) + 18 : Y(p.v) - 10;
+        const dx = anchor === 'start' ? -4 : anchor === 'end' ? 4 : 0;
+        s += `<text class="value-label" x="${(x + dx).toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}">${fmt(series[0].name, p.v)}</text>`;
+      });
+    }
+
+    s += `<line class="crosshair" x1="0" x2="0" y1="${P.t}" y2="${H - P.b}" visibility="hidden"/><g class="hl"></g>`;
+    s += `<rect x="${P.l - 8}" y="0" width="${W - P.l - P.r + 16}" height="${H}" fill="transparent"/></svg>`;
+    el.innerHTML = `${legend}${s}<div class="tooltip" hidden></div>`;
+
+    const svg = el.querySelector('svg');
+    const tip = el.querySelector('.tooltip');
+    const cross = svg.querySelector('.crosshair');
+    const hl = svg.querySelector('.hl');
+    const xs = [...new Set(all.map((p) => p.n))].sort((a, b) => a - b);
+    const show = (clientX) => {
+      const rect = svg.getBoundingClientRect();
+      const px = ((clientX - rect.left) / rect.width) * W;
+      let best = xs[0];
+      for (const n of xs) if (Math.abs(X(n) - px) < Math.abs(X(best) - px)) best = n;
+      const x = X(best);
+      cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
+      let dots = '';
+      const lines = [];
+      let iso = '';
+      series.forEach((se) => {
+        const p = se.pts.find((q) => q.n === best);
+        if (!p) return;
+        iso = p.iso;
+        dots += `<circle class="dot" fill="var(${se.color})" cx="${x}" cy="${Y(p.v)}" r="5.5"/>`;
+        lines.push(`${series.length > 1 ? `${se.label} ` : ''}${withUnit(se.name, p.v)}`);
+      });
+      hl.innerHTML = dots;
+      tip.innerHTML = `<b>${mdw(iso)}</b>${lines.join('　')}`;
+      tip.hidden = false;
+      const left = (x / W) * rect.width;
+      tip.style.left = `${Math.min(Math.max(left, 64), rect.width - 64)}px`;
+    };
+    const hide = () => { cross.setAttribute('visibility', 'hidden'); hl.innerHTML = ''; tip.hidden = true; };
+    svg.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') show(e.clientX); });
+    svg.addEventListener('pointerdown', (e) => show(e.clientX));
+    svg.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hide(); });
+  }
+
+  // ---- ノートの形 ----
+  function updateYaml() {
+    const m = ms[state.current];
+    const lines = ['---', `時刻: "${m.time.padStart(5, '0')}"`];
+    WHOLE_ALL.forEach((k) => { if (m.v[k] != null) lines.push(`${k}: ${fmt(k, m.v[k])}`); });
+    PARTS.forEach((p) => PART_MEASURES.forEach((pm) => {
+      const k = `${p} ${pm.n}`;
+      if (m.v[k] != null) lines.push(`${k}: ${fmt(k, m.v[k])}`);
+    }));
+    lines.push('---');
+    $('#yaml-path').textContent = `Fitness/body-composition/${m.date}.md`;
+    $('#yaml').textContent = lines.join('\n');
+    const gl = ['---', '# categories などほかの設定は省略', 'body_goals:'];
+    Object.keys(state.goals).sort((a, b) => order(a) - order(b)).forEach((n) => {
+      const g = state.goals[n];
+      gl.push(`  - name: ${n}`, `    target: ${fmt(n, g.target)}`, `    since: ${g.since}`);
+    });
+    if (gl.length === 3) gl[2] = 'body_goals: []';
+    gl.push('---');
+    $('#goal-yaml').textContent = gl.join('\n');
+  }
+
+  // ---- 操作 ----
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  function saveRecord() {
+    const date = $('#rec-date').value;
+    const time = ($('#rec-time').value || '').replace(/^0(\d)/, '$1');
+    const v = {};
+    for (let k = 0; k < state.tiles.length; k++) {
+      const raw = $(`#rec-${k}`).value.trim().replace(',', '.');
+      if (raw === '') continue;
+      const x = Number(raw);
+      if (!Number.isFinite(x)) { toast(`「${state.tiles[k]}」は数字で入れてください`); return; }
+      v[state.tiles[k]] = x;
+    }
+    if (!date) { toast('日付を入れてください'); return; }
+    if (!Object.keys(v).length) { toast('数値を 1 つ以上入れてください'); return; }
+    let idx = ms.findIndex((m) => m.date === date);
+    if (idx >= 0) {
+      Object.assign(ms[idx].v, v);
+      if (time) ms[idx].time = time;
+      toast(`${date}.md を書き換えました`);
+    } else {
+      ms.push({ date, time: time || '0:00', v });
+      ms.sort((a, b) => (a.date < b.date ? -1 : 1));
+      idx = ms.findIndex((m) => m.date === date);
+      toast(`${date}.md に保存しました`);
+    }
+    state.current = idx;
+    state.modal = null;
+    state.view = 'whole';
+    render();
+  }
+
+  screen.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el || !screen.contains(el)) return;
+    const act = el.dataset.act;
+    const v = el.dataset.v;
+    const name = el.dataset.name;
+    switch (act) {
+      case 'drawer': state.drawer = true; break;
+      case 'drawer-close': state.drawer = false; break;
+      case 'nav': state.page = v; state.drawer = false; break;
+      case 'prev': state.current = Math.max(0, state.current - 1); break;
+      case 'next': state.current = Math.min(ms.length - 1, state.current + 1); break;
+      case 'view': state.view = v; break;
+      case 'tile': state.open = state.open === name ? null : name; break;
+      case 'period': state.period = v; break;
+      case 'record': state.modal = 'record'; break;
+      case 'record-save': saveRecord(); return;
+      case 'modal-close': state.modal = null; break;
+      case 'items': state.modal = 'items'; break;
+      case 'item-remove':
+        state.tiles = state.tiles.filter((n) => n !== name);
+        if (state.open === name) state.open = null;
+        break;
+      case 'item-add': state.tiles.push(name); break;
+      case 'item-new': toast('名前と単位を入れて足します（この見本では動きません）'); return;
+      case 'pm':
+        state.partMeasure = v;
+        if (v === '筋質点数' && state.openPart === '体幹部') state.openPart = null;
+        break;
+      case 'part': state.openPart = state.openPart === v ? null : v; break;
+      case 'open-note': toast(`${ms[state.current].date}.md が開きます（この見本では開きません）`); return;
+      case 'toggle-enabled': state.enabled = !state.enabled; break;
+      case 'goal-edit': state.goalEdit = name || ''; state.modal = 'goal'; break;
+      case 'goal-save': saveGoal(); return;
+      case 'goal-remove':
+        delete state.goals[state.goalEdit];
+        state.modal = null;
+        toast('目標を消しました');
+        break;
+      default: return;
+    }
+    render();
+  });
+
+  screen.addEventListener('change', (e) => {
+    if (e.target.id !== 'goal-item') return;
+    const n = e.target.value;
+    const j = lastWith(n);
+    $('#goal-unit').textContent = metaOf(n).u;
+    $('#goal-value').placeholder = j >= 0 ? fmt(n, ms[j].v[n]) : '';
+    $('#goal-hint').textContent = goalHint(n);
+  });
+
+  document.querySelectorAll('[data-demo]').forEach((b) => b.addEventListener('click', () => {
+    const d = b.dataset.demo;
+    state.drawer = false;
+    state.modal = null;
+    if (d === 'settings') {
+      state.page = 'settings';
+    } else if (!state.enabled && d !== 'menu') {
+      state.page = 'settings';
+      render();
+      toast('「体組成を記録する」をオンにすると見られます');
+      return;
+    } else if (d === 'menu') {
+      state.drawer = true;
+    } else {
+      state.page = 'body';
+      if (d === 'tile') { state.view = 'whole'; state.open = state.tiles[0] || null; }
+      if (d === 'parts') { state.view = 'parts'; state.openPart = '脚'; }
+      if (d === 'goals') state.view = 'goals';
+      if (d === 'record') state.modal = 'record';
+      if (d === 'items') { state.view = 'whole'; state.modal = 'items'; }
+    }
+    render();
+    const r = $('#phone').getBoundingClientRect();
+    if (r.top < 0 || r.top > window.innerHeight * 0.6) $('#phone').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }));
+
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawCharts, 120); });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
