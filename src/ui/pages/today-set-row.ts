@@ -46,7 +46,7 @@ type SaveSet = (updated: SetLog) => boolean;
 /**
  * 終えたセットの 1 行: 「① ｜ 15 kg × 5 回 ｜ 22:40–22:40 (0:22) 休憩 2:33 ｜ 💬」。
  * 左の列（種目の ▶ と同じ列）にセット番号の丸。数字は押せばその場で直せる。右のアイコンでコメント（感じたこと）を書く。
- * 番号の丸を押す（右クリック）とメニュー（コメント・削除）。
+ * 右の … ・番号の丸を押す（右クリック）とメニュー（セットを削除・この種目を今日から外す）。
  */
 export function renderSetRow(
 	ctx: PageContext,
@@ -100,7 +100,7 @@ export function renderSetRow(
 			attr: { type: 'button', 'aria-label': t('today.setMenu', { n }) },
 		});
 	const openMenu = (event: MouseEvent, anchor: HTMLElement) =>
-		openSetMenu(ctx, section, card, n, address, comment, event, anchor);
+		openSetMenu(ctx, section, card, n, address, event, anchor);
 	label.addEventListener('click', (event) => openMenu(event, label));
 	row.addEventListener('contextmenu', (event) => openMenu(event, label));
 
@@ -203,8 +203,8 @@ export function renderSetRow(
 }
 
 /**
- * セットの操作のメニュー（番号の丸・行の … ・右クリック）: コメントを書く・セットを削除・
- * この種目を今日から外す（記録したセットも消す）
+ * セットの操作のメニュー（番号の丸・行の … ・右クリック）: セットを削除・この種目を今日から外す（記録したセットも消す）。
+ * コメントは行の 💬（すぐ左にあるので、メニューには重ねて出さない）
  */
 function openSetMenu(
 	ctx: PageContext,
@@ -212,19 +212,12 @@ function openSetMenu(
 	card: CardModel,
 	n: number,
 	address: SetAddress,
-	comment: () => void,
 	event: MouseEvent,
 	anchor: HTMLElement,
 ): void {
 	event.preventDefault();
 	event.stopPropagation();
 	const menu = new Menu();
-	menu.addItem((item) =>
-		item
-			.setTitle(t('today.comment'))
-			.setIcon('message-circle')
-			.onClick(comment),
-	);
 	menu.addItem((item) =>
 		item
 			.setTitle(t('today.deleteSetN', { n }))

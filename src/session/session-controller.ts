@@ -13,6 +13,7 @@ import {
 	removeExercise,
 	removeSession,
 	renameSession,
+	resetSession,
 	resumeDay,
 	resumeSession,
 	setsInSession,
@@ -468,6 +469,30 @@ export class SessionController {
 				data,
 				date,
 				sectionKey,
+				null,
+				todayString(this.now()),
+			);
+		});
+	}
+
+	/**
+	 * パッケージをその日の最初の状態（予定）に戻す（間違えて「筋トレを開始」した等）。開始・終了の時刻・記録したセット・
+	 * コメント・その日だけ足した種目を消し、並べ替えと外した種目も戻す。見出しは残すので、予定としてそのまま出る
+	 * （ルーチンの予定もスキップしない）。進行中のセットは取り消す
+	 */
+	async resetSessionOnDay(date: string, ref: SessionRef): Promise<void> {
+		const { match } = this.sessionMatcher(ref);
+		if (this.index.day(date)?.sessions.some((s) => match(s.name)))
+			await this.write(date, (d) => {
+				resetSession(d, match);
+			});
+		await this.store.update((data) => {
+			if (this.isActiveIn(data.activeSet, date, ref))
+				data.activeSet = null;
+			moveDaySection(
+				data,
+				date,
+				sectionKeyOf(ref),
 				null,
 				todayString(this.now()),
 			);

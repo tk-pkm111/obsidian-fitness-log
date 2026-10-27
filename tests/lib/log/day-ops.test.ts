@@ -14,6 +14,7 @@ import {
 	removeExercise,
 	removeSession,
 	renameSession,
+	resetSession,
 	setsInSession,
 	updateSet,
 } from '../../../src/lib/log/day-ops';
@@ -644,6 +645,36 @@ describe('その日の筋トレをまとめて終える（endDay）', () => {
 		expect(() =>
 			endDay(day, { time: '19:00:00', includeOther: true }),
 		).toThrow(DayLogError);
+	});
+});
+
+describe('resetSession（最初の状態に戻す）', () => {
+	it('開始・終了・種目の欄・コメントを消して見出しだけ残す。ほかのセッションはそのまま', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'CARDIO',
+					notes: ['間違えて開始'],
+					start: '00:57:00',
+					end: '02:17:00',
+					exercises: [
+						{
+							name: 'トレッドミル',
+							sets: [timed('00:57:10', '01:00:00')],
+						},
+						{ name: 'バイク', sets: [] },
+					],
+				},
+				{ name: 'B', notes: [], start: '01:00:00', exercises: [] },
+			],
+		};
+		expect(resetSession(day, exact('CARDIO'))).toBe(true);
+		expect(day.sessions).toEqual([
+			{ name: 'CARDIO', notes: [], exercises: [] },
+			{ name: 'B', notes: [], start: '01:00:00', exercises: [] },
+		]);
+		expect(resetSession(day, exact('無い'))).toBe(false);
 	});
 });
 

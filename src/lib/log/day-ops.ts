@@ -249,6 +249,21 @@ export function removeSession(
 	day.sessions.splice(index, 1);
 }
 
+/**
+ * セッションを最初の状態（予定）に戻す: 開始・終了の時刻、種目の欄（記録したセットも）、コメントを消し、見出しだけ残す
+ * （間違えて「筋トレを開始」したとき等）。無ければ false
+ */
+export function resetSession(day: DayLog, matches: SessionMatcher): boolean {
+	const session = findSession(day, matches);
+	if (!session) return false;
+	session.notes = [];
+	session.exercises = [];
+	delete session.start;
+	delete session.end;
+	delete session.time;
+	return true;
+}
+
 /** セッションを別のパッケージにする（見出しの名前だけ変える。開始・終了・セット・コメントはそのまま） */
 export function renameSession(
 	day: DayLog,

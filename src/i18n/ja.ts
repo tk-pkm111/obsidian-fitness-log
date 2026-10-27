@@ -135,7 +135,6 @@ export const ja = {
 	'today.olderNotes': '前の {n} 件',
 	'today.foldNotes': 'たたむ',
 	'today.setMenu': 'セット {n} の操作',
-	'today.comment': 'コメント',
 	'today.addComment': 'コメントを書く',
 	'today.editComment': 'コメントを直す',
 	'today.deleteSetN': 'セット {n} を削除',
@@ -156,6 +155,12 @@ export const ja = {
 	'today.removePackage': 'パッケージを外す',
 	'today.removeOther': '単発の種目を外す',
 	'today.removeShort': '外す',
+	'today.resetPackage': '初期化する',
+	'today.resetConfirm':
+		'開始・終了の時刻を消して、予定の状態（パッケージに登録した種目）に戻しますか？',
+	'today.resetLoses': '{items}も消えます。',
+	'today.resetSets': '記録した {n} セット',
+	'today.resetNotes': 'コメント {n} 件',
 	'today.removeSectionConfirm': '{day}の予定から外しますか？',
 	'today.removeSectionConfirmSets':
 		'記録した {n} セットも消えます。外しますか？',

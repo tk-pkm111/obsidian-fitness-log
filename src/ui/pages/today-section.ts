@@ -267,13 +267,8 @@ function openSectionMenu(
 	event: MouseEvent,
 ): void {
 	const { services, date } = ctx;
+	// コメントは名前の行の 💬（すぐ左にあるので、メニューには重ねて出さない）
 	const menu = new Menu();
-	menu.addItem((item) =>
-		item
-			.setTitle(t('today.addNote'))
-			.setIcon('message-square')
-			.onClick(() => addNote(ctx, section)),
-	);
 	const pkg = section.pkg;
 	if (pkg)
 		menu.addItem((item) =>
@@ -289,6 +284,15 @@ function openSectionMenu(
 				.setTitle(t('today.changePackage'))
 				.setIcon('arrow-right-left')
 				.onClick(() => changePackage(ctx, section, env)),
+		);
+	// 間違えて「筋トレを開始」したとき等に、予定の状態（パッケージに登録した種目）へ戻す
+	if (canResetSection(section, env))
+		menu.addItem((item) =>
+			item
+				.setTitle(t('today.resetPackage'))
+				.setIcon('undo-2')
+				.setWarning(true)
+				.onClick(() => confirmResetSection(ctx, section)),
 		);
 	if (
 		section.status === 'planned' &&
@@ -415,6 +419,46 @@ function confirmRemoveSection(ctx: PageContext, section: SectionModel): void {
 		onConfirm: () =>
 			ctx.run(() =>
 				ctx.services.controller.removeSessionFromDay(
+					ctx.date,
+					sectionRef(section),
+				),
+			),
+	}).open();
+}
+
+/** 初期化できるか: パッケージで、始めた・終えた・記録やコメントがある（予定のままなら戻すものが無い） */
+function canResetSection(section: SectionModel, env: SectionEnv): boolean {
+	return (
+		!section.isOther &&
+		!env.isFuture &&
+		(section.status !== 'planned' || section.notes.length > 0)
+	);
+}
+
+/**
+ * 「初期化する」: 「CARDIO ／ 開始・終了の時刻を消して、予定の状態（パッケージに登録した種目）に戻しますか？
+ * 記録した 3 セットとコメント 2 件も消えます。」。消えるものがあれば警告の色
+ */
+function confirmResetSection(ctx: PageContext, section: SectionModel): void {
+	const sets = section.cards.reduce((n, c) => n + c.sets.length, 0);
+	const lost = [
+		...(sets > 0 ? [t('today.resetSets', { n: sets })] : []),
+		...(section.notes.length > 0
+			? [t('today.resetNotes', { n: section.notes.length })]
+			: []),
+	];
+	new ConfirmModal(ctx.app, {
+		title: section.title,
+		message:
+			t('today.resetConfirm') +
+			(lost.length > 0
+				? t('today.resetLoses', { items: lost.join('と') })
+				: ''),
+		confirmText: t('today.resetPackage'),
+		danger: lost.length > 0,
+		onConfirm: () =>
+			ctx.run(() =>
+				ctx.services.controller.resetSessionOnDay(
 					ctx.date,
 					sectionRef(section),
 				),

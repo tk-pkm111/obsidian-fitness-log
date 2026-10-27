@@ -613,6 +613,42 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		]);
 	});
 
+	it('初期化すると、時刻・記録・コメント・その日の並びを消して予定に戻る（ルーチンはスキップしない。進行中のセットは取り消し）', async () => {
+		const { fake, store, index, controller } = await make();
+		const ref = { packageId: 'pk_a', sessionName: 'PUSH A' };
+		await store.update((d) => {
+			d.routines = [routine('pk_a')];
+			d.dayOrders = { '2026-10-01 pkg:pk_a': ['ex:ex_d', 'ex:ex_y'] };
+			d.dayRemoved = { '2026-10-01 pkg:pk_a': ['ex:ex_d'] };
+		});
+		await controller.startSession('2026-10-01', 'pk_a');
+		await controller.addSessionNote('2026-10-01', ref, '間違えて開始');
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await controller.finishSet(9);
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await controller.resetSessionOnDay('2026-10-01', ref);
+		expect(index.day('2026-10-01')?.sessions).toEqual([
+			{ name: 'PUSH A', notes: [], exercises: [] },
+		]);
+		const text = fake.vault.text('Fitness/log/2026-10-01.md')!;
+		expect(text).not.toContain('時間');
+		expect(text).not.toContain('間違えて開始');
+		expect(store.current.activeSet).toBeNull();
+		expect(store.current.routines[0]?.skipDates).toEqual([]);
+		expect(store.current.dayOrders).toBeUndefined();
+		expect(store.current.dayRemoved).toBeUndefined();
+	});
+
 	it('単発の種目もパッケージとまとめて終え（開始は最初のセット）、再開・種目の追加で続けられる', async () => {
 		const { fake, index, controller, setClock } = await make();
 		const path = 'Fitness/log/2026-10-01.md';
