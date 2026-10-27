@@ -182,7 +182,7 @@ for (let i = days - 1; i >= 0; i--) {
 		}
 		logged.push({ name: exercise.name, sets });
 	}
-	const day = { date, sessions: [{ name: session.name, note: '', exercises: logged }] };
+	const day = { date, sessions: [{ name: session.name, notes: [], exercises: logged }] };
 	const frontmatter = {};
 	lib.applySummaryToFrontmatter(frontmatter, day);
 	writeFileSync(file, `---\n${YAML.stringify(frontmatter)}---\n${lib.formatBlock(day)}\n`);

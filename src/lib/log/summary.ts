@@ -154,3 +154,45 @@ export function summarizeSession(session: SessionLog): SessionSummary {
 		durationMin: Math.round(sessionDurationSec(session) / 60),
 	};
 }
+
+export interface WorkoutSummary {
+	/** その日の筋トレの最初の開始・最後の終了（'HH:mm:ss'。時刻が無ければ null） */
+	start: string | null;
+	end: string | null;
+	durationMin: number;
+	/** 記録した種目の数（同じ種目は 1 つ） */
+	exercises: number;
+	sets: number;
+}
+
+/**
+ * その日の筋トレ全体（パッケージ・単発の種目をまとめて 1 日の筋トレ）のまとめ（「お疲れ様でした」の表示）。
+ * 時間は最初の開始から最後の終了まで（パッケージどうしが重なっていても足し合わせない）
+ */
+export function summarizeWorkout(day: DayLog): WorkoutSummary {
+	const times: number[] = [];
+	for (const session of day.sessions) {
+		const span = sessionSpan(session);
+		for (const time of [
+			session.start,
+			session.end,
+			span?.start,
+			span?.end,
+		]) {
+			const sec = time ? parseTime(time) : null;
+			if (sec !== null) times.push(sec);
+		}
+	}
+	const range = circularRange(times);
+	const start = range ? secondsToTime(range.first) : null;
+	const end = range ? secondsToTime(range.last) : null;
+	const summary = summarizeDay(day);
+	return {
+		start,
+		end,
+		durationMin:
+			start && end ? Math.round((spanSeconds(start, end) ?? 0) / 60) : 0,
+		exercises: summary.exercises.length,
+		sets: summary.sets,
+	};
+}

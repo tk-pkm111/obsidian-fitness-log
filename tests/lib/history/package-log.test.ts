@@ -37,7 +37,7 @@ const session = (
 	exercises: Array<[string, SetLog[]]>,
 ): SessionLog => ({
 	name,
-	note: '',
+	notes: [],
 	exercises: exercises.map(([n, sets]) => ({ name: n, sets })),
 });
 const day = (date: string, ...sessions: SessionLog[]): DayLog => ({

@@ -20,7 +20,7 @@ const dayWith = (
 	sessions: [
 		{
 			name: session,
-			note: '',
+			notes: [],
 			exercises: [
 				{
 					name: exercise,

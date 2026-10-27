@@ -216,12 +216,17 @@ describe('SessionController', () => {
 		expect(fake.vault.text(path)).toContain(
 			'| 1 | 10 | 7 | - | - | 右肩注意 |',
 		);
-		await controller.setSessionNote(
-			'2026-10-01',
-			{ packageId: 'pk_a', sessionName: null },
-			'調子よし',
+		const ref = { packageId: 'pk_a', sessionName: null };
+		await controller.addSessionNote('2026-10-01', ref, '調子よし');
+		await controller.addSessionNote('2026-10-01', ref, '右肩に注意');
+		expect(fake.vault.text(path)).toContain(
+			'- コメント: 調子よし\n- コメント: 右肩に注意',
 		);
-		expect(fake.vault.text(path)).toContain('- コメント: 調子よし');
+		await controller.editSessionNote('2026-10-01', ref, 0, '調子よし', '');
+		expect(fake.vault.text(path)).not.toContain('調子よし');
+		await expect(
+			controller.editSessionNote('2026-10-01', ref, 0, '調子よし', 'x'),
+		).rejects.toThrow();
 		await controller.deleteSet('2026-10-01', address);
 		expect(fake.vault.text(path)).not.toContain('ケーブルYレイズ');
 		expect(FakeFileManager.read(fake.vault.text(path))).toMatchObject({
@@ -239,7 +244,7 @@ describe('SessionController', () => {
 		expect(index.day('2026-10-01')?.sessions).toEqual([
 			{
 				name: 'PUSH A',
-				note: '',
+				notes: [],
 				exercises: [{ name: 'ディップス', sets: [] }],
 			},
 		]);
@@ -297,7 +302,7 @@ describe('SessionController', () => {
 		expect(index.day('2026-10-01')?.sessions).toEqual([]);
 
 		await controller.addExerciseToDay('2026-10-01', OTHER_SESSION, 'ex_d');
-		await controller.setSessionNote(
+		await controller.addSessionNote(
 			'2026-10-01',
 			OTHER_SESSION,
 			'混んでいた',
@@ -308,7 +313,7 @@ describe('SessionController', () => {
 			'ex_d',
 		);
 		expect(index.day('2026-10-01')?.sessions).toEqual([
-			{ name: null, note: '混んでいた', exercises: [] },
+			{ name: null, notes: ['混んでいた'], exercises: [] },
 		]);
 	});
 
@@ -450,10 +455,7 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		setClock(new Date(2026, 9, 1, 18, 31, 0));
 		await controller.finishSet(9);
 		setClock(new Date(2026, 9, 1, 19, 20, 5));
-		await controller.endSession('2026-10-01', {
-			packageId: 'pk_a',
-			sessionName: null,
-		});
+		await controller.endDay('2026-10-01');
 		const text = fake.vault.text(path)!;
 		expect(text).toContain('- 時間: 18:30:05 – 19:20:05');
 		expect(FakeFileManager.read(text)).toMatchObject({
@@ -462,48 +464,47 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		});
 	});
 
-	it('筋トレ中に別のパッケージは開始できない。セットが進行中なら終了できない', async () => {
-		const { controller } = await make();
+	it('筋トレ中でも別のパッケージを始められ、「筋トレを終了」でまとめて終える。セットが進行中なら終了できない', async () => {
+		const { fake, controller, setClock } = await make();
+		const path = 'Fitness/log/2026-10-01.md';
 		await controller.startSession('2026-10-01', 'pk_a');
-		await expect(
-			controller.startSession('2026-10-01', 'pk_b'),
-		).rejects.toBeInstanceOf(SessionError);
 		await controller.startSet({
 			date: '2026-10-01',
 			packageId: 'pk_a',
 			exerciseId: 'ex_y',
 			weight: 10,
 		});
-		await expect(
-			controller.endSession('2026-10-01', {
-				packageId: 'pk_a',
-				sessionName: null,
-			}),
-		).rejects.toBeInstanceOf(SessionError);
+		setClock(new Date(2026, 9, 1, 18, 31, 0));
 		await controller.finishSet(8);
-		await controller.endSession('2026-10-01', {
-			packageId: 'pk_a',
-			sessionName: null,
+		await controller.startSession('2026-10-01', 'pk_b');
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_b',
+			exerciseId: 'ex_d',
+			weight: null,
 		});
-		await expect(
-			controller.startSession('2026-10-01', 'pk_b'),
-		).resolves.toBeDefined();
+		await expect(controller.endDay('2026-10-01')).rejects.toBeInstanceOf(
+			SessionError,
+		);
+		setClock(new Date(2026, 9, 1, 18, 40, 0));
+		await controller.finishSet(10);
+		setClock(new Date(2026, 9, 1, 18, 45, 0));
+		await controller.endDay('2026-10-01');
+		const text = fake.vault.text(path)!;
+		// 先のパッケージは最後のセットの終了、最後にやったパッケージは押した時刻
+		expect(text).toContain('## PUSH A\n- 時間: 18:30:05 – 18:31:00\n');
+		expect(text).toContain('## PULL A\n- 時間: 18:31:00 – 18:45:00\n');
 	});
 
-	it('再開すると終了時刻が消えて筋トレ中に戻る', async () => {
+	it('「筋トレを再開」でまとめて筋トレ中に戻る', async () => {
 		const { fake, controller } = await make();
 		await controller.startSession('2026-10-01', 'pk_a');
-		await controller.endSession('2026-10-01', {
-			packageId: 'pk_a',
-			sessionName: null,
-		});
-		await controller.resumeSession('2026-10-01', {
-			packageId: 'pk_a',
-			sessionName: null,
-		});
+		await controller.endDay('2026-10-01');
+		await controller.resumeDay('2026-10-01');
 		expect(fake.vault.text('Fitness/log/2026-10-01.md')).toContain(
 			'- 時間: 18:30:05 –\n',
 		);
+		await expect(controller.resumeDay('2026-10-01')).rejects.toThrow();
 	});
 
 	const routine = (packageId: string) => ({
@@ -608,16 +609,14 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		);
 		expect(store.current.routines[0]?.skipDates).toEqual(['2026-10-01']);
 		expect(index.day('2026-10-01')?.sessions).toEqual([
-			{ name: 'PULL A', note: '', exercises: [] },
+			{ name: 'PULL A', notes: [], exercises: [] },
 		]);
 	});
 
-	it('単発の種目も「筋トレを終了」で終え（開始は最初のセット）、再開・種目の追加で続けられる', async () => {
+	it('単発の種目もパッケージとまとめて終え（開始は最初のセット）、再開・種目の追加で続けられる', async () => {
 		const { fake, index, controller, setClock } = await make();
 		const path = 'Fitness/log/2026-10-01.md';
-		await expect(
-			controller.endSession('2026-10-01', OTHER_SESSION),
-		).rejects.toThrow();
+		await expect(controller.endDay('2026-10-01')).rejects.toThrow();
 		await controller.startSet({
 			date: '2026-10-01',
 			packageId: null,
@@ -626,18 +625,22 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		});
 		setClock(new Date(2026, 9, 1, 18, 31, 0));
 		await controller.finishSet(12);
-		// 筋トレ中のパッケージがあっても、単発の種目は別に終えられる
+		setClock(new Date(2026, 9, 1, 18, 35, 0));
 		await controller.startSession('2026-10-01', 'pk_a');
 		setClock(new Date(2026, 9, 1, 18, 40, 0));
-		await controller.endSession('2026-10-01', OTHER_SESSION);
+		await controller.endDay('2026-10-01');
+		// 最後にやったのは「筋トレを開始」したパッケージ（押した時刻）。単発の種目は最後のセットの終了
 		expect(fake.vault.text(path)).toContain(
-			'## その他\n- 時間: 18:30:05 – 18:40:00\n',
+			'## PUSH A\n- 時間: 18:35:00 – 18:40:00\n',
 		);
-		await controller.resumeSession('2026-10-01', OTHER_SESSION);
+		expect(fake.vault.text(path)).toContain(
+			'## その他\n- 時間: 18:30:05 – 18:31:00\n',
+		);
+		await controller.resumeDay('2026-10-01');
 		expect(fake.vault.text(path)).toContain(
 			'## その他\n- 時間: 18:30 – 18:31\n',
 		);
-		await controller.endSession('2026-10-01', OTHER_SESSION);
+		await controller.endDay('2026-10-01');
 		await controller.addExerciseToDay('2026-10-01', OTHER_SESSION, 'ex_d');
 		const other = index
 			.day('2026-10-01')
@@ -649,20 +652,33 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		]);
 	});
 
-	it('別のパッケージが筋トレ中なら再開できない', async () => {
-		const { controller } = await make();
-		const refA = { packageId: 'pk_a', sessionName: null };
+	it('記録した種目は withSets のときだけ外せる（セットごと消し、パッケージの種目は「外した」と覚える）', async () => {
+		const { fake, store, controller } = await make();
+		const ref = { packageId: 'pk_a', sessionName: null };
 		await controller.startSession('2026-10-01', 'pk_a');
-		await controller.endSession('2026-10-01', refA);
-		await controller.startSession('2026-10-01', 'pk_b');
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		await controller.finishSet(9);
 		await expect(
-			controller.resumeSession('2026-10-01', refA),
+			controller.removeExerciseFromDay('2026-10-01', ref, 'ex_y'),
 		).rejects.toBeInstanceOf(SessionError);
+		await controller.removeExerciseFromDay('2026-10-01', ref, 'ex_y', {
+			withSets: true,
+		});
+		expect(fake.vault.text('Fitness/log/2026-10-01.md')).not.toContain(
+			'ケーブルYレイズ',
+		);
+		expect(store.current.dayRemoved).toEqual({
+			'2026-10-01 pkg:pk_a': ['ex:ex_y'],
+		});
 	});
 
 	it('再開は今日だけ。日が変わってから終えると最後のセットの終了で終える', async () => {
 		const { fake, store, controller, setClock } = await make();
-		const ref = { packageId: 'pk_a', sessionName: null };
 		await controller.startSession('2026-10-01', 'pk_a');
 		await controller.startSet({
 			date: '2026-10-01',
@@ -674,12 +690,12 @@ describe('SessionController（筋トレの開始・終了）', () => {
 		await controller.finishSet(9);
 		// 翌日
 		setClock(new Date(2026, 9, 2, 9, 0, 0));
-		await controller.endSession('2026-10-01', ref);
+		await controller.endDay('2026-10-01');
 		const path = 'Fitness/log/2026-10-01.md';
 		expect(fake.vault.text(path)).toContain('- 時間: 18:30:05 – 18:31:00');
-		await expect(
-			controller.resumeSession('2026-10-01', ref),
-		).rejects.toBeInstanceOf(SessionError);
+		await expect(controller.resumeDay('2026-10-01')).rejects.toBeInstanceOf(
+			SessionError,
+		);
 		// 今日の並び（その日だけ）
 		await controller.reorderDay('2026-10-02', 'pkg:pk_a', ['ex:b', 'ex:a']);
 		expect(store.current.dayOrders).toEqual({

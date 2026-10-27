@@ -34,7 +34,11 @@ import { ConfirmModal } from '../modals/confirm-modal';
 import { TextPromptModal } from '../modals/text-prompt-modal';
 import { WheelPickerModal } from '../modals/wheel-picker-modal';
 import type { PageContext } from '../page-context';
-import { pickDistanceWheel, pickWeightWheel } from './today-actions';
+import {
+	pickDistanceWheel,
+	pickWeightWheel,
+	removeExerciseWithSets,
+} from './today-actions';
 
 /** 直したセットを日ノートに書く（描き直しで新しい値が出る）。true を返す */
 type SaveSet = (updated: SetLog) => boolean;
@@ -95,30 +99,10 @@ export function renderSetRow(
 			text: String(n),
 			attr: { type: 'button', 'aria-label': t('today.setMenu', { n }) },
 		});
-	const openMenu = (event: MouseEvent) => {
-		event.preventDefault();
-		const menu = new Menu();
-		menu.addItem((item) =>
-			item
-				.setTitle(t('today.comment'))
-				.setIcon('message-circle')
-				.onClick(comment),
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle(t('today.deleteSet'))
-				.setIcon('trash-2')
-				.setWarning(true)
-				.onClick(() => confirmDelete(ctx, card, n, address)),
-		);
-		// キーボードで押したときはマウスの位置が無いので、ボタンの下に出す
-		if (event.clientX === 0 && event.clientY === 0) {
-			const rect = label.getBoundingClientRect();
-			menu.showAtPosition({ x: rect.left, y: rect.bottom });
-		} else menu.showAtMouseEvent(event);
-	};
-	label.addEventListener('click', openMenu);
-	row.addEventListener('contextmenu', openMenu);
+	const openMenu = (event: MouseEvent, anchor: HTMLElement) =>
+		openSetMenu(ctx, section, card, n, address, comment, event, anchor);
+	label.addEventListener('click', (event) => openMenu(event, label));
+	row.addEventListener('contextmenu', (event) => openMenu(event, label));
 
 	const title = `${card.name} ・ ${t('today.set', { n })}`;
 	const field = { ctx, set, key, save, title };
@@ -201,12 +185,72 @@ export function renderSetRow(
 		'fitness-log-comment-button',
 	);
 	button.toggleClass('has-comment', set.note.length > 0);
+	// … で操作のメニュー（番号の丸を押したときと同じ）。消す操作はここから見つけられるように
+	const more = iconButton(
+		row,
+		'more-horizontal',
+		t('today.setMenu', { n }),
+		(event) => openMenu(event, more),
+		'fitness-log-set-more',
+	);
 	if (set.note) {
 		const note = row.createDiv({
 			cls: 'fitness-log-set-note',
 			text: set.note,
 		});
 		note.addEventListener('click', comment);
+	}
+}
+
+/**
+ * セットの操作のメニュー（番号の丸・行の … ・右クリック）: コメントを書く・セットを削除・
+ * この種目を今日から外す（記録したセットも消す）
+ */
+function openSetMenu(
+	ctx: PageContext,
+	section: SectionModel,
+	card: CardModel,
+	n: number,
+	address: SetAddress,
+	comment: () => void,
+	event: MouseEvent,
+	anchor: HTMLElement,
+): void {
+	event.preventDefault();
+	event.stopPropagation();
+	const menu = new Menu();
+	menu.addItem((item) =>
+		item
+			.setTitle(t('today.comment'))
+			.setIcon('message-circle')
+			.onClick(comment),
+	);
+	menu.addItem((item) =>
+		item
+			.setTitle(t('today.deleteSetN', { n }))
+			.setIcon('trash-2')
+			.setWarning(true)
+			.onClick(() => confirmDelete(ctx, card, n, address)),
+	);
+	if (card.exercise) {
+		menu.addSeparator();
+		menu.addItem((item) =>
+			item
+				.setTitle(t('today.removeExerciseWithSets'))
+				.setIcon('list-x')
+				.setWarning(true)
+				.onClick(() => removeExerciseWithSets(ctx, section, card)),
+		);
+	}
+	// キーボード・タップで押したときはボタンの下に出す（マウスの位置が無い）
+	if (
+		event.type === 'contextmenu' &&
+		(event.clientX !== 0 || event.clientY !== 0)
+	)
+		menu.showAtMouseEvent(event);
+	else {
+		const rect = anchor.getBoundingClientRect();
+		menu.showAtPosition({ x: rect.left, y: rect.bottom });
 	}
 }
 

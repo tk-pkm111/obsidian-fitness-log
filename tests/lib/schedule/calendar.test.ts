@@ -74,10 +74,10 @@ describe('calendarEntries', () => {
 		const day: DayLog = {
 			date: '2026-10-05',
 			sessions: [
-				{ name: 'PUSH A', note: '', start: '10:00:00', exercises: [] },
+				{ name: 'PUSH A', notes: [], start: '10:00:00', exercises: [] },
 				{
 					name: null,
-					note: '',
+					notes: [],
 					exercises: [
 						{
 							name: 'ランニング',
@@ -93,7 +93,7 @@ describe('calendarEntries', () => {
 						},
 					],
 				},
-				{ name: 'PULL A', note: '', exercises: [] },
+				{ name: 'PULL A', notes: [], exercises: [] },
 			],
 		};
 		expect(

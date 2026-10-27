@@ -18,6 +18,7 @@ import type { PageContext } from '../page-context';
 import {
 	addSetManually,
 	finishSet,
+	openExerciseHistory,
 	pickWeightWheel,
 	startSet,
 } from './today-actions';
@@ -172,7 +173,10 @@ function renderRemoveButton(header: HTMLElement, env: CardEnv): void {
 	);
 }
 
-/** 種目名。押すと種目ノート（フォームやコツのメモ）を開く */
+/**
+ * 種目名。押すと種目ノート（フォームやコツのメモ）を開く。すぐ右の 📈 で前回までの記録
+ * （種目のことなので名前の隣。右端の × ⌃ と離して押し間違えないように）
+ */
 function renderTitle(
 	ctx: PageContext,
 	header: HTMLElement,
@@ -191,7 +195,27 @@ function renderTitle(
 			event.preventDefault();
 			openNoteInNewTab(ctx.app, notePath);
 		});
-	} else title.createSpan({ text: card.name });
+	} else title.createSpan({ cls: 'fitness-log-card-name', text: card.name });
+	renderHistoryButton(ctx, title, card);
+}
+
+/** 種目名のすぐ右の 📈（前回までの記録）。種目ノートに無い種目は出さない */
+function renderHistoryButton(
+	ctx: PageContext,
+	title: HTMLElement,
+	card: CardModel,
+): void {
+	if (!card.exercise) return;
+	iconButton(
+		title,
+		'line-chart',
+		t('today.exerciseHistory', { exercise: card.name }),
+		(event) => {
+			event.stopPropagation();
+			openExerciseHistory(ctx, card);
+		},
+		'fitness-log-history-button',
+	);
 }
 
 /** 終わった種目: 「② シーテッドカーフレイズ  15 kg × 8 / 20 kg × 7 ›」。押すといまの種目として開く */
@@ -207,7 +231,9 @@ function renderDoneRow(
 		cls: 'fitness-log-done-count',
 		text: String(card.sets.length),
 	});
-	header.createDiv({ cls: 'fitness-log-card-title', text: card.name });
+	const title = header.createDiv({ cls: 'fitness-log-card-title' });
+	title.createSpan({ cls: 'fitness-log-card-name', text: card.name });
+	renderHistoryButton(ctx, title, card);
 	const meta = header.createSpan({ cls: 'fitness-log-card-summary' });
 	if (env.rest?.card === card) renderRestChip(ctx, meta, env.rest);
 	else
@@ -230,6 +256,8 @@ function renderDoneRow(
 	const open = () => env.onFocus?.();
 	header.addEventListener('click', open);
 	header.addEventListener('keydown', (event) => {
+		// 📈 のボタンで押したキーは、そのボタンのもの
+		if (event.target !== header) return;
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
 			open();

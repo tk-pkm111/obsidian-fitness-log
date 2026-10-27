@@ -123,7 +123,22 @@ run(`
 	await s().controller.startSet({ date, packageId: pk.id, exerciseId: ex('ハンギングレッグレイズ'), weight: null }); await sleep(1500); await s().controller.finishSet(12);
 	await sleep(6000); top(); return 1`);
 shot('today-workout');
-run(`await click('筋トレを終了'); await sleep(1200); top(); return 1`);
+// 全体のコメント（1 件ずつ。新しい 2 件だけ見せる）・セットの …・種目の 📈
+run(`
+	const date = window.moment().format('YYYY-MM-DD');
+	const ref = { packageId: s().store.current.packages.find((p) => p.name === 'LEGS A').id, sessionName: null };
+	for (const note of ['スクワットはスミスマシンで', '目標の回数をメモしておく', 'カーフレイズはレッグプレスのマシンで。シートの高さは 4 にした'])
+		await s().controller.addSessionNote(date, ref, note);
+	await sleep(1500); top(); return 1`);
+shot('today-notes');
+run(`document.querySelector('.fitness-log-set-more').click(); await sleep(800); return 1`);
+shot('today-set-menu');
+run(`
+	document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await sleep(300);
+	document.querySelectorAll('.menu').forEach((m) => m.remove());
+	document.querySelector('[aria-label="マシンアダクター の記録"]').click(); await sleep(1000); return 1`);
+shot('today-history');
+run(`await closeModals(); await click('筋トレを終了'); await sleep(1200); top(); return 1`);
 shot('today-finished');
 
 // パッケージ

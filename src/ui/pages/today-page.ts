@@ -8,9 +8,12 @@ import {
 	type SectionModel,
 } from '../../lib/today/day-model';
 import { dayOrdersFor, dayRemovedFor } from '../../lib/today/groups';
+import { summarizeWorkout } from '../../lib/log/summary';
+import { dayStatus } from '../../lib/today/progress';
 import { restState } from '../../lib/today/rest';
 import {
 	addDays,
+	formatHm,
 	formatMonthDay,
 	isDateString,
 	weekdayOf,
@@ -20,6 +23,7 @@ import { chooseExercise } from '../choose-exercise';
 import { choosePackage } from '../choose-package';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
 import type { PageContext } from '../page-context';
+import { endDayWithNotice, formatMinutes } from './today-actions';
 import { renderSection } from './today-section';
 
 /** 今日ページ（実装計画 §5.2） */
@@ -87,7 +91,6 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 	}
 
 	const isToday = date === today;
-	const running = sections.filter((s) => s.status === 'in-progress');
 	// 休憩は最後にセットを終えた種目のすぐ下に出す（筋トレ中・その他のときだけ）
 	const lastSet = isToday ? latestFinishedSet(day) : null;
 	const rest = restState(sections, lastSet, isToday);
@@ -98,7 +101,6 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 		renderSection(ctx, list, section, {
 			isToday,
 			isFuture,
-			anotherRunning: running.some((s) => s !== section),
 			session: sessionOf(day, section),
 			rest,
 			lastSet,
@@ -148,7 +150,81 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 				icon: 'plus',
 			},
 		);
+		renderDayEnd(ctx, el, day, sections);
 	}
+}
+
+/**
+ * その日の筋トレ全体（パッケージと単発の種目をまとめて 1 日の筋トレ）の終わり方。いちばん下に 1 つだけ出す:
+ * 筋トレ中は右に「■ 筋トレを終了」（まとめて終える）。終えたあとは「お疲れ様でした」とその日のまとめ、
+ * 今日なら右に「↻ 筋トレを再開」（まとめて再開する）
+ */
+function renderDayEnd(
+	ctx: PageContext,
+	el: HTMLElement,
+	day: DayLog | undefined,
+	sections: readonly SectionModel[],
+): void {
+	const isToday = ctx.date === ctx.today;
+	const status = dayStatus(sections, isToday);
+	if (status === 'running') {
+		const bar = el.createDiv({ cls: 'fitness-log-day-end' });
+		textButton(bar, t('session.end'), () => endDayWithNotice(ctx), {
+			icon: 'square',
+			cls: 'fitness-log-end-button',
+		});
+		return;
+	}
+	if (status !== 'finished' || !day) return;
+	const summary = summarizeWorkout(day);
+	const done = el.createDiv({ cls: 'fitness-log-finished' });
+	setIcon(done.createSpan({ cls: 'fitness-log-finished-icon' }), 'trophy');
+	const text = done.createDiv({ cls: 'fitness-log-finished-text' });
+	text.createDiv({
+		cls: 'fitness-log-finished-title',
+		text: t('session.finished'),
+	});
+	const stats = [
+		...(summary.start && summary.end
+			? [
+					t('today.timeRange', {
+						start: formatHm(summary.start),
+						end: formatHm(summary.end),
+					}),
+					formatMinutes(summary.durationMin),
+				]
+			: []),
+		t('session.summary', {
+			exercises: summary.exercises,
+			sets: summary.sets,
+		}),
+	];
+	// 「3 セット」などの途中で折り返さないよう、項目ごとに折り返さない
+	const statsEl = text.createDiv({ cls: 'fitness-log-finished-stats' });
+	stats.forEach((stat, i) => {
+		if (i > 0) statsEl.appendText(' ・ ');
+		statsEl.createSpan({ cls: 'fitness-log-finished-stat', text: stat });
+	});
+	const buttons = done.createDiv({ cls: 'fitness-log-finished-buttons' });
+	const file = ctx.services.repository.fileFor(ctx.date);
+	if (file)
+		textButton(
+			buttons,
+			t('today.openNote'),
+			() => openNoteInNewTab(ctx.app, file.path),
+			{ icon: 'file-text', cls: 'mod-quiet' },
+		);
+	// 再開は今日だけ（過去の日はタイマーで続きのセットを計れない）
+	if (isToday)
+		textButton(
+			buttons,
+			t('session.resume'),
+			() => ctx.run(() => ctx.services.controller.resumeDay(ctx.date)),
+			{
+				icon: 'rotate-ccw',
+				cls: 'fitness-log-end-button fitness-log-resume-button',
+			},
+		);
 }
 
 /**

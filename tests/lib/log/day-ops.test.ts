@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
+	addSessionNote,
 	appendSet,
 	cloneDay,
 	countSets,
 	DayLogError,
 	deleteSet,
-	endPastSession,
-	endSession,
+	editSessionNote,
+	endDay,
+	resumeDay,
 	resumeSession,
 	startSession,
-	removeEmptyExercise,
+	removeExercise,
 	removeSession,
 	renameSession,
-	setSessionNote,
 	setsInSession,
 	updateSet,
 } from '../../../src/lib/log/day-ops';
@@ -55,7 +56,7 @@ describe('appendSet', () => {
 			sessions: [
 				{
 					name: '旧パッケージ名',
-					note: '',
+					notes: [],
 					exercises: [{ name: 'DBカール', sets: [] }],
 				},
 			],
@@ -84,7 +85,7 @@ describe('appendSet', () => {
 	it('パッケージのセッションは「その他」より前に入る', () => {
 		const day: DayLog = {
 			date: '2026-10-01',
-			sessions: [{ name: null, note: '', exercises: [] }],
+			sessions: [{ name: null, notes: [], exercises: [] }],
 		};
 		appendSet(
 			day,
@@ -138,7 +139,7 @@ describe('appendSet（やった順）', () => {
 			sessions: [
 				{
 					name: 'PUSH A',
-					note: '',
+					notes: [],
 					exercises: [
 						{ name: 'ディップス', sets: [] },
 						{ name: 'カール', sets: [] },
@@ -165,7 +166,7 @@ describe('updateSet / deleteSet', () => {
 		sessions: [
 			{
 				name: 'A',
-				note: '',
+				notes: [],
 				exercises: [
 					{ name: 'X', sets: [set(10, 8), set(12.5, 6)] },
 					{ name: 'Y', sets: [set(20, 5)] },
@@ -252,22 +253,57 @@ describe('updateSet / deleteSet', () => {
 });
 
 describe('セッションの操作', () => {
-	it('メモを設定する（無ければセッションを作る）', () => {
+	it('全体のコメントを 1 件ずつ後ろに足す（無ければセッションを作る。空は足さない）', () => {
 		const day: DayLog = { date: '2026-10-01', sessions: [] };
-		setSessionNote(day, exact('A'), 'A', '  調子よし ');
+		addSessionNote(day, exact('A'), 'A', '  調子よし ');
+		addSessionNote(day, exact('A'), 'A', 'スクワットはスミスマシンで');
+		addSessionNote(day, exact('A'), 'A', '   ');
 		expect(day.sessions).toEqual([
-			{ name: 'A', note: '調子よし', exercises: [] },
+			{
+				name: 'A',
+				notes: ['調子よし', 'スクワットはスミスマシンで'],
+				exercises: [],
+			},
 		]);
+	});
+
+	it('コメントを 1 件だけ直す・空にしたら消す。ノートが変わっていたら書き換えない', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [{ name: 'A', notes: ['一', '二', '三'], exercises: [] }],
+		};
+		editSessionNote(day, exact('A'), 1, '二', ' 2 件目 ');
+		expect(day.sessions[0]?.notes).toEqual(['一', '2 件目', '三']);
+		editSessionNote(day, exact('A'), 0, '一', '');
+		expect(day.sessions[0]?.notes).toEqual(['2 件目', '三']);
+		// 画面に出していた文とノートが違う（手編集・Sync）・無いセッション
+		expect(() => editSessionNote(day, exact('A'), 0, '一', 'x')).toThrow(
+			DayLogError,
+		);
+		expect(() => editSessionNote(day, exact('B'), 0, '一', 'x')).toThrow(
+			DayLogError,
+		);
+		expect(day.sessions[0]?.notes).toEqual(['2 件目', '三']);
+	});
+
+	it('cloneDay はコメントの配列も写す（元の日を変えない）', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [{ name: 'A', notes: ['一'], exercises: [] }],
+		};
+		const copy = cloneDay(day);
+		addSessionNote(copy, exact('A'), 'A', '二');
+		expect(day.sessions[0]?.notes).toEqual(['一']);
 	});
 
 	it('セットの無いセッションは外せる。記録があれば外さない', () => {
 		const day: DayLog = {
 			date: '2026-10-01',
 			sessions: [
-				{ name: 'A', note: '', exercises: [] },
+				{ name: 'A', notes: [], exercises: [] },
 				{
 					name: 'B',
-					note: '',
+					notes: [],
 					exercises: [{ name: 'X', sets: [set(1, 1)] }],
 				},
 			],
@@ -285,7 +321,7 @@ describe('セッションの操作', () => {
 			sessions: [
 				{
 					name: 'B',
-					note: '',
+					notes: [],
 					start: '10:00:00',
 					exercises: [{ name: 'X', sets: [set(1, 1)] }],
 				},
@@ -301,7 +337,7 @@ describe('セッションの操作', () => {
 			sessions: [
 				{
 					name: 'A',
-					note: 'メモ',
+					notes: ['メモ'],
 					start: '10:00:00',
 					exercises: [{ name: 'X', sets: [set(1, 1)] }],
 				},
@@ -311,7 +347,7 @@ describe('セッションの操作', () => {
 		expect(day.sessions).toEqual([
 			{
 				name: 'B',
-				note: 'メモ',
+				notes: ['メモ'],
 				start: '10:00:00',
 				exercises: [{ name: 'X', sets: [set(1, 1)] }],
 			},
@@ -320,14 +356,14 @@ describe('セッションの操作', () => {
 	});
 });
 
-describe('removeEmptyExercise', () => {
+describe('removeExercise', () => {
 	it('セットの無い欄だけ消す。記録のある欄・他のセッションは残す', () => {
 		const day: DayLog = {
 			date: '2026-10-01',
 			sessions: [
 				{
 					name: 'PUSH A',
-					note: '',
+					notes: [],
 					exercises: [
 						{ name: 'ディップス', sets: [set(null, 8)] },
 						{ name: 'ケーブルYレイズ', sets: [] },
@@ -335,28 +371,48 @@ describe('removeEmptyExercise', () => {
 				},
 				{
 					name: null,
-					note: '',
+					notes: [],
 					exercises: [{ name: 'ケーブルYレイズ', sets: [] }],
 				},
 			],
 		};
 		const isY = (n: string) => n === 'ケーブルYレイズ';
-		expect(removeEmptyExercise(day, exact('PUSH A'), isY)).toBe(true);
+		expect(removeExercise(day, exact('PUSH A'), isY)).toBe(true);
 		expect(day.sessions[0]?.exercises.map((e) => e.name)).toEqual([
 			'ディップス',
 		]);
 		expect(day.sessions[1]?.exercises).toHaveLength(1);
 		// もう無い・記録のある欄は消さない（false）
-		expect(removeEmptyExercise(day, exact('PUSH A'), isY)).toBe(false);
+		expect(removeExercise(day, exact('PUSH A'), isY)).toBe(false);
 		expect(
-			removeEmptyExercise(
-				day,
-				exact('PUSH A'),
-				(n) => n === 'ディップス',
-			),
+			removeExercise(day, exact('PUSH A'), (n) => n === 'ディップス'),
 		).toBe(false);
 		expect(day.sessions[0]?.exercises).toHaveLength(1);
-		expect(removeEmptyExercise(day, exact('LEGS'), isY)).toBe(false);
+		expect(removeExercise(day, exact('LEGS'), isY)).toBe(false);
+	});
+
+	it('withSets のときは記録のある欄も消す（同じ種目の欄が 2 つあればどちらも）', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'PUSH A',
+					notes: [],
+					exercises: [
+						{ name: 'ディップス', sets: [set(null, 8)] },
+						{ name: 'ベンチプレス', sets: [set(40, 10)] },
+						{ name: 'ディップス', sets: [set(null, 6)] },
+					],
+				},
+			],
+		};
+		const isDips = (n: string) => n === 'ディップス';
+		expect(
+			removeExercise(day, exact('PUSH A'), isDips, { withSets: true }),
+		).toBe(true);
+		expect(day.sessions[0]?.exercises.map((e) => e.name)).toEqual([
+			'ベンチプレス',
+		]);
 	});
 });
 
@@ -367,12 +423,12 @@ describe('位置の確かめ（レビューで見つかった不具合の再発�
 			sessions: [
 				{
 					name: null,
-					note: '',
+					notes: [],
 					exercises: [{ name: 'X', sets: [set(10, 8)] }],
 				},
 				{
 					name: null,
-					note: '',
+					notes: [],
 					exercises: [{ name: 'X', sets: [set(50, 5)] }],
 				},
 			],
@@ -400,7 +456,7 @@ describe('位置の確かめ（レビューで見つかった不具合の再発�
 			sessions: [
 				{
 					name: 'A',
-					note: '',
+					notes: [],
 					exercises: [{ name: 'X', sets: [set(10, 7)] }],
 				},
 			],
@@ -419,20 +475,20 @@ describe('位置の確かめ（レビューで見つかった不具合の再発�
 	});
 });
 
-describe('筋トレ（セッション）の開始・終了', () => {
+describe('筋トレの開始・再開', () => {
 	const match = (name: string | null) => (other: string | null) =>
 		other === name;
 
-	it('開始でセッションを作って開始時刻、終了で終了時刻、再開で終了時刻を消す', () => {
+	it('開始でセッションを作って開始時刻、再開で終了時刻を消す', () => {
 		const day: DayLog = { date: '2026-10-01', sessions: [] };
 		startSession(day, match('PUSH A'), 'PUSH A', '18:30:05');
 		expect(day.sessions[0]).toEqual({
 			name: 'PUSH A',
-			note: '',
+			notes: [],
 			exercises: [],
 			start: '18:30:05',
 		});
-		endSession(day, match('PUSH A'), '19:20:00');
+		endDay(day, { time: '19:20:00', includeOther: true });
 		expect(day.sessions[0]?.end).toBe('19:20:00');
 		resumeSession(day, match('PUSH A'));
 		expect(day.sessions[0]).not.toHaveProperty('end');
@@ -440,50 +496,186 @@ describe('筋トレ（セッション）の開始・終了', () => {
 		startSession(day, match('PUSH A'), 'PUSH A', '20:00:00');
 		expect(day.sessions[0]?.start).toBe('18:30:05');
 	});
-
-	it('開始していないセッションは終了できない', () => {
-		const day: DayLog = {
-			date: '2026-10-01',
-			sessions: [{ name: 'A', note: '', exercises: [] }],
-		};
-		expect(() => endSession(day, match('A'), '19:00:00')).toThrow(
-			DayLogError,
-		);
-	});
 });
 
-describe('過去の日の筋トレを終える', () => {
-	it('最後のセットの終了を終了時刻にする（セットが無ければ開始）', () => {
+const timed = (start: string, end: string): SetLog => ({
+	...set(10, 8),
+	start,
+	end,
+});
+
+describe('その日の筋トレをまとめて終える（endDay）', () => {
+	it('それぞれ最後のセットの終了で終え、最後にやったものだけ押した時刻にする', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'CARDIO',
+					notes: [],
+					start: '00:57:00',
+					exercises: [
+						{
+							name: 'トレッドミル',
+							sets: [timed('00:57:10', '01:00:00')],
+						},
+					],
+				},
+				{
+					name: null,
+					notes: [],
+					exercises: [
+						{
+							name: 'レッグプレス',
+							sets: [
+								timed('00:59:00', '01:00:16'),
+								timed('01:02:00', '01:02:38'),
+							],
+						},
+					],
+				},
+			],
+		};
+		const ended = endDay(day, { time: '01:05:00', includeOther: true });
+		expect(ended.map((s) => s.name)).toEqual(['CARDIO', null]);
+		expect(day.sessions[0]?.end).toBe('01:00:00');
+		// 単発の種目は開始の代わりに最初のセットの開始
+		expect(day.sessions[1]).toMatchObject({
+			start: '00:59:00',
+			end: '01:05:00',
+		});
+	});
+
+	it('終えたもの・開始していないパッケージ・記録の無い単発の種目はそのまま', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'A',
+					notes: [],
+					start: '18:00:00',
+					end: '18:30:00',
+					exercises: [],
+				},
+				{ name: 'B', notes: [], start: '19:00:00', exercises: [] },
+				{ name: 'C', notes: [], exercises: [] },
+				{ name: null, notes: [], exercises: [] },
+			],
+		};
+		endDay(day, { time: '19:10:00', includeOther: true });
+		expect(day.sessions.map((s) => s.end)).toEqual([
+			'18:30:00',
+			'19:10:00',
+			undefined,
+			undefined,
+		]);
+		expect(day.sessions[3]).not.toHaveProperty('start');
+	});
+
+	it('日付をまたいでも、最後にやったものを押した時刻で終える', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'A',
+					notes: [],
+					start: '23:40:00',
+					exercises: [
+						{ name: 'X', sets: [timed('23:41:00', '23:50:00')] },
+					],
+				},
+				{
+					name: 'B',
+					notes: [],
+					start: '23:55:00',
+					exercises: [
+						{ name: 'Y', sets: [timed('00:05:00', '00:06:00')] },
+					],
+				},
+			],
+		};
+		endDay(day, { time: '00:10:00', includeOther: true });
+		expect(day.sessions.map((s) => s.end)).toEqual([
+			'23:50:00',
+			'00:10:00',
+		]);
+	});
+
+	it('過去の日（time が null）はどれも最後のセットの終了（セットが無ければ開始）。単発の種目は終えない', () => {
 		const day: DayLog = {
 			date: '2026-10-01',
 			sessions: [
 				{
 					name: 'PUSH A',
-					note: '',
+					notes: [],
 					start: '22:40:00',
 					exercises: [
 						{
 							name: 'X',
 							sets: [
-								{
-									...set(10, 8),
-									start: '22:41:00',
-									end: '22:41:30',
-								},
-								{
-									...set(10, 8),
-									start: '23:45:00',
-									end: '23:46:10',
-								},
+								timed('22:41:00', '22:41:30'),
+								timed('23:45:00', '23:46:10'),
 							],
 						},
 					],
 				},
-				{ name: 'B', note: '', start: '10:00:00', exercises: [] },
+				{ name: 'B', notes: [], start: '10:00:00', exercises: [] },
+				{
+					name: null,
+					notes: [],
+					exercises: [
+						{ name: 'Y', sets: [timed('11:00:00', '11:01:00')] },
+					],
+				},
 			],
 		};
-		expect(endPastSession(day, exact('PUSH A')).end).toBe('23:46:10');
-		expect(endPastSession(day, exact('B')).end).toBe('10:00:00');
-		expect(() => endPastSession(day, exact('none'))).toThrow(DayLogError);
+		endDay(day, { time: null, includeOther: false });
+		expect(day.sessions.map((s) => s.end)).toEqual([
+			'23:46:10',
+			'10:00:00',
+			undefined,
+		]);
+	});
+
+	it('筋トレ中のものが無ければエラー', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [{ name: 'A', notes: [], exercises: [] }],
+		};
+		expect(() =>
+			endDay(day, { time: '19:00:00', includeOther: true }),
+		).toThrow(DayLogError);
+	});
+});
+
+describe('その日の筋トレをまとめて再開する（resumeDay）', () => {
+	it('終えたものの終了を消す。単発の種目は開始も消す', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'A',
+					notes: [],
+					start: '18:00:00',
+					end: '18:30:00',
+					exercises: [],
+				},
+				{ name: 'B', notes: [], exercises: [] },
+				{
+					name: null,
+					notes: [],
+					start: '18:10:00',
+					end: '18:40:00',
+					exercises: [
+						{ name: 'Y', sets: [timed('18:10:00', '18:11:00')] },
+					],
+				},
+			],
+		};
+		expect(resumeDay(day).map((s) => s.name)).toEqual(['A', null]);
+		expect(day.sessions[0]).toMatchObject({ start: '18:00:00' });
+		expect(day.sessions[0]).not.toHaveProperty('end');
+		expect(day.sessions[2]).not.toHaveProperty('start');
+		expect(day.sessions[2]).not.toHaveProperty('end');
+		expect(() => resumeDay(day)).toThrow(DayLogError);
 	});
 });

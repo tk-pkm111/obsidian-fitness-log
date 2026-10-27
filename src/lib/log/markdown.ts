@@ -211,7 +211,7 @@ export function parseBlockContent(inner: string, date: string): ParseResult {
 			const name = (h2[1] ?? '').trim();
 			session = {
 				name: name === OTHER_SESSION_HEADING ? null : name,
-				note: '',
+				notes: [],
 				exercises: [],
 			};
 			sessions.push(session);
@@ -312,13 +312,12 @@ export function parseBlockContent(inner: string, date: string): ParseResult {
 					session.time = bullet.value;
 				continue;
 			}
+			// コメントは 1 行 1 件（書いた順）
 			if (
 				bullet.label === NOTE_LABEL ||
 				bullet.label === LEGACY_NOTE_LABEL
 			) {
-				session.note = session.note
-					? `${session.note} ${bullet.value}`
-					: bullet.value;
+				if (bullet.value !== '') session.notes.push(bullet.value);
 				continue;
 			}
 		}
@@ -413,8 +412,9 @@ function formatSession(session: SessionLog): string[] {
 		);
 	else if (session.time)
 		lines.push(`- ${TIME_LABEL}: ${oneLine(session.time)}`);
-	if (session.note.trim().length > 0)
-		lines.push(`- ${NOTE_LABEL}: ${oneLine(session.note)}`);
+	for (const note of session.notes)
+		if (oneLine(note).length > 0)
+			lines.push(`- ${NOTE_LABEL}: ${oneLine(note)}`);
 	// セット番号は種目ごとの通し番号（同じ種目を後でもう一度やった 2 つ目の欄は続きから）
 	const counts = new Map<string, number>();
 	for (const exercise of session.exercises) {

@@ -71,7 +71,8 @@ export interface SectionModel {
 	inNote: boolean;
 	/** ルーチンで予定されていて、まだノートに無い */
 	plannedBy: Routine | null;
-	note: string;
+	/** 全体のコメント（書いた順） */
+	notes: string[];
 	cards: CardModel[];
 }
 
@@ -214,7 +215,7 @@ export function buildDayModel(input: DayModelInput): SectionModel[] {
 				title: '',
 				inNote: true,
 				plannedBy: null,
-				note: session.note,
+				notes: session.notes,
 				cards: buildCards([], session.exercises, sessionIndex),
 			});
 			continue;
@@ -234,7 +235,7 @@ export function buildDayModel(input: DayModelInput): SectionModel[] {
 			title: pkg?.name ?? session.name,
 			inNote: true,
 			plannedBy: null,
-			note: session.note,
+			notes: session.notes,
 			cards: buildCards(
 				pkg?.items ?? [],
 				session.exercises,
@@ -285,7 +286,7 @@ export function buildDayModel(input: DayModelInput): SectionModel[] {
 						title: '',
 						inNote: false,
 						plannedBy: null,
-						note: '',
+						notes: [],
 						cards: [],
 					};
 			sections.push(section);
@@ -387,7 +388,7 @@ function plannedSection(
 		title: pkg.name,
 		inNote: false,
 		plannedBy: routine,
-		note: '',
+		notes: [],
 		cards,
 	};
 }

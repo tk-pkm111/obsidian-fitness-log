@@ -31,7 +31,7 @@ Publish のホームは「Fitness Log とは」にする。
 npm run docs:shots
 ```
 
-一時フォルダに撮影用の vault（最初の設定の例・ダミーの記録・ダミーの体組成）を作り、隔離した Obsidian をスマホの幅・ダークで開いて、`docs/guide/images/` に 23 枚撮る（`scripts/docs-shots.mjs`）。ボタンの文言を変えたら、スクリプトの場面の操作も直す。
+一時フォルダに撮影用の vault（最初の設定の例・ダミーの記録・ダミーの体組成）を作り、隔離した Obsidian をスマホの幅・ダークで開いて、`docs/guide/images/` に 26 枚撮る（`scripts/docs-shots.mjs`）。ボタンの文言を変えたら、スクリプトの場面の操作も直す。
 
 ## エージェントに渡す
 ```bash

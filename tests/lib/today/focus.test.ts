@@ -50,7 +50,7 @@ const layoutOf = (
 	const day: DayLog = {
 		date: '2026-10-02',
 		sessions: [
-			{ name: 'LEGS', note: '', start: '10:00:00', exercises: done },
+			{ name: 'LEGS', notes: [], start: '10:00:00', exercises: done },
 		],
 	};
 	const [section] = buildDayModel({

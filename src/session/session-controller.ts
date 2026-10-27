@@ -2,19 +2,19 @@ import type { DataStore } from '../data/data-store';
 import type { LogIndex } from '../data/log-index';
 import type { LogRepository } from '../data/log-repository';
 import {
+	addSessionNote,
 	appendSet,
 	deleteSet,
-	endManualSession,
-	endPastSession,
-	endSession,
+	editSessionNote,
+	endDay,
 	ensureExercise,
 	ensureSession,
 	findSession,
-	removeEmptyExercise,
+	removeExercise,
 	removeSession,
 	renameSession,
+	resumeDay,
 	resumeSession,
-	setSessionNote,
 	setsInSession,
 	startSession,
 	updateSet,
@@ -348,17 +348,21 @@ export class SessionController {
 	}
 
 	/**
-	 * まだやっていない種目をその日の一覧から外す（混んでいて別の種目にした等）。パッケージの定義は変えない。
-	 * ノートに空の欄（「種目を追加」したもの）があれば消し、パッケージの種目は data.json に「外した」と覚える
-	 * （「種目を追加」で戻せる）。記録のある種目は外さない（セットを消してから）
+	 * 種目をその日の一覧から外す（混んでいて別の種目にした・間違えて記録した等）。パッケージの定義は変えない。
+	 * ノートのその種目の欄を消し、パッケージの種目は data.json に「外した」と覚える（「種目を追加」で戻せる）。
+	 * 記録のある種目は withSets のときだけ外す（記録したセットも消す。画面で確かめてから）
 	 */
 	async removeExerciseFromDay(
 		date: string,
 		ref: SessionRef,
 		exerciseId: string,
+		options: { withSets?: boolean } = {},
 	): Promise<void> {
 		const exercise = this.requireExercise(exerciseId);
-		if (this.doneSets(date, ref, exerciseId).length > 0)
+		if (
+			!options.withSets &&
+			this.doneSets(date, ref, exerciseId).length > 0
+		)
 			throw new SessionError(
 				'記録のある種目は外せません。先にセットを削除してください',
 			);
@@ -376,23 +380,22 @@ export class SessionController {
 			?.sessions.find((s) => target.matchSession(s.name));
 		if (
 			session?.exercises.some(
-				(e) => e.sets.length === 0 && target.matchExercise(e.name),
+				(e) =>
+					target.matchExercise(e.name) &&
+					(e.sets.length === 0 || options.withSets),
 			)
 		)
 			await this.write(date, (d) => {
-				removeEmptyExercise(
-					d,
-					target.matchSession,
-					target.matchExercise,
-				);
+				removeExercise(d, target.matchSession, target.matchExercise, {
+					withSets: options.withSets,
+				});
 				// 単発の種目の最後の 1 つなら、空になった「単発の種目」の見出しも消す（コメントがあれば残す）
 				const rest = findSession(d, target.matchSession);
 				if (
-					ref.packageId === null &&
-					ref.sessionName === null &&
+					isOtherRef(ref) &&
 					rest &&
 					rest.exercises.length === 0 &&
-					rest.note.trim().length === 0
+					rest.notes.length === 0
 				)
 					removeSession(d, target.matchSession);
 			});
@@ -421,13 +424,28 @@ export class SessionController {
 		);
 	}
 
-	async setSessionNote(
+	/** 全体のコメントを 1 件足す（いちばん後ろ） */
+	async addSessionNote(
 		date: string,
 		ref: SessionRef,
 		note: string,
 	): Promise<DayLog> {
 		const { match, name } = this.sessionMatcher(ref);
-		return this.write(date, (d) => setSessionNote(d, match, name, note));
+		return this.write(date, (d) => addSessionNote(d, match, name, note));
+	}
+
+	/** index 番目の全体のコメントを直す（空にしたら消す）。expected は画面に出していた文 */
+	async editSessionNote(
+		date: string,
+		ref: SessionRef,
+		index: number,
+		expected: string,
+		note: string,
+	): Promise<DayLog> {
+		const { match } = this.sessionMatcher(ref);
+		return this.write(date, (d) =>
+			editSessionNote(d, match, index, expected, note),
+		);
 	}
 
 	/**
@@ -505,11 +523,11 @@ export class SessionController {
 	}
 
 	// -------------------------------------------------------------------------
-	// 筋トレ（パッケージのセッション）の開始・終了
+	// 筋トレの開始・終了。その日のパッケージと単発の種目をまとめて 1 日の筋トレとして終える・再開する
 
 	/**
 	 * 「筋トレを開始」: 日ノートにセッションを作り、開始時刻を書く。
-	 * 筋トレ中の別のパッケージがあれば、先に終了してもらう（同時に 1 つ）。
+	 * 別のパッケージが筋トレ中でもよい（終えるときはその日の筋トレをまとめて終える）
 	 */
 	async startSession(date: string, packageId: string): Promise<DayLog> {
 		const { match, name } = this.sessionMatcher({
@@ -517,72 +535,38 @@ export class SessionController {
 			sessionName: null,
 		});
 		if (name === null) throw new SessionError('パッケージが見つかりません');
-		const running = this.index
-			.day(date)
-			?.sessions.find(
-				(s) => s.name !== null && s.start && !s.end && !match(s.name),
-			);
-		if (running?.name)
-			throw new SessionError(
-				`「${running.name}」が筋トレ中です。先に終了してください`,
-			);
 		return this.write(date, (d) => {
 			startSession(d, match, name, formatTime(this.now()));
 		});
 	}
 
 	/**
-	 * 「筋トレを終了」: 終了時刻を書く。そのパッケージでセットが進行中なら先に終えてもらう。
-	 * 単発の種目は開始の代わりに最初のセットの開始を書く
+	 * 「筋トレを終了」: その日の筋トレ（筋トレ中のパッケージ・記録のある単発の種目）をまとめて終える。
+	 * セットが進行中なら先に終えてもらう。それぞれの終了は最後のセットの終了で、最後にやったものだけ今の時刻。
+	 * 過去の日（再開したまま日が変わった等）は、どれも最後のセットの終了で終える（単発の種目はそのまま）
 	 */
-	async endSession(date: string, ref: SessionRef): Promise<DayLog> {
+	async endDay(date: string): Promise<DayLog> {
 		const active = this.activeSet;
-		if (
-			active &&
-			active.date === date &&
-			active.packageId === ref.packageId
-		)
+		if (active && active.date === date)
 			throw new SessionError(
 				'進行中のセットを終了してから、筋トレを終了してください',
 			);
-		const { match } = this.sessionMatcher(ref);
-		// 過去の日（再開したまま日が変わった等）は、今の時刻ではなく最後のセットの終了で終える
 		const isToday = date === todayString(this.now());
 		return this.write(date, (d) => {
-			if (isOtherRef(ref))
-				endManualSession(
-					d,
-					match,
-					isToday ? formatTime(this.now()) : null,
-				);
-			else if (isToday) endSession(d, match, formatTime(this.now()));
-			else endPastSession(d, match);
+			endDay(d, {
+				time: isToday ? formatTime(this.now()) : null,
+				includeOther: isToday,
+			});
 		});
 	}
 
-	/** 終了した筋トレを再開する（今日の筋トレだけ。過去の日は続きのセットを計れないので） */
-	async resumeSession(date: string, ref: SessionRef): Promise<DayLog> {
+	/** 終えたその日の筋トレをまとめて再開する（今日だけ。過去の日は続きのセットを計れないので） */
+	async resumeDay(date: string): Promise<DayLog> {
 		if (date !== todayString(this.now()))
 			throw new SessionError('再開できるのは今日の筋トレだけです');
-		const { match } = this.sessionMatcher(ref);
-		// 単発の種目はパッケージと同時に続けられる（筋トレ中が 1 つまでなのはパッケージだけ）
-		const manual = isOtherRef(ref);
-		const running = manual
-			? undefined
-			: this.index
-					.day(date)
-					?.sessions.find(
-						(s) =>
-							s.name !== null &&
-							s.start &&
-							!s.end &&
-							!match(s.name),
-					);
-		if (running?.name)
-			throw new SessionError(
-				`「${running.name}」が筋トレ中です。先に終了してください`,
-			);
-		return this.write(date, (d) => resumeSession(d, match, { manual }));
+		return this.write(date, (d) => {
+			resumeDay(d);
+		});
 	}
 
 	/** 今日の画面でドラッグした種目の並び（その日だけ。パッケージの並びは変えない） */

@@ -50,7 +50,7 @@ const EXAMPLE_DAY: DayLog = {
 	sessions: [
 		{
 			name: 'PUSH A',
-			note: '調子よし',
+			notes: ['調子よし'],
 			start: '18:30:00',
 			end: '19:18:00',
 			exercises: [
@@ -89,7 +89,7 @@ const EXAMPLE_DAY: DayLog = {
 		},
 		{
 			name: null,
-			note: '',
+			notes: [],
 			exercises: [
 				{
 					name: 'ランニング',
@@ -248,7 +248,7 @@ describe('formatBlock', () => {
 			sessions: [
 				{
 					name: 'A',
-					note: '一行目\n二行目',
+					notes: ['一行目\n二行目'],
 					exercises: [
 						{
 							name: 'X',
@@ -269,7 +269,9 @@ describe('formatBlock', () => {
 		const block = formatBlock(day);
 		expect(block).toContain('| 1 | 61.235 | 8 | - | - | a \\| b |');
 		const parsed = parseDayNote(block, day.date);
-		expect(parsed.ok && parsed.day.sessions[0]?.note).toBe('一行目 二行目');
+		expect(parsed.ok && parsed.day.sessions[0]?.notes).toEqual([
+			'一行目 二行目',
+		]);
 		expect(
 			parsed.ok && parsed.day.sessions[0]?.exercises[0]?.sets[0]?.note,
 		).toBe('a | b');
@@ -278,7 +280,7 @@ describe('formatBlock', () => {
 	it('種目の無いセッション（予定だけ追加した日）も往復できる', () => {
 		const day: DayLog = {
 			date: '2026-10-01',
-			sessions: [{ name: 'LEGS A', note: '', exercises: [] }],
+			sessions: [{ name: 'LEGS A', notes: [], exercises: [] }],
 		};
 		expect(formatBlock(day)).toBe(
 			`${BLOCK_START}\n## LEGS A\n${BLOCK_END}`,
@@ -294,7 +296,7 @@ describe('replaceBlock', () => {
 	it('ブロックの外側（frontmatter・ユーザーのメモ）を保持する', () => {
 		const updated = replaceBlock(PLAN_EXAMPLE, {
 			date: '2026-10-01',
-			sessions: [{ name: 'PUSH A', note: '', exercises: [] }],
+			sessions: [{ name: 'PUSH A', notes: [], exercises: [] }],
 		});
 		expect(updated).not.toBeNull();
 		if (updated === null) return;
@@ -349,10 +351,31 @@ describe('レビューで見つかった不具合の再発防止', () => {
 	it('セッションのメモの | は書くたびに増えない', () => {
 		let day: DayLog = {
 			date: '2026-10-01',
-			sessions: [{ name: 'A', note: 'a | b', exercises: [] }],
+			sessions: [{ name: 'A', notes: ['a | b'], exercises: [] }],
 		};
 		for (let i = 0; i < 3; i++) day = roundTrip(day);
-		expect(day.sessions[0]?.note).toBe('a | b');
+		expect(day.sessions[0]?.notes).toEqual(['a | b']);
+	});
+
+	it('全体のコメントは 1 件 1 行で書き、書いた順に読む（空のものは書かない）', () => {
+		const day: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'A',
+					notes: ['スミスマシンでスクワット', '  ', '最後は補助あり'],
+					exercises: [],
+				},
+			],
+		};
+		const block = formatBlock(day);
+		expect(block).toContain(
+			'## A\n- コメント: スミスマシンでスクワット\n- コメント: 最後は補助あり',
+		);
+		expect(roundTrip(day).sessions[0]?.notes).toEqual([
+			'スミスマシンでスクワット',
+			'最後は補助あり',
+		]);
 	});
 
 	it('表に知らない列があれば書き込まない（消えてしまうため）', () => {
@@ -378,12 +401,15 @@ describe('レビューで見つかった不具合の再発防止', () => {
 		).toMatchObject({ weight: 10, reps: 8, note: '' });
 	});
 
-	it('メモの行が 2 つあれば両方残す', () => {
+	it('コメントの行が 2 つあれば 1 件ずつ残す（以前の「メモ」も。空の行は読み飛ばす）', () => {
 		const result = parseBlockContent(
-			'## A\n- メモ: 一つ目\n- メモ: 二つ目',
+			'## A\n- メモ: 一つ目\n- コメント: 二つ目\n- コメント:',
 			'2026-10-01',
 		);
-		expect(result.ok && result.day.sessions[0]?.note).toBe('一つ目 二つ目');
+		expect(result.ok && result.day.sessions[0]?.notes).toEqual([
+			'一つ目',
+			'二つ目',
+		]);
 	});
 
 	it('パッケージの「時間」は筋トレの開始・終了として読み、読めない手書きは残す', () => {
@@ -423,7 +449,7 @@ describe('レビューで見つかった不具合の再発防止', () => {
 			sessions: [
 				{
 					name: 'A',
-					note: '',
+					notes: [],
 					exercises: [
 						{
 							name: 'ラン',
@@ -489,7 +515,7 @@ describe('レビューで見つかった不具合の再発防止', () => {
 		const open: DayLog = {
 			date: '2026-10-01',
 			sessions: [
-				{ name: null, note: '', exercises: [{ name: 'X', sets }] },
+				{ name: null, notes: [], exercises: [{ name: 'X', sets }] },
 			],
 		};
 		// 終えていなければセットから分まで（読み戻しても開始・終了は持たない）
@@ -505,7 +531,7 @@ describe('レビューで見つかった不具合の再発防止', () => {
 			sessions: [
 				{
 					name: null,
-					note: '',
+					notes: [],
 					start: '22:09:00',
 					end: '22:27:50',
 					exercises: [{ name: 'X', sets }],
@@ -531,7 +557,7 @@ describe('レビューで見つかった不具合の再発防止', () => {
 			sessions: [
 				{
 					name: 'A',
-					note: '',
+					notes: [],
 					exercises: [
 						{
 							name: 'X',
@@ -573,7 +599,7 @@ describe('やった順の記録（同じ種目を 2 回に分けた日）', () =
 		sessions: [
 			{
 				name: 'PUSH A',
-				note: '',
+				notes: [],
 				start: '18:30:00',
 				end: '19:00:00',
 				exercises: [
@@ -621,7 +647,7 @@ describe('以前の版の書式（「メモ」）', () => {
 		const parsed = parseDayNote(LEGACY, '2026-10-01');
 		if (!parsed.ok) throw new Error(parsed.error);
 		const session = parsed.day.sessions[0];
-		expect(session?.note).toBe('調子よし');
+		expect(session?.notes).toEqual(['調子よし']);
 		expect(session?.exercises[0]?.sets[0]?.note).toBe('右肩注意');
 		const block = formatBlock(parsed.day);
 		expect(block).toContain('- コメント: 調子よし');

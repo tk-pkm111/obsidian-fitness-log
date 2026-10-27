@@ -6,6 +6,7 @@
  * 名前の照合（本名＋別名）は呼び出し側が matcher で渡す。
  */
 import type { DayLog, ExerciseLog, SessionLog, SetLog } from '../model/types';
+import { circularRange, parseTime } from '../time/date';
 import { sessionSpan } from './summary';
 
 export type SessionMatcher = (sessionName: string | null) => boolean;
@@ -47,6 +48,7 @@ export function cloneDay(day: DayLog): DayLog {
 		date: day.date,
 		sessions: day.sessions.map((session) => ({
 			...session,
+			notes: [...session.notes],
 			exercises: session.exercises.map((exercise) => ({
 				...exercise,
 				sets: exercise.sets.map((set) => ({ ...set })),
@@ -73,7 +75,7 @@ export function ensureSession(
 ): SessionLog {
 	const found = findSession(day, matches);
 	if (found) return found;
-	const session: SessionLog = { name, note: '', exercises: [] };
+	const session: SessionLog = { name, notes: [], exercises: [] };
 	const otherIndex = day.sessions.findIndex((s) => s.name === null);
 	if (name !== null && otherIndex >= 0)
 		day.sessions.splice(otherIndex, 0, session);
@@ -197,13 +199,37 @@ export function deleteSet(day: DayLog, address: SetAddress): void {
 		session.exercises.splice(session.exercises.indexOf(exercise), 1);
 }
 
-export function setSessionNote(
+/** 全体のコメントを 1 件、いちばん後ろに足す（空なら何もしない） */
+export function addSessionNote(
 	day: DayLog,
 	matches: SessionMatcher,
 	name: string | null,
 	note: string,
 ): void {
-	ensureSession(day, matches, name).note = note.trim();
+	const text = note.trim();
+	if (text.length === 0) return;
+	ensureSession(day, matches, name).notes.push(text);
+}
+
+/**
+ * index 番目の全体のコメントを直す（空にしたら消す）。expected は画面に出していた文。
+ * ノートが手編集・Sync で変わっていたら、別のコメントを書き換えずにエラーにする
+ */
+export function editSessionNote(
+	day: DayLog,
+	matches: SessionMatcher,
+	index: number,
+	expected: string,
+	note: string,
+): void {
+	const session = findSession(day, matches);
+	if (session?.notes[index] !== expected)
+		throw new DayLogError(
+			'対象のコメントが見つからないか、ノートが変更されています。画面を確かめてからやり直してください',
+		);
+	const text = note.trim();
+	if (text.length > 0) session.notes[index] = text;
+	else session.notes.splice(index, 1);
 }
 
 /**
@@ -236,19 +262,22 @@ export function renameSession(
 }
 
 /**
- * セットの無い種目の欄（「種目を追加」したもの）をセッションから消す。記録のある欄は消さない。
+ * 種目の欄をセッションから消す。ふだんはセットの無い欄（「種目を追加」したもの）だけを消し、記録のある欄は残す。
+ * withSets のときは記録した欄ごと消す（画面で「記録した N セットも消えます」と確かめてから）。
  * 消したら true（ノートに書く必要がある）
  */
-export function removeEmptyExercise(
+export function removeExercise(
 	day: DayLog,
 	matchSession: SessionMatcher,
 	matchExercise: ExerciseMatcher,
+	options: { withSets?: boolean } = {},
 ): boolean {
 	const session = findSession(day, matchSession);
 	if (!session) return false;
 	const before = session.exercises.length;
 	session.exercises = session.exercises.filter(
-		(e) => e.sets.length > 0 || !matchExercise(e.name),
+		(e) =>
+			!matchExercise(e.name) || (e.sets.length > 0 && !options.withSets),
 	);
 	return session.exercises.length !== before;
 }
@@ -277,50 +306,58 @@ export function startSession(
 	return session;
 }
 
-/** 「筋トレを終了」: 終了時刻を入れる。開始していないセッションはエラー */
-export function endSession(
-	day: DayLog,
-	matches: SessionMatcher,
-	time: string,
-): SessionLog {
-	const session = findSession(day, matches);
-	if (!session?.start)
-		throw new DayLogError('このパッケージはまだ開始していません');
-	session.end = time;
-	return session;
+/**
+ * 筋トレ中か: パッケージは開始していて終了していないもの。単発の種目（開始が無い）は、
+ * includeOther のときだけ、時刻のあるセットがあって終えていないもの
+ */
+export function isRunningSession(
+	session: SessionLog,
+	includeOther: boolean,
+): boolean {
+	if (session.end) return false;
+	if (session.name !== null) return Boolean(session.start);
+	return includeOther && sessionSpan(session) !== null;
 }
 
 /**
- * 過去の日の筋トレを終える（「再開」したまま日が変わった等）。今の時刻ではなく、
- * 最後のセットの終了（セットが無ければ開始）を終了時刻にする
+ * 「筋トレを終了」: その日の筋トレ（筋トレ中のパッケージと単発の種目）をまとめて終える。
+ * 終了時刻は、それぞれの最後のセットの終了（セットが無ければ開始）。最後にやったものだけは time
+ * （今日は押した時刻。過去の日は null を渡し、最後のセットの終了にする）。
+ * 単発の種目は開始の代わりに最初のセットの開始を書く（今日だけ。includeOther）。
+ * 終えたもの（ノートの順）を返す。筋トレ中のものが無ければエラー
  */
-export function endPastSession(
+export function endDay(
 	day: DayLog,
-	matches: SessionMatcher,
-): SessionLog {
-	const session = findSession(day, matches);
-	if (!session?.start)
-		throw new DayLogError('このパッケージはまだ開始していません');
-	session.end = sessionSpan(session)?.end ?? session.start;
-	return session;
-}
-
-/**
- * 単発の種目（パッケージ外）を終える。単発には「筋トレを開始」が無いので、開始は最初のセットの開始。
- * 終了は time（過去の日は null を渡し、最後のセットの終了にする）。記録が無ければエラー
- */
-export function endManualSession(
-	day: DayLog,
-	matches: SessionMatcher,
-	time: string | null,
-): SessionLog {
-	const session = findSession(day, matches);
-	const span = session ? sessionSpan(session) : null;
-	if (!session || !span) throw new DayLogError('まだ記録がありません');
-	session.start = span.start;
-	session.end = time ?? span.end;
-	delete session.time;
-	return session;
+	options: { time: string | null; includeOther: boolean },
+): SessionLog[] {
+	const running = day.sessions.filter((s) =>
+		isRunningSession(s, options.includeOther),
+	);
+	if (running.length === 0)
+		throw new DayLogError('筋トレ中のものがありません');
+	const lastOf = (s: SessionLog) => sessionSpan(s)?.end ?? s.start ?? null;
+	// 日付をまたいだ筋トレ（23:50〜00:20）でも比べられるよう、いちばん早い開始からの経過で比べる
+	const starts = running.flatMap((s) => {
+		const sec = parseTime(sessionSpan(s)?.start ?? s.start ?? '');
+		return sec === null ? [] : [sec];
+	});
+	const base = circularRange(starts)?.first ?? 0;
+	const offset = (s: SessionLog) => {
+		const sec = parseTime(lastOf(s) ?? '');
+		return sec === null ? -1 : (sec - base + 86_400) % 86_400;
+	};
+	const latest = running.reduce((a, b) => (offset(b) >= offset(a) ? b : a));
+	for (const session of running) {
+		const span = sessionSpan(session);
+		if (session.name === null && span) session.start = span.start;
+		const end =
+			session === latest && options.time !== null
+				? options.time
+				: lastOf(session);
+		if (end !== null) session.end = end;
+		delete session.time;
+	}
+	return running;
 }
 
 /**
@@ -336,4 +373,16 @@ export function resumeSession(
 	if (!session) throw new DayLogError('セッションが見つかりません');
 	delete session.end;
 	if (options.manual) delete session.start;
+}
+
+/** 「筋トレを再開」: その日に終えた筋トレ（パッケージ・単発の種目）をまとめて再開する。無ければエラー */
+export function resumeDay(day: DayLog): SessionLog[] {
+	const ended = day.sessions.filter((s) => s.end);
+	if (ended.length === 0) throw new DayLogError('終えた筋トレがありません');
+	// 単発の種目は開始も消す（resumeSession と同じ）
+	for (const session of ended) {
+		delete session.end;
+		if (session.name === null) delete session.start;
+	}
+	return ended;
 }

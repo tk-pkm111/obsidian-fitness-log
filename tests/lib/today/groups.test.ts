@@ -59,7 +59,7 @@ const cardsOf = (
 			sessions: [
 				{
 					name: 'PULL',
-					note: '',
+					notes: [],
 					start: '09:59:00',
 					exercises: performed,
 				},
@@ -202,7 +202,7 @@ describe('この日から外した種目', () => {
 				sessions: [
 					{
 						name: 'PULL',
-						note: '',
+						notes: [],
 						start: '09:59:00',
 						exercises: [{ name: 'A', sets: [set] }],
 					},

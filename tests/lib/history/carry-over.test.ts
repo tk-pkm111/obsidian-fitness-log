@@ -20,7 +20,7 @@ const days: DayLog[] = [
 		sessions: [
 			{
 				name: '上半身A',
-				note: '',
+				notes: [],
 				exercises: [
 					{ name: 'ラットプルダウン', sets: [s(40, 10), s(40, 9)] },
 				],
@@ -32,12 +32,12 @@ const days: DayLog[] = [
 		sessions: [
 			{
 				name: '上半身B',
-				note: '',
+				notes: [],
 				exercises: [{ name: 'ラットプルダウン', sets: [s(50, 8)] }],
 			},
 			{
 				name: '上半身A',
-				note: '',
+				notes: [],
 				exercises: [{ name: 'ベンチプレス', sets: [s(60, 5)] }],
 			},
 		],
@@ -47,7 +47,7 @@ const days: DayLog[] = [
 		sessions: [
 			{
 				name: '上半身A',
-				note: '',
+				notes: [],
 				exercises: [{ name: 'ラットプルダウン', sets: [s(45, 10)] }],
 			},
 		],
@@ -73,12 +73,12 @@ describe('collectOccurrences', () => {
 				sessions: [
 					{
 						name: '朝',
-						note: '',
+						notes: [],
 						exercises: [{ name: 'X', sets: [s(1, 1)] }],
 					},
 					{
 						name: '夜',
-						note: '',
+						notes: [],
 						exercises: [{ name: 'X', sets: [s(2, 2)] }],
 					},
 				],

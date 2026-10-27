@@ -187,7 +187,8 @@ export interface ExerciseLog {
 export interface SessionLog {
 	/** パッケージ名。null はパッケージ外（ノートでは「その他」） */
 	name: string | null;
-	note: string;
+	/** 全体のコメント（書いた順。ノートでは 1 件ずつ「- コメント:」の行） */
+	notes: string[];
 	/** 「筋トレを開始」した時刻（'HH:mm:ss'）。パッケージのセッションだけが持つ */
 	start?: string;
 	/** 「筋トレを終了」した時刻。開始していて終了が無ければ進行中 */

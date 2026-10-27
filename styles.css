@@ -510,13 +510,91 @@ a.fitness-log-section-link:hover {
 	transition: width 300ms ease;
 }
 
-.fitness-log-section-note {
-	padding: var(--size-4-2) var(--size-4-3);
-	border-radius: var(--radius-m);
-	background: var(--background-secondary);
+/* 全体のコメント: 書いた順に 1 件 1 行（長い文は … で切る）。新しい 2 件だけを見せ、前のものは「前の N 件」にたたむ */
+.fitness-log-section-notes {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 1px;
+	padding-left: var(--size-4-2);
+	border-left: 2px solid var(--background-modifier-border);
+}
+
+.fitness-log-section-notes > .fitness-log-section-note {
+	display: block;
+	width: 100%;
+	height: auto;
+	padding: 2px var(--size-4-2);
+	border: none;
+	border-radius: var(--radius-s);
+	background: none;
+	box-shadow: none;
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
+	font-weight: var(--font-normal);
+	line-height: var(--line-height-tight);
+	text-align: left;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.fitness-log-section-notes.is-open > .fitness-log-section-note {
 	white-space: pre-wrap;
+}
+
+.fitness-log-section-notes > button.fitness-log-section-note {
+	cursor: pointer;
+}
+
+.fitness-log-section-notes > button.fitness-log-section-note:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.fitness-log-section-notes > .fitness-log-notes-toggle {
+	display: inline-flex;
+	align-items: center;
+	align-self: flex-start;
+	gap: var(--size-4-1);
+	height: auto;
+	padding: 2px var(--size-4-2);
+	border: none;
+	background: none;
+	box-shadow: none;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	cursor: pointer;
+}
+
+.fitness-log-section-notes > .fitness-log-notes-toggle:hover {
+	color: var(--text-muted);
+}
+
+.fitness-log-notes-toggle-icon {
+	display: inline-flex;
+}
+
+.fitness-log-notes-toggle-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* 終えたパッケージ: やった種目は「記録を見る（2 種目 ・ 3 セット）」の中に */
+.fitness-log-finished-row {
+	display: flex;
+}
+
+/* その日の筋トレ全体の「■ 筋トレを終了」（いちばん下の右） */
+.fitness-log-day-end {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var(--size-4-3);
+}
+
+/* その日の「お疲れ様でした」（いちばん下） */
+.fitness-log-footer ~ .fitness-log-finished {
+	margin-top: var(--size-4-4);
 }
 
 /* 種目のリスト（1 つの枠の中に行を並べる） */
@@ -622,6 +700,9 @@ a.fitness-log-section-link:hover {
 .fitness-log-card.is-done .fitness-log-card-title {
 	color: var(--text-muted);
 	font-weight: var(--font-normal);
+}
+
+.fitness-log-card.is-done .fitness-log-card-title > .fitness-log-card-name {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -773,9 +854,27 @@ button.fitness-log-play.fitness-log-icon-button:disabled {
 }
 
 .fitness-log-card-title {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
 	flex: 1;
 	min-width: 0;
 	font-weight: var(--font-medium);
+}
+
+.fitness-log-card-title > .fitness-log-card-name {
+	min-width: 0;
+}
+
+/* 種目名のすぐ右の 📈（前回までの記録）。種目名の幅を取りすぎないよう余白は小さく */
+.fitness-log-card-title > button.fitness-log-history-button {
+	flex-shrink: 0;
+	padding: var(--size-2-1);
+	color: var(--text-accent);
+}
+
+.fitness-log-card-title > button.fitness-log-history-button:hover {
+	color: var(--text-accent-hover);
 }
 
 .fitness-log-card-warning {
@@ -859,10 +958,10 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 /* 番号の丸（左の列）| 結果 | 時刻 | コメント。コメントの文は次の行。狭いと時刻も次の行に回す */
 .fitness-log-set-row {
 	display: grid;
-	grid-template-columns: var(--fitness-log-play-size) auto 1fr auto;
+	grid-template-columns: var(--fitness-log-play-size) auto 1fr auto auto;
 	grid-template-areas:
-		'slot result time edit'
-		'. note note note';
+		'slot result time edit more'
+		'. note note note note';
 	align-items: center;
 	column-gap: var(--size-4-3);
 	padding: var(--size-4-1) 0;
@@ -1012,21 +1111,27 @@ input.fitness-log-inline-edit[type='text']::placeholder {
 	color: var(--text-faint);
 }
 
+/* … （コメント・セットを削除・この種目を今日から外す）。💬 のすぐ右（狭い幅では、時刻の行を下に通す） */
+.fitness-log-set-row > .fitness-log-icon-button.fitness-log-set-more {
+	grid-area: more;
+	margin-left: calc(var(--size-4-2) * -1);
+}
+
 .is-phone .fitness-log-set-row {
-	grid-template-columns: var(--fitness-log-play-size) 1fr auto;
+	grid-template-columns: var(--fitness-log-play-size) 1fr auto auto;
 	grid-template-areas:
-		'slot result edit'
-		'. time edit'
-		'. note note';
+		'slot result edit more'
+		'. time time time'
+		'. note note note';
 }
 
 @container fitness-log-card (max-width: 520px) {
 	.fitness-log-set-row {
-		grid-template-columns: var(--fitness-log-play-size) 1fr auto;
+		grid-template-columns: var(--fitness-log-play-size) 1fr auto auto;
 		grid-template-areas:
-			'slot result edit'
-			'. time edit'
-			'. note note';
+			'slot result edit more'
+			'. time time time'
+			'. note note note';
 	}
 }
 
@@ -2785,6 +2890,10 @@ button.fitness-log-resume-button {
 	font-weight: var(--font-bold);
 }
 
+.fitness-log-finished-stat {
+	white-space: nowrap;
+}
+
 .fitness-log-finished-stats {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
@@ -4508,4 +4617,65 @@ button.fitness-log-list-edit-name .fitness-log-muted {
 	flex: 1;
 	min-width: 0;
 	font-size: var(--font-ui-smaller);
+}
+
+/* ---------------------------------------------------------------- 種目の 📈（前回までの記録） */
+
+.fitness-log-history-sub {
+	margin-bottom: var(--size-4-1);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.fitness-log-history-row {
+	display: grid;
+	/* 日付の幅をそろえて、重量・回数の頭を縦にそろえる */
+	grid-template-columns: 5.6em minmax(0, 1fr);
+	align-items: baseline;
+	column-gap: var(--size-4-3);
+	padding: var(--size-4-2) 0;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.fitness-log-history-row:first-child {
+	border-top: none;
+}
+
+.fitness-log-history-date {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.fitness-log-history-line {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	column-gap: var(--size-4-2);
+}
+
+.fitness-log-history-sets {
+	font-weight: var(--font-semibold);
+	font-variant-numeric: tabular-nums;
+}
+
+.fitness-log-history-package {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+.fitness-log-history-note {
+	margin-top: 2px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.fitness-log-history-best {
+	margin-top: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-m);
+	background: var(--background-modifier-hover);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
 }

@@ -1,12 +1,13 @@
 import { Notice, Platform } from 'obsidian';
 import { t } from '../../i18n';
 import { formatSetsCompact } from '../../lib/format';
-import { summarizeSession } from '../../lib/log/summary';
+import { summarizeWorkout } from '../../lib/log/summary';
 import {
 	carryOver,
 	lastPerformance,
 	type ExerciseOccurrence,
 } from '../../lib/history/carry-over';
+import { bestRecordSet, recentRecords } from '../../lib/history/recent';
 import type { SetLog, WeightUnit } from '../../lib/model/types';
 import { nearestIndex, stepRange, weightChoices } from '../../lib/picker';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
@@ -26,10 +27,12 @@ import {
 	type SessionRef,
 } from '../../session/session-controller';
 import { ConfirmModal } from '../modals/confirm-modal';
+import { ExerciseHistoryModal } from '../modals/exercise-history-modal';
 import { NumberPromptModal } from '../modals/number-prompt-modal';
 import { SetEditModal } from '../modals/set-edit-modal';
 import { WheelPickerModal } from '../modals/wheel-picker-modal';
 import type { PageContext } from '../page-context';
+import { openExerciseLog } from './log-page';
 
 /**
  * 今日ページの種目カードの操作（開始・終了・手入力）。
@@ -44,27 +47,23 @@ export function formatMinutes(minutes: number): string {
 		: t('session.minutes', { n: minutes });
 }
 
-/** 「■ 筋トレを終了」: 終了時刻を書いて「今日もお疲れ様でした」 */
-export function endSessionWithNotice(
-	ctx: PageContext,
-	section: SectionModel,
-): void {
+/**
+ * 「■ 筋トレを終了」（その日の画面のいちばん下）: その日の筋トレをまとめて終えて「今日もお疲れ様でした」。
+ * 過去の日は、最後のセットの終了を終了時刻にしたと知らせる
+ */
+export function endDayWithNotice(ctx: PageContext): void {
 	const { services, date } = ctx;
-	const ref = sectionRef(section);
 	ctx.run(async () => {
-		const day = await services.controller.endSession(date, ref);
-		const session = day.sessions.find((s) =>
-			services.controller.sessionMatcher(ref).match(s.name),
+		const summary = summarizeWorkout(
+			await services.controller.endDay(date),
 		);
-		const summary = session ? summarizeSession(session) : null;
-		if (date !== ctx.today && session?.end)
-			// 過去の日は最後のセットの終了を終了時刻にした
+		if (date !== ctx.today && summary.end)
 			new Notice(
-				t('notice.pastSessionEnded', { time: formatHm(session.end) }),
+				t('notice.pastSessionEnded', { time: formatHm(summary.end) }),
 			);
 		else
 			new Notice(
-				summary
+				summary.sets > 0
 					? t('notice.sessionEnded', {
 							minutes: formatMinutes(summary.durationMin),
 							exercises: summary.exercises,
@@ -222,6 +221,59 @@ export function removeExerciseFromDay(
 					exercise.id,
 				),
 			),
+	}).open();
+}
+
+/**
+ * 記録した種目をセットごとこの日の一覧から外す（種目を間違えて記録した等）。
+ * 「記録した N セットも消えます」と確かめてから。同じ種目を 2 欄に分けていれば、どちらも消す
+ */
+export function removeExerciseWithSets(
+	ctx: PageContext,
+	section: SectionModel,
+	card: CardModel,
+): void {
+	const exercise = card.exercise;
+	if (!exercise) return;
+	const sets = section.cards
+		.filter((c) => c.exercise?.id === exercise.id)
+		.reduce((n, c) => n + c.sets.length, 0);
+	new ConfirmModal(ctx.app, {
+		title: card.name,
+		message: t('today.removeExerciseWithSetsConfirm', { n: sets }),
+		confirmText: t('today.removeExerciseOk'),
+		danger: true,
+		onConfirm: () =>
+			ctx.run(() =>
+				ctx.services.controller.removeExerciseFromDay(
+					ctx.date,
+					sectionRef(section),
+					exercise.id,
+					{ withSets: true },
+				),
+			),
+	}).open();
+}
+
+/** 📈 で出す記録の回数 */
+const HISTORY_COUNT = 5;
+
+/**
+ * 種目の 📈: 前回までの記録（直近 5 回・いちばんのセット）を今日の画面の上に出す。
+ * どのパッケージでやった記録も出す（パッケージの名前を添える）
+ */
+export function openExerciseHistory(ctx: PageContext, card: CardModel): void {
+	const exercise = card.exercise;
+	if (!exercise) return;
+	const { controller, index, store } = ctx.services;
+	const occurrences = index.occurrences(controller.exerciseMatcher(exercise));
+	new ExerciseHistoryModal(ctx.app, {
+		title: card.name,
+		records: recentRecords(occurrences, ctx.date, HISTORY_COUNT),
+		best: bestRecordSet(occurrences, ctx.date, card.recordType),
+		recordType: card.recordType,
+		unit: store.settings.weightUnit,
+		onOpenLog: () => openExerciseLog(ctx, exercise.id),
 	}).open();
 }
 

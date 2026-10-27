@@ -84,7 +84,7 @@ describe('buildDayModel', () => {
 			sessions: [
 				{
 					name: '旧PUSH',
-					note: 'メモ',
+					notes: ['メモ'],
 					exercises: [
 						{ name: 'ディップス', sets: [set(8)] },
 						{ name: 'DBカール', sets: [set(10)] },
@@ -100,7 +100,7 @@ describe('buildDayModel', () => {
 			title: 'PUSH A',
 			sessionName: '旧PUSH',
 			inNote: true,
-			note: 'メモ',
+			notes: ['メモ'],
 		});
 		expect(
 			push?.cards.map((c) => [
@@ -125,10 +125,10 @@ describe('buildDayModel', () => {
 				sessions: [
 					{
 						name: null,
-						note: '',
+						notes: [],
 						exercises: [{ name: 'ランニング', sets: [set(1)] }],
 					},
-					{ name: 'PUSH A', note: '', exercises: [] },
+					{ name: 'PUSH A', notes: [], exercises: [] },
 				],
 			},
 			{ routines: [routine('pk_a'), routine('pk_l')] },
@@ -188,7 +188,7 @@ describe('buildDayModel', () => {
 	it('解決できないセッション名はそのまま 1 セクションにする', () => {
 		const sections = build({
 			date: '2026-10-01',
-			sessions: [{ name: '昔のメニュー', note: '', exercises: [] }],
+			sessions: [{ name: '昔のメニュー', notes: [], exercises: [] }],
 		});
 		expect(sections[0]).toMatchObject({
 			key: 'name:昔のメニュー',
@@ -206,7 +206,7 @@ describe('latestFinishedSet', () => {
 				sessions: [
 					{
 						name: 'A',
-						note: '',
+						notes: [],
 						exercises: [
 							{
 								name: 'X',
@@ -216,7 +216,7 @@ describe('latestFinishedSet', () => {
 					},
 					{
 						name: null,
-						note: '',
+						notes: [],
 						exercises: [{ name: 'Y', sets: [set(1, '10:03:00')] }],
 					},
 				],
@@ -237,7 +237,7 @@ describe('やった順の並び', () => {
 		exercises: Array<{ name: string; sets: SetLog[] }>,
 	): DayLog => ({
 		date: '2026-10-01',
-		sessions: [{ name: 'PUSH A', note: '', start: '09:50:00', exercises }],
+		sessions: [{ name: 'PUSH A', notes: [], start: '09:50:00', exercises }],
 	});
 	const active = (exerciseId: string, setIndex: number): ActiveSet => ({
 		date: '2026-10-01',
@@ -345,17 +345,17 @@ describe('カードのノート上の位置', () => {
 			sessions: [
 				{
 					name: 'PUSH A',
-					note: '',
+					notes: [],
 					exercises: [{ name: 'ディップス', sets: [set(8)] }],
 				},
 				{
 					name: null,
-					note: '',
+					notes: [],
 					exercises: [{ name: 'ランニング', sets: [set(1)] }],
 				},
 				{
 					name: null,
-					note: '',
+					notes: [],
 					exercises: [{ name: 'ランニング', sets: [set(2)] }],
 				},
 			],
@@ -388,7 +388,7 @@ describe('セクションの状態（筋トレの開始・終了）', () => {
 		expect(
 			statusOf({
 				date: '2026-10-01',
-				sessions: [{ name: 'PUSH A', note: '', exercises: [] }],
+				sessions: [{ name: 'PUSH A', notes: [], exercises: [] }],
 			}),
 		).toEqual([['pkg:pk_a', 'planned']]);
 		expect(
@@ -397,7 +397,7 @@ describe('セクションの状態（筋トレの開始・終了）', () => {
 				sessions: [
 					{
 						name: 'PUSH A',
-						note: '',
+						notes: [],
 						exercises: [],
 						start: '18:30:00',
 					},
@@ -410,7 +410,7 @@ describe('セクションの状態（筋トレの開始・終了）', () => {
 				sessions: [
 					{
 						name: 'PUSH A',
-						note: '',
+						notes: [],
 						exercises: [],
 						start: '18:30:00',
 						end: '19:00:00',
@@ -421,7 +421,7 @@ describe('セクションの状態（筋トレの開始・終了）', () => {
 		expect(
 			statusOf({
 				date: '2026-10-01',
-				sessions: [{ name: null, note: '', exercises: [] }],
+				sessions: [{ name: null, notes: [], exercises: [] }],
 			}),
 		).toEqual([['other', 'manual']]);
 		// 単発の種目も「筋トレを終了」したら終了
@@ -430,7 +430,7 @@ describe('セクションの状態（筋トレの開始・終了）', () => {
 			sessions: [
 				{
 					name: null,
-					note: '',
+					notes: [],
 					start: '22:09:00',
 					end: '22:27:00',
 					exercises: [{ name: 'ディップス', sets: [set(8)] }],
@@ -448,7 +448,7 @@ describe('セクションの状態（筋トレの開始・終了）', () => {
 			sessions: [
 				{
 					name: 'PUSH A',
-					note: '',
+					notes: [],
 					exercises: [{ name: 'ディップス', sets: [set(8)] }],
 				},
 			],

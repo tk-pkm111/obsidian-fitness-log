@@ -50,12 +50,12 @@ const day = (
 	sessions: [
 		{
 			name: 'PUSH',
-			note: '',
+			notes: [],
 			start: '10:00:00',
 			...(end ? { end } : {}),
 			exercises: done,
 		},
-		...(other ? [{ name: null, note: '', exercises: other }] : []),
+		...(other ? [{ name: null, notes: [], exercises: other }] : []),
 	],
 });
 const sectionsOf = (d: DayLog, active: ActiveSet | null = null) =>

@@ -16,7 +16,7 @@ const day = (
 	sets: SetLog[],
 ): DayLog => ({
 	date,
-	sessions: [{ name, note: '', exercises: [{ name: exercise, sets }] }],
+	sessions: [{ name, notes: [], exercises: [{ name: exercise, sets }] }],
 });
 const days = [
 	day('2026-09-28', 'A', 'ベンチ', [s(60, 5), s(60, 5)]),

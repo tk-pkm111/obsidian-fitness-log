@@ -26,7 +26,6 @@ import { TextPromptModal } from '../modals/text-prompt-modal';
 import type { PageContext } from '../page-context';
 import { dragHandle, makeSortable, type SortableEntry } from '../sortable';
 import {
-	endSessionWithNotice,
 	focusOf,
 	formatMinutes,
 	removeExerciseFromDay,
@@ -37,8 +36,6 @@ import { renderExerciseCard, type CardEnv } from './today-card';
 export interface SectionEnv {
 	isToday: boolean;
 	isFuture: boolean;
-	/** 別のパッケージが筋トレ中（開始ボタンを押せない） */
-	anotherRunning: boolean;
 	/** その日の日ノートのセッション */
 	session: SessionLog | undefined;
 	/** 休憩を出す種目（最後にセットを終えた種目。無ければ null） */
@@ -50,13 +47,13 @@ export interface SectionEnv {
 }
 
 /**
- * 今日ページの 1 セクション（パッケージ 1 つ分）。枠で囲まず、見出し（名前・状態・進み）と種目のリストで見せる。
+ * 今日ページの 1 セクション（パッケージ 1 つ分）。枠で囲まず、見出し（名前・状態・進み）・全体のコメント・種目のリストで見せる。
  * - 予定（planned）: 種目名のチップと「▶ 筋トレを開始」
- * - 筋トレ中（in-progress）: 進みのバー、種目のリスト（やった順 → まだの種目）、「■ 筋トレを終了」
- * - 終了（finished）: 「お疲れ様でした」とまとめ（種目数・セット数）。「記録を見る」でやった種目だけを開いて修正。
- *   今日なら右下に「筋トレを再開」（筋トレ中の「筋トレを終了」と同じ場所）
- * - 単発の種目（manual）: パッケージ外の種目。開始は無く、いつも開いている。今日は記録があれば右下に
- *   「筋トレを終了」（終えると finished になり、「お疲れ様でした」と「筋トレを再開」）
+ * - 筋トレ中（in-progress）: 進みのバー、種目のリスト（やった順 → まだの種目）
+ * - 終了（finished）: やった種目は「記録を見る（2 種目 ・ 3 セット）」の中にたたむ（開いて修正できる）
+ * - 単発の種目（manual）: パッケージ外の種目。開始は無く、いつも開いている
+ * 「筋トレを終了」「お疲れ様でした」「筋トレを再開」はセクションごとではなく、その日の画面のいちばん下に 1 つ
+ * （パッケージと単発の種目をまとめて 1 日の筋トレ。today-page.ts）。
  * 名前の行の右端の × で、まとまりをその日から外せる（筋トレ中・終了後も。記録があれば確かめてから消す）
  * 実行中のセットはその種目の行に、休憩は最後にセットを終えた種目のすぐ下に出す（today-card.ts）。
  */
@@ -74,14 +71,13 @@ export function renderSection(
 	});
 
 	renderHeader(ctx, box, section, env, expanded, expandKey);
-	if (section.note)
-		box.createDiv({ cls: 'fitness-log-section-note', text: section.note });
+	renderNotes(ctx, box, section, env);
 
 	switch (status) {
 		case 'planned':
 			if (expanded.has(expandKey) && !env.isFuture) {
 				renderCards(ctx, box, section, section.cards, 'manual', env);
-				renderFooter(ctx, box, section, { add: true });
+				renderFooter(ctx, box, section);
 			} else renderPlanned(ctx, box, section, env, expanded, expandKey);
 			return;
 		case 'in-progress':
@@ -93,7 +89,7 @@ export function renderSection(
 				env.isToday ? 'timer' : 'manual',
 				env,
 			);
-			renderFooter(ctx, box, section, { add: true, end: true });
+			renderFooter(ctx, box, section);
 			return;
 		case 'finished':
 			renderFinished(ctx, box, section, env, expanded, expandKey);
@@ -105,12 +101,7 @@ export function renderSection(
 					? 'timer'
 					: 'manual';
 			renderCards(ctx, box, section, section.cards, mode, env);
-			// 今日の単発の種目も、記録があれば「筋トレを終了」で終えられる（休憩のタイマーも止まる）
-			if (mode !== 'readonly')
-				renderFooter(ctx, box, section, {
-					add: true,
-					end: env.isToday && sectionProgress(section).sets > 0,
-				});
+			if (mode !== 'readonly') renderFooter(ctx, box, section);
 			return;
 		}
 	}
@@ -235,13 +226,11 @@ function renderHeader(
 	}
 
 	const actions = header.createDiv({ cls: 'fitness-log-section-actions' });
-	const memo = iconButton(
-		actions,
-		'message-square',
-		t('today.editMemo'),
-		() => editMemo(ctx, section),
+	// 💬 は全体のコメントを 1 件足す（書いたものは名前の行の下に並ぶ。押すとその 1 件を直せる）
+	const memo = iconButton(actions, 'message-square', t('today.addNote'), () =>
+		addNote(ctx, section),
 	);
-	memo.toggleClass('has-comment', section.note.length > 0);
+	memo.toggleClass('has-comment', section.notes.length > 0);
 	iconButton(actions, 'more-horizontal', t('today.sectionMenu'), (event) =>
 		openSectionMenu(ctx, section, env, expanded, expandKey, event),
 	);
@@ -281,9 +270,9 @@ function openSectionMenu(
 	const menu = new Menu();
 	menu.addItem((item) =>
 		item
-			.setTitle(t('today.editMemo'))
+			.setTitle(t('today.addNote'))
 			.setIcon('message-square')
-			.onClick(() => editMemo(ctx, section)),
+			.onClick(() => addNote(ctx, section)),
 	);
 	const pkg = section.pkg;
 	if (pkg)
@@ -370,22 +359,13 @@ function renderPlanned(
 	const actions = box.createDiv({ cls: 'fitness-log-session-actions' });
 	const pkg = section.pkg;
 	if (env.isToday && pkg) {
-		const start = textButton(
+		// 別のパッケージが筋トレ中でも始められる（終えるときは、その日の筋トレをまとめて終える）
+		textButton(
 			actions,
 			t('session.start'),
 			() => ctx.run(() => services.controller.startSession(date, pkg.id)),
-			{
-				icon: 'play',
-				cta: !env.anotherRunning,
-				cls: 'fitness-log-session-button',
-			},
+			{ icon: 'play', cta: true, cls: 'fitness-log-session-button' },
 		);
-		start.disabled = env.anotherRunning;
-		if (env.anotherRunning)
-			actions.createSpan({
-				cls: 'fitness-log-muted',
-				text: t('session.anotherRunning'),
-			});
 	} else {
 		// 過去の日: タイマーを使わずに記録を足す
 		textButton(
@@ -464,7 +444,11 @@ function changePackage(
 	});
 }
 
-/** 終了: 「お疲れ様でした」とまとめ。「記録を見る」でやった種目だけを開いて修正できる */
+/**
+ * 終了: やった種目を「記録を見る（2 種目 ・ 3 セット）」の中にたたむ。開くとやった種目だけを修正できる
+ * （やらなかった種目を並べても修正には要らない。足すときは「種目を追加」）。
+ * 「お疲れ様でした」と「筋トレを再開」は、その日の画面のいちばん下に 1 つ（today-page.ts）
+ */
 function renderFinished(
 	ctx: PageContext,
 	box: HTMLElement,
@@ -473,35 +457,19 @@ function renderFinished(
 	expanded: Set<string>,
 	expandKey: string,
 ): void {
-	const summary = env.session ? summarizeSession(env.session) : null;
-	const done = box.createDiv({ cls: 'fitness-log-finished' });
-	setIcon(done.createSpan({ cls: 'fitness-log-finished-icon' }), 'trophy');
-	const text = done.createDiv({ cls: 'fitness-log-finished-text' });
-	text.createDiv({
-		cls: 'fitness-log-finished-title',
-		text: t('session.finished'),
-	});
-	if (summary)
-		text.createDiv({
-			cls: 'fitness-log-finished-stats',
-			text: t('session.summary', {
-				exercises: summary.exercises,
-				sets: summary.sets,
-			}),
-		});
-	const buttons = done.createDiv({ cls: 'fitness-log-finished-buttons' });
-	const file = ctx.services.repository.fileFor(ctx.date);
-	if (file)
-		textButton(
-			buttons,
-			t('today.openNote'),
-			() => openNoteInNewTab(ctx.app, file.path),
-			{ icon: 'file-text', cls: 'mod-quiet' },
-		);
+	const progress = sectionProgress(section);
 	const open = expanded.has(expandKey);
+	const row = box.createDiv({ cls: 'fitness-log-finished-row' });
 	textButton(
-		buttons,
-		open ? t('session.hideRecords') : t('session.showRecords'),
+		row,
+		open
+			? t('session.hideRecords')
+			: progress.sets > 0
+				? t('session.showRecordsCount', {
+						exercises: progress.doneExercises,
+						sets: progress.sets,
+					})
+				: t('session.showRecords'),
 		() => {
 			if (open) expanded.delete(expandKey);
 			else expanded.add(expandKey);
@@ -509,20 +477,16 @@ function renderFinished(
 		},
 		{ icon: open ? 'chevron-up' : 'chevron-down', cls: 'mod-quiet' },
 	);
-	// やった種目だけ（やらなかった種目を並べても修正には要らない）。足すときは「種目を追加」
-	if (open)
-		renderCards(
-			ctx,
-			box,
-			section,
-			section.cards.filter((c) => c.sets.length > 0),
-			env.isFuture ? 'readonly' : 'manual',
-			env,
-		);
-	// 再開は今日だけ（過去の日はタイマーで続きのセットを計れない）
-	const resume = env.isToday && (section.isOther || section.pkg !== null);
-	const add = open && !env.isFuture;
-	if (add || resume) renderFooter(ctx, box, section, { add, resume });
+	if (!open) return;
+	renderCards(
+		ctx,
+		box,
+		section,
+		section.cards.filter((c) => c.sets.length > 0),
+		env.isFuture ? 'readonly' : 'manual',
+		env,
+	);
+	if (!env.isFuture) renderFooter(ctx, box, section);
 }
 
 /** 種目のリスト（パッケージの区切りごと）。今日の筋トレ中は、まだの種目を ⋮⋮ で並べ替えられる */
@@ -619,56 +583,28 @@ function renderCards(
 	}
 }
 
-/**
- * リストの下: 左に「＋ 種目を追加」、右に（筋トレ中は）「■ 筋トレを終了」・（終了後は）「↻ 筋トレを再開」。
- * 終了と再開は同じ右下に出す（終えたところで、そのまま押し直せる）
- */
+/** リストの下の「＋ 種目を追加」（その日のこのまとまりに足す） */
 function renderFooter(
 	ctx: PageContext,
 	box: HTMLElement,
 	section: SectionModel,
-	options: { add?: boolean; end?: boolean; resume?: boolean },
 ): void {
 	const footer = box.createDiv({ cls: 'fitness-log-section-footer' });
-	if (options.add)
-		textButton(
-			footer,
-			t('today.addExercise'),
-			() =>
-				chooseExerciseForSection(ctx, section, (exerciseId) =>
-					ctx.run(() =>
-						ctx.services.controller.addExerciseToDay(
-							ctx.date,
-							sectionRef(section),
-							exerciseId,
-						),
-					),
-				),
-			{ icon: 'plus', cls: 'mod-quiet' },
-		);
-	if (options.end)
-		textButton(
-			footer,
-			t('session.end'),
-			() => endSessionWithNotice(ctx, section),
-			{ icon: 'square', cls: 'fitness-log-end-button' },
-		);
-	if (options.resume)
-		textButton(
-			footer,
-			t('session.resume'),
-			() =>
+	textButton(
+		footer,
+		t('today.addExercise'),
+		() =>
+			chooseExerciseForSection(ctx, section, (exerciseId) =>
 				ctx.run(() =>
-					ctx.services.controller.resumeSession(
+					ctx.services.controller.addExerciseToDay(
 						ctx.date,
 						sectionRef(section),
+						exerciseId,
 					),
 				),
-			{
-				icon: 'rotate-ccw',
-				cls: 'fitness-log-end-button fitness-log-resume-button',
-			},
-		);
+			),
+		{ icon: 'plus', cls: 'mod-quiet' },
+	);
 }
 
 /** パッケージの編集画面へ（編集画面から「今日の画面に戻る」で戻れる） */
@@ -698,21 +634,116 @@ function groupLabel(group: CardGroup): string | null {
 	return null;
 }
 
-function editMemo(ctx: PageContext, section: SectionModel): void {
+/** 全体のコメントの見出し（「コメント: LEGS A」） */
+function noteTitle(section: SectionModel): string {
+	return `${t('memo.title')}: ${section.isOther ? t('today.other') : section.title}`;
+}
+
+/** 全体のコメントを 1 件足す（いちばん後ろ） */
+function addNote(ctx: PageContext, section: SectionModel): void {
 	new TextPromptModal(ctx.app, {
-		title: `${t('memo.title')}: ${section.isOther ? t('today.other') : section.title}`,
-		initial: section.note,
+		title: noteTitle(section),
+		initial: '',
 		placeholder: t('memo.placeholder'),
-		submitText: t('memo.save'),
-		onSubmit: (note) =>
+		submitText: t('memo.add'),
+		onSubmit: (note) => {
+			if (note.trim().length === 0) return;
 			ctx.run(() =>
-				ctx.services.controller.setSessionNote(
+				ctx.services.controller.addSessionNote(
 					ctx.date,
 					sectionRef(section),
 					note,
 				),
-			),
+			);
+		},
 	}).open();
+}
+
+/** 全体のコメントの 1 件を直す・消す */
+function editNote(
+	ctx: PageContext,
+	section: SectionModel,
+	index: number,
+	note: string,
+): void {
+	const save = (text: string) =>
+		ctx.run(() =>
+			ctx.services.controller.editSessionNote(
+				ctx.date,
+				sectionRef(section),
+				index,
+				note,
+				text,
+			),
+		);
+	new TextPromptModal(ctx.app, {
+		title: noteTitle(section),
+		initial: note,
+		placeholder: t('memo.placeholder'),
+		submitText: t('memo.save'),
+		onSubmit: (text) => {
+			if (text.trim() !== note) save(text);
+		},
+		onDelete: () => save(''),
+	}).open();
+}
+
+/** 全体のコメントを見せる数。それより前は「前の N 件」にたたむ（増えても種目のリストを押し下げないように） */
+const VISIBLE_NOTES = 2;
+
+/**
+ * 全体のコメント（名前の行の下）: 書いた順に 1 件 1 行（長い文は … で切る）。新しい VISIBLE_NOTES 件だけを見せ、
+ * それより前は「前の N 件」にたたむ。開くと全部を最後まで出す。1 件を押すと、その 1 件を直せる
+ */
+function renderNotes(
+	ctx: PageContext,
+	box: HTMLElement,
+	section: SectionModel,
+	env: SectionEnv,
+): void {
+	const notes = section.notes;
+	if (notes.length === 0) return;
+	const opened = ctx.pageState('todayNotesOpen', () => new Set<string>());
+	const key = `${ctx.date}:${section.key}`;
+	const open = opened.has(key);
+	const list = box.createDiv({ cls: 'fitness-log-section-notes' });
+	list.toggleClass('is-open', open);
+	const toggle = (text: string, icon: string) => {
+		const button = list.createEl('button', {
+			cls: 'fitness-log-notes-toggle',
+			attr: { type: 'button' },
+		});
+		setIcon(
+			button.createSpan({ cls: 'fitness-log-notes-toggle-icon' }),
+			icon,
+		);
+		button.createSpan({ text });
+		button.addEventListener('click', () => {
+			if (open) opened.delete(key);
+			else opened.add(key);
+			ctx.refresh();
+		});
+	};
+	const hidden = open ? 0 : Math.max(0, notes.length - VISIBLE_NOTES);
+	if (hidden > 0)
+		toggle(t('today.olderNotes', { n: hidden }), 'chevron-down');
+	notes.forEach((note, index) => {
+		if (index < hidden) return;
+		if (env.isFuture) {
+			list.createDiv({ cls: 'fitness-log-section-note', text: note });
+			return;
+		}
+		const item = list.createEl('button', {
+			cls: 'fitness-log-section-note',
+			text: note,
+			attr: { type: 'button', 'aria-label': t('today.editNote') },
+		});
+		item.addEventListener('click', () =>
+			editNote(ctx, section, index, note),
+		);
+	});
+	if (open && notes.length > VISIBLE_NOTES)
+		toggle(t('today.foldNotes'), 'chevron-up');
 }
 
 /** セクションに種目を足す（既に並んでいる種目は候補から外す） */

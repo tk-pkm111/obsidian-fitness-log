@@ -35,6 +35,16 @@ export function openPackageLog(
 	ctx.navigate({ page: 'log', selectedId: null });
 }
 
+/** ログの種目のタブで、その種目を開く（今日の画面の 📈 の「ログで詳しく見る」から） */
+export function openExerciseLog(ctx: PageContext, exerciseKey: string): void {
+	const state = logPageState(ctx);
+	state.mode = 'exercise';
+	state.detail = null;
+	state.query = '';
+	state.hidden = new Set();
+	ctx.navigate({ page: 'log', exerciseId: exerciseKey, selectedId: null });
+}
+
 /**
  * ログページ: パッケージ（パッケージの中での伸び）／種目（パッケージごとの線）／月ごと。
  * 同じ種目でもパッケージで扱える重量が変わるので、まずはパッケージの中どうしで比べる。

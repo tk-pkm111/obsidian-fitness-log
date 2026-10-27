@@ -3,6 +3,7 @@ import {
 	applySummaryToFrontmatter,
 	sessionSpan,
 	summarizeDay,
+	summarizeWorkout,
 } from '../../../src/lib/log/summary';
 import type { DayLog, SetLog } from '../../../src/lib/model/types';
 
@@ -18,7 +19,7 @@ const day: DayLog = {
 	sessions: [
 		{
 			name: 'PUSH A',
-			note: '',
+			notes: [],
 			exercises: [
 				{
 					name: 'ケーブルYレイズ',
@@ -35,7 +36,7 @@ const day: DayLog = {
 		},
 		{
 			name: null,
-			note: '',
+			notes: [],
 			exercises: [
 				{
 					name: 'ランニング',
@@ -43,7 +44,7 @@ const day: DayLog = {
 				},
 			],
 		},
-		{ name: 'LEGS A', note: '', exercises: [] },
+		{ name: 'LEGS A', notes: [], exercises: [] },
 	],
 };
 
@@ -106,7 +107,7 @@ describe('日付をまたいだセッション', () => {
 			sessions: [
 				{
 					name: 'A',
-					note: '',
+					notes: [],
 					exercises: [
 						{
 							name: 'X',
@@ -124,5 +125,74 @@ describe('日付をまたいだセッション', () => {
 			end: '00:01:00',
 		});
 		expect(summarizeDay(night).durationMin).toBe(11);
+	});
+});
+
+describe('summarizeWorkout（その日の筋トレ全体のまとめ）', () => {
+	it('最初の開始から最後の終了まで（重なっても足さない）。種目は同じ名前を 1 つと数える', () => {
+		const workout: DayLog = {
+			date: '2026-10-01',
+			sessions: [
+				{
+					name: 'CARDIO',
+					notes: [],
+					start: '00:57:00',
+					end: '01:00:00',
+					exercises: [
+						{
+							name: 'トレッドミル',
+							sets: [set(null, null, '00:57:10', '01:00:00')],
+						},
+					],
+				},
+				{
+					name: null,
+					notes: [],
+					start: '00:59:00',
+					end: '01:08:00',
+					exercises: [
+						{
+							name: 'レッグプレス',
+							sets: [
+								set(50, 12, '00:59:00', '01:00:16'),
+								set(50, 12, '01:02:00', '01:02:38'),
+							],
+						},
+						{
+							name: 'トレッドミル',
+							sets: [set(null, null, '01:05:00', '01:07:00')],
+						},
+					],
+				},
+			],
+		};
+		expect(summarizeWorkout(workout)).toEqual({
+			start: '00:57:00',
+			end: '01:08:00',
+			durationMin: 11,
+			exercises: 2,
+			sets: 4,
+		});
+	});
+
+	it('時刻が無ければ開始・終了は null、時間は 0', () => {
+		expect(
+			summarizeWorkout({
+				date: '2026-10-01',
+				sessions: [
+					{
+						name: 'A',
+						notes: [],
+						exercises: [{ name: 'X', sets: [set(10, 8)] }],
+					},
+				],
+			}),
+		).toEqual({
+			start: null,
+			end: null,
+			durationMin: 0,
+			exercises: 1,
+			sets: 1,
+		});
 	});
 });

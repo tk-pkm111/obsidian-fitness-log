@@ -12,6 +12,8 @@ export interface TextPromptOptions {
 	/** 文字列を返すと拒否してその文言を表示する */
 	validate?: (value: string) => string | undefined;
 	onSubmit: (value: string) => void;
+	/** 左下に「削除」を出す（直している 1 件を消す） */
+	onDelete?: () => void;
 }
 
 export class TextPromptModal extends Modal {
@@ -60,6 +62,17 @@ export class TextPromptModal extends Modal {
 		const buttons = contentEl.createDiv({
 			cls: 'fitness-log-modal-buttons',
 		});
+		const onDelete = options.onDelete;
+		if (onDelete)
+			textButton(
+				buttons,
+				t('prompt.delete'),
+				() => {
+					this.close();
+					onDelete();
+				},
+				{ cls: 'mod-warning fitness-log-button-left' },
+			);
 		textButton(buttons, t('prompt.cancel'), () => this.close());
 		textButton(buttons, options.submitText, submit, { cta: true });
 		window.setTimeout(() => input.focus(), 0);
