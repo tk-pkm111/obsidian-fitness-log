@@ -314,8 +314,17 @@ input.fitness-log-date-input {
 	border: 1px solid var(--background-modifier-border);
 }
 
-.fitness-log-banner > span:not(.fitness-log-banner-icon) {
+.fitness-log-banner > span:not(.fitness-log-banner-icon),
+.fitness-log-banner-text {
 	flex: 1;
+	min-width: 0;
+}
+
+/* 0 時をまたいだ前の日の筋トレ: 今日の筋トレを始めるとどうなるか */
+.fitness-log-banner-sub {
+	margin-top: 2px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
 }
 
 .fitness-log-banner.mod-warning {
@@ -953,6 +962,24 @@ body:not(.is-mobile) .fitness-log-card .fitness-log-drag-handle:focus-visible {
 	margin-top: var(--size-4-1);
 	display: flex;
 	flex-direction: column;
+}
+
+/* 計り終えないまま過去の日に残った進行中のセット: 種目名の列にそろえ、「記録する」と × を右に */
+.fitness-log-leftover-active {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-1);
+	padding-left: calc(var(--fitness-log-play-size) + var(--size-4-3));
+	font-size: var(--font-ui-small);
+}
+
+/* 狭いときは文を 1 行に取り、ボタンは次の行に回す */
+.fitness-log-leftover-active-text {
+	flex: 1 1 16em;
+	min-width: 0;
+	color: var(--text-muted);
 }
 
 /* 番号の丸（左の列）| 結果 | 時刻 | コメント。コメントの文は次の行。狭いと時刻も次の行に回す */

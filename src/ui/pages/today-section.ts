@@ -29,18 +29,20 @@ import {
 	focusOf,
 	formatMinutes,
 	removeExerciseFromDay,
+	runStart,
 	sectionRef,
 } from './today-actions';
 import { renderExerciseCard, type CardEnv } from './today-card';
 
 export interface SectionEnv {
-	isToday: boolean;
+	/** タイマーで記録する日（今日と、0 時をまたいで筋トレが続いている前の日。isLiveDate） */
+	live: boolean;
 	isFuture: boolean;
 	/** その日の日ノートのセッション */
 	session: SessionLog | undefined;
 	/** 休憩を出す種目（最後にセットを終えた種目。無ければ null） */
 	rest: RestState | null;
-	/** その日に最後に終えたセット（今日だけ。いまの種目を決める） */
+	/** その日に最後に終えたセット（タイマーで記録する日だけ。いまの種目を決める） */
 	lastSet: LastSet | null;
 	/** その日のノートにもうあるパッケージ（「別のパッケージに変える」の候補から外す） */
 	packagesInDay: ReadonlySet<string>;
@@ -86,7 +88,7 @@ export function renderSection(
 				box,
 				section,
 				section.cards,
-				env.isToday ? 'timer' : 'manual',
+				env.live ? 'timer' : 'manual',
 				env,
 			);
 			renderFooter(ctx, box, section);
@@ -97,7 +99,7 @@ export function renderSection(
 		case 'manual': {
 			const mode = env.isFuture
 				? 'readonly'
-				: env.isToday
+				: env.live
 					? 'timer'
 					: 'manual';
 			renderCards(ctx, box, section, section.cards, mode, env);
@@ -173,7 +175,7 @@ function renderHeader(
 			if (start) {
 				item(t('session.started', { time: formatHm(start) }));
 				const startSec = parseTime(start);
-				if (env.isToday && startSec !== null) {
+				if (env.live && startSec !== null) {
 					const elapsed = item('', 'fitness-log-elapsed');
 					ctx.addTicker((now) => {
 						const nowSec =
@@ -362,12 +364,15 @@ function renderPlanned(
 	if (env.isFuture) return;
 	const actions = box.createDiv({ cls: 'fitness-log-session-actions' });
 	const pkg = section.pkg;
-	if (env.isToday && pkg) {
+	if (env.live && pkg) {
 		// 別のパッケージが筋トレ中でも始められる（終えるときは、その日の筋トレをまとめて終える）
 		textButton(
 			actions,
 			t('session.start'),
-			() => ctx.run(() => services.controller.startSession(date, pkg.id)),
+			() =>
+				runStart(ctx, () =>
+					services.controller.startSession(date, pkg.id),
+				),
 			{ icon: 'play', cta: true, cls: 'fitness-log-session-button' },
 		);
 	} else {
@@ -543,7 +548,6 @@ function renderCards(
 	env: SectionEnv,
 ): void {
 	const baseEnv: CardEnv = {
-		isToday: ctx.date === ctx.today,
 		mode,
 		rest: env.rest,
 	};

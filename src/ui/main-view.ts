@@ -86,6 +86,8 @@ export class MainView extends ItemView {
 	private bodyEl: HTMLElement | null = null;
 	private pageStates = new Map<string, object>();
 	private renderedToday = todayString();
+	/** 今日のページが追う日（ふつうは今日。0 時をまたいで筋トレが続いている間は前の日） */
+	private renderedFollow = this.renderedToday;
 	/** 前に描いたページ（ページに入ったときを知るため） */
 	private renderedPage: PageId | null = null;
 
@@ -165,7 +167,15 @@ export class MainView extends ItemView {
 		this.render();
 	}
 
+	/** 日付を決めずに今日のページを開いたときの日（0 時をまたいで筋トレが続いていればその日） */
+	private followDate(now = new Date()): string {
+		return this.services.controller.overnight()?.date ?? todayString(now);
+	}
+
 	private navigate(patch: Partial<MainViewState>): void {
+		// 追う日を選んだら「追う」にする（日付が変わったら次の日へ。決めた日のままにしない）
+		if (patch.date && patch.date === this.followDate())
+			patch = { ...patch, date: null };
 		this.viewState = { ...this.viewState, ...patch };
 		void this.app.workspace.requestSaveLayout();
 		this.drawerOpen = false;
@@ -176,8 +186,12 @@ export class MainView extends ItemView {
 	private tick(): void {
 		const now = new Date();
 		const today = todayString(now);
-		// 日付が変わったら「今日」を表示し直す
-		if (today !== this.renderedToday) {
+		// 日付が変わったら「今日」を表示し直す。0 時をまたいで筋トレが続いていれば前の日のまま
+		// （続かなくなったら今日へ）
+		if (
+			today !== this.renderedToday ||
+			this.followDate(now) !== this.renderedFollow
+		) {
 			this.render();
 			return;
 		}
@@ -204,6 +218,10 @@ export class MainView extends ItemView {
 				: null;
 		this.tickers = [];
 		this.renderedToday = todayString();
+		this.renderedFollow = this.followDate();
+		// 前の日の筋トレが続いている間に今日を選んでいて、続かなくなったら、また今日を追う
+		if (this.viewState.date === this.renderedFollow)
+			this.viewState = { ...this.viewState, date: null };
 		contentEl.empty();
 		// 体組成を記録しなくなったら（ほかの端末でオフにしたときも）今日のページへ。
 		// 起動直後は設定ノートを読むまでオン・オフが分からないので、読み終えるまで待つ
@@ -249,8 +267,9 @@ export class MainView extends ItemView {
 			services: this.services,
 			app: this.app,
 			state: this.viewState,
-			date: this.viewState.date ?? this.renderedToday,
+			date: this.viewState.date ?? this.renderedFollow,
 			today: this.renderedToday,
+			overnight: this.services.controller.overnight(),
 			header: { center, actions },
 			navigate: (patch) => this.navigate(patch),
 			refresh: () => this.requestRender(),

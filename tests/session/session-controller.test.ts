@@ -738,4 +738,114 @@ describe('SessionController（筋トレの開始・終了）', () => {
 			'2026-10-02 pkg:pk_a': ['ex:b', 'ex:a'],
 		});
 	});
+
+	it('0 時をまたいでも筋トレが続いていれば、前の日も今日と同じ（終了は押した時刻・再開できる）', async () => {
+		const { fake, controller, setClock } = await make();
+		const path = 'Fitness/log/2026-10-01.md';
+		setClock(new Date(2026, 9, 1, 23, 45, 0));
+		await controller.startSession('2026-10-01', 'pk_a');
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		setClock(new Date(2026, 9, 2, 0, 10, 0));
+		expect(controller.overnight()).toEqual({
+			date: '2026-10-01',
+			running: true,
+		});
+		expect(controller.isLive('2026-10-01')).toBe(true);
+		await controller.finishSet(9);
+		setClock(new Date(2026, 9, 2, 0, 20, 0));
+		await controller.endDay('2026-10-01');
+		expect(fake.vault.text(path)).toContain(
+			'## PUSH A\n- 時間: 23:45:00 – 00:20:00\n',
+		);
+		// 0 時を過ぎてから終えたので、まだ前の日のまま（再開できる）
+		expect(controller.overnight()).toEqual({
+			date: '2026-10-01',
+			running: false,
+		});
+		await controller.resumeDay('2026-10-01');
+		expect(fake.vault.text(path)).toContain('- 時間: 23:45:00 –\n');
+	});
+
+	it('今日の筋トレを始めると、0 時をまたいで続いている前の日の筋トレ（進行中のセットも）を今の時刻で終える', async () => {
+		const { fake, store, controller, setClock } = await make();
+		setClock(new Date(2026, 9, 1, 23, 45, 0));
+		await controller.startSession('2026-10-01', 'pk_a');
+		setClock(new Date(2026, 9, 1, 23, 50, 0));
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		setClock(new Date(2026, 9, 2, 0, 30, 0));
+		await controller.startSession('2026-10-02', 'pk_b');
+		expect(store.current.activeSet).toBeNull();
+		const yesterday = fake.vault.text('Fitness/log/2026-10-01.md')!;
+		expect(yesterday).toContain('- 時間: 23:45:00 – 00:30:00\n');
+		expect(yesterday).toContain('| 1 | 10 | - | 23:50:00 | 00:30:00 | |');
+		expect(fake.vault.text('Fitness/log/2026-10-02.md')).toContain(
+			'## PULL A\n- 時間: 00:30:00 –\n',
+		);
+		expect(controller.overnight()).toBeNull();
+		expect(controller.isLive('2026-10-01')).toBe(false);
+	});
+
+	it('今日のセット（単発の種目）を始めても、前の日の進行中のセットを終えてから始める', async () => {
+		const { fake, store, controller, setClock } = await make();
+		setClock(new Date(2026, 9, 1, 23, 55, 0));
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: null,
+			exerciseId: 'ex_d',
+			weight: null,
+		});
+		setClock(new Date(2026, 9, 2, 0, 5, 0));
+		await controller.startSet({
+			date: '2026-10-02',
+			packageId: null,
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		expect(store.current.activeSet).toMatchObject({
+			date: '2026-10-02',
+			exerciseId: 'ex_y',
+		});
+		expect(fake.vault.text('Fitness/log/2026-10-01.md')).toContain(
+			'## その他\n- 時間: 23:55:00 – 00:05:00\n',
+		);
+	});
+
+	it('終え忘れて 3 時間を過ぎた前の日は過去の日（今日を始めても触らない）。残ったセットは手で入れて記録できる', async () => {
+		const { fake, store, controller, setClock } = await make();
+		setClock(new Date(2026, 9, 1, 20, 0, 0));
+		await controller.startSession('2026-10-01', 'pk_a');
+		await controller.startSet({
+			date: '2026-10-01',
+			packageId: 'pk_a',
+			exerciseId: 'ex_y',
+			weight: 10,
+		});
+		setClock(new Date(2026, 9, 2, 0, 30, 0));
+		expect(controller.overnight()).toBeNull();
+		await expect(
+			controller.startSession('2026-10-02', 'pk_b'),
+		).resolves.toBeDefined();
+		expect(store.current.activeSet).toMatchObject({ date: '2026-10-01' });
+		await controller.recordActiveSet({
+			weight: 10,
+			reps: 8,
+			start: '20:00:00',
+			end: '20:01:00',
+			note: '',
+		});
+		expect(store.current.activeSet).toBeNull();
+		expect(fake.vault.text('Fitness/log/2026-10-01.md')).toContain(
+			'| 1 | 10 | 8 | 20:00:00 | 20:01:00 | |',
+		);
+	});
 });

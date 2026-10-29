@@ -51,6 +51,17 @@ export function diffDays(from: string, to: string): number {
 	return Math.round((toUtcMs(to) - toUtcMs(from)) / DAY_MS);
 }
 
+/** その日のローカル時刻の 0 時（ミリ秒） */
+export function startOfDayMs(date: string): number {
+	const match = DATE_PATTERN.exec(date);
+	if (!match) throw new Error(`Invalid date: ${date}`);
+	return new Date(
+		Number(match[1]),
+		Number(match[2]) - 1,
+		Number(match[3]),
+	).getTime();
+}
+
 /** 0=日 … 6=土 */
 export function weekdayOf(date: string): number {
 	return new Date(toUtcMs(date)).getUTCDay();

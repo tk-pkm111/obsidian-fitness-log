@@ -182,6 +182,14 @@ export const ja = {
 	'today.sectionMenu': 'その他の操作',
 	'today.activeElsewhere': '進行中のセットがあります: {exercise}（{date}）',
 	'today.goToActive': 'その日を表示',
+	'today.overnightRunning': '{date} の筋トレが続いています',
+	'today.overnightEnds':
+		'ここで始めると、{date} の筋トレを今の時刻で終えます',
+	'today.overnightEndsWithSet':
+		'ここで始めると、{date} の筋トレ（進行中のセットも）を今の時刻で終えます',
+	'today.leftoverActive': 'セット {n} ・ {time} に始めたまま',
+	'today.recordActive': '記録する',
+	'today.recordActiveTitle': 'セット {n} を記録',
 	'today.noteError':
 		'この日のノートの記録を読めません（{reason}）。ノートを開いて表を直してください。',
 	'today.unknownExercise':
@@ -629,6 +637,9 @@ export const ja = {
 		'今日もお疲れ様でした！ {minutes} ・ {exercises} 種目 ・ {sets} セット',
 	'notice.pastSessionEnded':
 		'筋トレを終了しました（終了時刻は最後のセットの終了 {time} にしました）。',
+	'notice.overnightEnded': '{date} の筋トレを今の時刻で終えました。',
+	'notice.overnightEndedWithSet':
+		'{date} の筋トレを今の時刻で終えました（{exercise}のセットも終了。回数などは {date} の画面で直せます）。',
 
 	'settings.group.body': '体組成',
 	'settings.bodyEnabled.name': '体組成を記録する',

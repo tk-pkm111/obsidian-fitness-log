@@ -257,7 +257,7 @@ function openDay(ctx: PageContext, date: string, entry?: CalendarEntry): void {
 		);
 	ctx.navigate({
 		page: 'today',
-		date: date === ctx.today ? null : date,
+		date,
 		selectedId: null,
 	});
 }

@@ -5,27 +5,34 @@ import { formatSetResult, formatSetsCompact } from '../../lib/format';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
 import type { CardRole } from '../../lib/today/focus';
 import type { RestState } from '../../lib/today/rest';
-import { elapsedSeconds, formatDuration, parseTime } from '../../lib/time/date';
+import {
+	elapsedSeconds,
+	formatDuration,
+	formatHm,
+	formatTime,
+	parseTime,
+} from '../../lib/time/date';
 import {
 	fromDisplayWeight,
 	parseNumberInput,
 	toDisplayWeight,
 } from '../../lib/units';
-import { iconButton, openNoteInNewTab } from '../helpers';
+import { iconButton, openNoteInNewTab, textButton } from '../helpers';
 import { inlineInput } from '../inline-input';
 import { ConfirmModal } from '../modals/confirm-modal';
 import type { PageContext } from '../page-context';
 import {
 	addSetManually,
 	finishSet,
+	isSetBlocked,
 	openExerciseHistory,
 	pickWeightWheel,
+	recordActiveSetManually,
 	startSet,
 } from './today-actions';
 import { renderSetRow } from './today-set-row';
 
 export interface CardEnv {
-	isToday: boolean;
 	/**
 	 * timer: ▶／■ でタイマー記録（筋トレ中・その他）
 	 * manual: ＋ で手入力（過去日・終えた筋トレの修正）
@@ -97,7 +104,7 @@ export function renderExerciseCard(
 				() => startSet(ctx, section, card),
 				'fitness-log-play',
 			);
-			play.disabled = ctx.services.store.current.activeSet !== null;
+			play.disabled = isSetBlocked(ctx);
 			play.toggleClass('is-filled', env.suggested === true);
 		}
 		renderTitle(ctx, header, card);
@@ -150,6 +157,8 @@ export function renderExerciseCard(
 			);
 		}
 		if (env.rest?.card === card) renderRestRow(ctx, box, env.rest);
+		if (card.active && env.mode === 'manual')
+			renderLeftoverActiveRow(ctx, box, section, card);
 	}
 
 	if (!card.exercise)
@@ -302,7 +311,7 @@ function renderSubtasks(
 				? 'fitness-log-play'
 				: 'fitness-log-play is-filled',
 		);
-		play.disabled = active !== null;
+		play.disabled = isSetBlocked(ctx);
 		row.createSpan({
 			cls: 'fitness-log-subtask-label',
 			text: t('today.set', { n }),
@@ -347,7 +356,7 @@ function renderSubtasks(
 			text: t('today.addOneMore', { n: total + 1 }),
 			attr: { type: 'button' },
 		});
-		add.disabled = active !== null;
+		add.disabled = isSetBlocked(ctx);
 		add.addEventListener('click', () => startSet(ctx, section, card));
 	}
 }
@@ -442,6 +451,40 @@ function renderActiveRow(
 			confirmText: t('today.cancelSet'),
 			danger: true,
 			onConfirm: () => ctx.run(() => controller.cancelSet()),
+		}).open(),
+	);
+}
+
+/**
+ * 計り終えないまま過去の日に残った進行中のセット（終え忘れて日が変わった）: 「セット 3 ・ 23:50 から計り終えていません」。
+ * 「記録する」で終了の時刻と回数などを入れて記録し、× で取り消す（タイマーで終えると何時間ものセットになるので）
+ */
+function renderLeftoverActiveRow(
+	ctx: PageContext,
+	parent: HTMLElement,
+	section: SectionModel,
+	card: CardModel,
+): void {
+	const active = ctx.services.store.current.activeSet;
+	if (!active) return;
+	const row = parent.createDiv({ cls: 'fitness-log-leftover-active' });
+	row.createSpan({
+		cls: 'fitness-log-leftover-active-text',
+		text: t('today.leftoverActive', {
+			n: active.setIndex,
+			time: formatHm(formatTime(new Date(active.startedAt))),
+		}),
+	});
+	textButton(row, t('today.recordActive'), () =>
+		recordActiveSetManually(ctx, section, card),
+	);
+	iconButton(row, 'x', t('today.cancelSet'), () =>
+		new ConfirmModal(ctx.app, {
+			title: card.name,
+			message: t('today.cancelSetConfirm'),
+			confirmText: t('today.cancelSet'),
+			danger: true,
+			onConfirm: () => ctx.run(() => ctx.services.controller.cancelSet()),
 		}).open(),
 	);
 }

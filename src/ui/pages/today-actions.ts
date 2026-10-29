@@ -12,7 +12,7 @@ import type { SetLog, WeightUnit } from '../../lib/model/types';
 import { nearestIndex, stepRange, weightChoices } from '../../lib/picker';
 import type { CardModel, SectionModel } from '../../lib/today/day-model';
 import { emptyFocus, type FocusState } from '../../lib/today/focus';
-import { formatHm, formatMonthDay } from '../../lib/time/date';
+import { formatHm, formatMonthDay, formatTime } from '../../lib/time/date';
 import { quickReps, quickWeights } from '../../lib/today/quick-values';
 import { hasField, keepsWeight } from '../../lib/model/record-type';
 import {
@@ -31,7 +31,7 @@ import { ExerciseHistoryModal } from '../modals/exercise-history-modal';
 import { NumberPromptModal } from '../modals/number-prompt-modal';
 import { SetEditModal } from '../modals/set-edit-modal';
 import { WheelPickerModal } from '../modals/wheel-picker-modal';
-import type { PageContext } from '../page-context';
+import { isLiveDate, type PageContext } from '../page-context';
 import { openExerciseLog } from './log-page';
 
 /**
@@ -57,7 +57,7 @@ export function endDayWithNotice(ctx: PageContext): void {
 		const summary = summarizeWorkout(
 			await services.controller.endDay(date),
 		);
-		if (date !== ctx.today && summary.end)
+		if (!isLiveDate(ctx) && summary.end)
 			new Notice(
 				t('notice.pastSessionEnded', { time: formatHm(summary.end) }),
 			);
@@ -73,6 +73,51 @@ export function endDayWithNotice(ctx: PageContext): void {
 				8000,
 			);
 	});
+}
+
+/**
+ * 今日の筋トレを始める操作（筋トレを開始・セットの ▶）。0 時をまたいで前の日の筋トレが続いていれば、
+ * controller が先に今の時刻で終える（進行中のセットも）ので、そのことを知らせる
+ */
+export function runStart(
+	ctx: PageContext,
+	action: () => Promise<unknown>,
+): void {
+	const overnight =
+		ctx.date === ctx.today && ctx.overnight?.running ? ctx.overnight : null;
+	const active = ctx.services.store.current.activeSet;
+	const exercise =
+		overnight && active?.date === overnight.date
+			? ctx.services.controller.exerciseById(active.exerciseId)
+			: undefined;
+	ctx.run(async () => {
+		await action();
+		if (!overnight) return;
+		const date = formatMonthDay(overnight.date);
+		new Notice(
+			exercise
+				? t('notice.overnightEndedWithSet', {
+						date,
+						exercise: exercise.name,
+					})
+				: t('notice.overnightEnded', { date }),
+			8000,
+		);
+	});
+}
+
+/**
+ * セットを始められないか: 進行中のセットがある。ただし 0 時をまたいだ前の日のセットは、今日のセットを始めると
+ * 今の時刻で終えるので（runStart）、今日の画面では止めない
+ */
+export function isSetBlocked(ctx: PageContext): boolean {
+	const active = ctx.services.store.current.activeSet;
+	if (!active) return false;
+	return !(
+		ctx.date === ctx.today &&
+		ctx.overnight?.running === true &&
+		active.date === ctx.overnight.date
+	);
 }
 
 /** ホイールで選べる重量の上限（それより重い記録があればそこまで広げる） */
@@ -352,7 +397,7 @@ export function startSet(
 		currentSets: hist.done,
 	});
 	const start = (weight: number | null) =>
-		ctx.run(() =>
+		runStart(ctx, () =>
 			controller.startSet({
 				date: ctx.date,
 				packageId: section.pkg?.id ?? null,
@@ -470,6 +515,45 @@ export function finishSet(
 		submitText: askDistance ? t('prompt.next') : t('prompt.record'),
 		allowEmpty: false,
 		onSubmit: askDistanceThen,
+	}).open();
+}
+
+/**
+ * 計り終えないまま過去の日に残った進行中のセットを記録する（終了の時刻と回数などを手で入れる。
+ * 開始はセットを始めた時刻）。タイマーで終えると、終了が今の時刻になって何時間ものセットになるので
+ */
+export function recordActiveSetManually(
+	ctx: PageContext,
+	section: SectionModel,
+	card: CardModel,
+): void {
+	const active = ctx.services.store.current.activeSet;
+	if (!active) return;
+	const hist = cardHistory(ctx, section, card);
+	const carry = carryOver({
+		occurrences: hist.occurrences,
+		date: ctx.date,
+		isSamePackage: hist.isSamePackage,
+		setIndex: active.setIndex,
+		currentSets: hist.done,
+	});
+	new SetEditModal(ctx.app, {
+		title: t('today.recordActiveTitle', { n: active.setIndex }),
+		subtitle: [card.name, hist.hint].filter((s) => s).join(' ・ '),
+		initial: {
+			weight: active.weight ?? null,
+			reps: carry.reps,
+			...(hasField(card.recordType, 'distance')
+				? { distance: carry.distance }
+				: {}),
+			start: formatTime(new Date(active.startedAt)),
+			end: null,
+			note: '',
+		},
+		unit: ctx.services.store.settings.weightUnit,
+		recordType: card.recordType,
+		onSave: (set) =>
+			ctx.run(() => ctx.services.controller.recordActiveSet(set)),
 	}).open();
 }
 

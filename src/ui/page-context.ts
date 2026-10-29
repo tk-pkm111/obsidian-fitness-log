@@ -1,4 +1,5 @@
 import type { App } from 'obsidian';
+import type { Overnight } from '../lib/today/overnight';
 import type { FitnessServices } from '../services';
 
 export type PageId =
@@ -17,7 +18,7 @@ export const PAGE_IDS: readonly PageId[] = [
 /** ビューの状態（ワークスペースに保存され、再起動後も同じページに戻る） */
 export interface MainViewState {
 	page: PageId;
-	/** 表示中の日付。null は「今日」に追従する */
+	/** 表示中の日付。null は「今日」に追従する（0 時をまたいで筋トレが続いている間は前の日） */
 	date: string | null;
 	/** ログページで選んでいる種目 */
 	exerciseId: string | null;
@@ -34,6 +35,8 @@ export interface PageContext {
 	date: string;
 	/** 端末の今日 */
 	today: string;
+	/** 0 時をまたいで続いている前の日の筋トレ（無ければ null）。その日も今日と同じくタイマーで記録する */
+	overnight: Overnight | null;
 	/**
 	 * ヘッダーの差し込み口。center はページの見出し（今日ページは日付ナビ。空ならページ名を出す）、
 	 * actions は右上の操作ボタン。
@@ -50,4 +53,9 @@ export interface PageContext {
 	 * ページごとの一時的な状態（検索語・絞り込みなど）。ビューが開いている間だけ保持し、保存しない。
 	 */
 	pageState<T extends object>(key: string, initial: () => T): T;
+}
+
+/** タイマーで記録する日か（今日と、0 時をまたいで筋トレが続いている前の日） */
+export function isLiveDate(ctx: PageContext, date = ctx.date): boolean {
+	return date === ctx.today || date === ctx.overnight?.date;
 }

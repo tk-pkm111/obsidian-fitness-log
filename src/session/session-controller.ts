@@ -10,6 +10,7 @@ import {
 	ensureExercise,
 	ensureSession,
 	findSession,
+	isRunningSession,
 	removeExercise,
 	removeSession,
 	renameSession,
@@ -42,6 +43,7 @@ import {
 	setDayRemoved,
 } from '../lib/today/groups';
 import { formatTime, todayString } from '../lib/time/date';
+import { overnightWorkout, type Overnight } from '../lib/today/overnight';
 
 /** 利用者に見せるエラー（Notice にそのまま出す） */
 export class SessionError extends Error {
@@ -184,18 +186,23 @@ export class SessionController {
 	// -------------------------------------------------------------------------
 	// 進行中セット
 
+	/**
+	 * セットを始める。今日のセットなら、0 時をまたいで続いている前の日の筋トレを先に終える
+	 * （進行中のセットもその時刻で終える。closeOvernight）
+	 */
 	async startSet(params: {
 		date: string;
 		packageId: string | null;
 		exerciseId: string;
 		weight: number | null;
 	}): Promise<ActiveSet> {
-		if (this.activeSet || this.starting)
-			throw new SessionError(
-				'進行中のセットがあります。先に終了してください',
-			);
+		const busy = () =>
+			new SessionError('進行中のセットがあります。先に終了してください');
+		if (this.starting) throw busy();
 		this.starting = true;
 		try {
+			await this.closeOvernight(params.date);
+			if (this.activeSet) throw busy();
 			return await this.doStartSet(params);
 		} finally {
 			this.starting = false;
@@ -266,9 +273,6 @@ export class SessionController {
 		const active = this.activeSet;
 		if (!active) throw new SessionError('進行中のセットがありません');
 		const exercise = this.requireExercise(active.exerciseId);
-		const ref: SessionRef = this.packageById(active.packageId)
-			? { packageId: active.packageId, sessionName: null }
-			: OTHER_SESSION;
 		const set: SetLog = {
 			weight: active.weight ?? null,
 			reps,
@@ -277,6 +281,32 @@ export class SessionController {
 			note: note.trim(),
 		};
 		if (hasField(exercise.recordType, 'distance')) set.distance = distance;
+		return this.writeActiveSet(active, exercise, set);
+	}
+
+	/**
+	 * 計り終えないまま過去の日に残った進行中のセットを、手で入れた数字・時刻で記録する
+	 * （タイマーでは終えられない日。終了を今の時刻にすると何時間ものセットになるので）
+	 */
+	async recordActiveSet(set: SetLog): Promise<DayLog> {
+		const active = this.activeSet;
+		if (!active) throw new SessionError('進行中のセットがありません');
+		return this.writeActiveSet(
+			active,
+			this.requireExercise(active.exerciseId),
+			set,
+		);
+	}
+
+	/** 進行中のセットを日ノートに書いて、進行中を消す。書き込みに失敗したら進行中のまま残す */
+	private async writeActiveSet(
+		active: ActiveSet,
+		exercise: Exercise,
+		set: SetLog,
+	): Promise<DayLog> {
+		const ref: SessionRef = this.packageById(active.packageId)
+			? { packageId: active.packageId, sessionName: null }
+			: OTHER_SESSION;
 		const day = await this.write(active.date, (d) => {
 			appendSet(d, this.target(ref, exercise), set);
 		});
@@ -551,8 +581,44 @@ export class SessionController {
 	// 筋トレの開始・終了。その日のパッケージと単発の種目をまとめて 1 日の筋トレとして終える・再開する
 
 	/**
+	 * 0 時をまたいで続いている前の日の筋トレ（overnightWorkout）。続いている間は、その日も今日と同じく
+	 * タイマーで記録し、終えた時刻は押した時刻にする
+	 */
+	overnight(): Overnight | null {
+		return overnightWorkout({
+			now: this.now(),
+			activeSet: this.activeSet,
+			day: (date) => this.index.day(date),
+		});
+	}
+
+	/** タイマーで記録する日か: 今日と、0 時をまたいで続いている前の日 */
+	isLive(date: string): boolean {
+		return (
+			date === todayString(this.now()) || date === this.overnight()?.date
+		);
+	}
+
+	/**
+	 * 今日の筋トレを始める前に、0 時をまたいで続いている前の日の筋トレを今の時刻で終える
+	 * （進行中のセットも今の時刻で終える。回数などはその日の画面で直せる）。同じ筋トレが 2 日に分かれて続かないように
+	 */
+	private async closeOvernight(date: string): Promise<void> {
+		if (date !== todayString(this.now())) return;
+		const overnight = this.overnight();
+		if (!overnight?.running) return;
+		if (this.activeSet?.date === overnight.date) await this.finishSet(null);
+		const day = this.index.day(overnight.date);
+		if (day?.sessions.some((s) => isRunningSession(s, true)))
+			await this.write(overnight.date, (d) => {
+				endDay(d, { time: formatTime(this.now()), includeOther: true });
+			});
+	}
+
+	/**
 	 * 「筋トレを開始」: 日ノートにセッションを作り、開始時刻を書く。
-	 * 別のパッケージが筋トレ中でもよい（終えるときはその日の筋トレをまとめて終える）
+	 * 別のパッケージが筋トレ中でもよい（終えるときはその日の筋トレをまとめて終える）。
+	 * 今日なら、0 時をまたいで続いている前の日の筋トレを先に終える（closeOvernight）
 	 */
 	async startSession(date: string, packageId: string): Promise<DayLog> {
 		const { match, name } = this.sessionMatcher({
@@ -560,6 +626,7 @@ export class SessionController {
 			sessionName: null,
 		});
 		if (name === null) throw new SessionError('パッケージが見つかりません');
+		await this.closeOvernight(date);
 		return this.write(date, (d) => {
 			startSession(d, match, name, formatTime(this.now()));
 		});
@@ -568,7 +635,8 @@ export class SessionController {
 	/**
 	 * 「筋トレを終了」: その日の筋トレ（筋トレ中のパッケージ・記録のある単発の種目）をまとめて終える。
 	 * セットが進行中なら先に終えてもらう。それぞれの終了は最後のセットの終了で、最後にやったものだけ今の時刻。
-	 * 過去の日（再開したまま日が変わった等）は、どれも最後のセットの終了で終える（単発の種目はそのまま）
+	 * 0 時をまたいで続いている前の日も今日と同じ。過去の日（終え忘れたまま日が変わった等）は、
+	 * どれも最後のセットの終了で終える（単発の種目はそのまま）
 	 */
 	async endDay(date: string): Promise<DayLog> {
 		const active = this.activeSet;
@@ -576,18 +644,20 @@ export class SessionController {
 			throw new SessionError(
 				'進行中のセットを終了してから、筋トレを終了してください',
 			);
-		const isToday = date === todayString(this.now());
+		const live = this.isLive(date);
 		return this.write(date, (d) => {
 			endDay(d, {
-				time: isToday ? formatTime(this.now()) : null,
-				includeOther: isToday,
+				time: live ? formatTime(this.now()) : null,
+				includeOther: live,
 			});
 		});
 	}
 
-	/** 終えたその日の筋トレをまとめて再開する（今日だけ。過去の日は続きのセットを計れないので） */
+	/**
+	 * 終えたその日の筋トレをまとめて再開する（今日と、0 時をまたいだ前の日だけ。過去の日は続きのセットを計れないので）
+	 */
 	async resumeDay(date: string): Promise<DayLog> {
-		if (date !== todayString(this.now()))
+		if (!this.isLive(date))
 			throw new SessionError('再開できるのは今日の筋トレだけです');
 		return this.write(date, (d) => {
 			resumeDay(d);

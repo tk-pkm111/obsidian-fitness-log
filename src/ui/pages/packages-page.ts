@@ -194,7 +194,7 @@ function renderPackageDetail(
 				ctx.navigate({
 					page: 'today',
 					selectedId: null,
-					date: returnDate === ctx.today ? null : returnDate,
+					date: returnDate,
 				});
 			},
 			{ icon: 'chevron-left', cls: 'mod-quiet fitness-log-back' },

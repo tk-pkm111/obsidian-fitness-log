@@ -258,5 +258,5 @@ export function chartPoints(
 
 /** その日の画面を開く */
 export function openDay(ctx: PageContext, date: string): void {
-	ctx.navigate({ page: 'today', date: date === ctx.today ? null : date });
+	ctx.navigate({ page: 'today', date });
 }

@@ -63,7 +63,7 @@ export function renderMonthly(ctx: PageContext, el: HTMLElement): void {
 			go.addEventListener('click', () =>
 				ctx.navigate({
 					page: 'today',
-					date: day.date === ctx.today ? null : day.date,
+					date: day.date,
 				}),
 			);
 			const file = repository.fileFor(day.date);

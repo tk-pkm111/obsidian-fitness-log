@@ -26,7 +26,8 @@ export function sectionProgress(section: SectionModel): SectionProgress {
 
 /**
  * その日の筋トレ全体の状態（今日の画面のいちばん下の「筋トレを終了」「お疲れ様でした」を決める）
- * - running: 筋トレ中のパッケージがある。今日は、記録があってまだ終えていない単発の種目も筋トレ中
+ * - running: 筋トレ中のパッケージがある。タイマーで記録する日（live: 今日と、0 時をまたいで筋トレが続いている
+ *   前の日）は、記録があってまだ終えていない単発の種目も筋トレ中
  * - finished: 筋トレ中のものが無く、終えたもの（記録のあるもの）がある
  * - none: どちらでもない（予定だけ・何も無い）
  */
@@ -34,7 +35,7 @@ export type DayStatus = 'none' | 'running' | 'finished';
 
 export function dayStatus(
 	sections: readonly SectionModel[],
-	isToday: boolean,
+	live: boolean,
 ): DayStatus {
 	// 単発の種目は、時刻のあるセットがあるときだけ（終えるときに最初のセットの開始を書くので。day-ops の endDay）
 	const timed = (s: SectionModel) =>
@@ -42,7 +43,7 @@ export function dayStatus(
 	const running = sections.some(
 		(s) =>
 			s.status === 'in-progress' ||
-			(isToday && s.status === 'manual' && timed(s)),
+			(live && s.status === 'manual' && timed(s)),
 	);
 	if (running) return 'running';
 	return sections.some((s) => s.status === 'finished') ? 'finished' : 'none';

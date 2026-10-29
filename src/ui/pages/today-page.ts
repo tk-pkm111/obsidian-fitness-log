@@ -22,7 +22,7 @@ import { OTHER_SESSION } from '../../session/session-controller';
 import { chooseExercise } from '../choose-exercise';
 import { choosePackage } from '../choose-package';
 import { iconButton, openNoteInNewTab, textButton } from '../helpers';
-import type { PageContext } from '../page-context';
+import { isLiveDate, type PageContext } from '../page-context';
 import { endDayWithNotice, formatMinutes } from './today-actions';
 import { renderSection } from './today-section';
 
@@ -33,20 +33,7 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 	renderDateBar(ctx);
 
 	const active = data.activeSet;
-	if (active && active.date !== date) {
-		const exercise = data.exercises.find((e) => e.id === active.exerciseId);
-		const banner = el.createDiv({ cls: 'fitness-log-banner' });
-		setIcon(banner.createSpan({ cls: 'fitness-log-banner-icon' }), 'timer');
-		banner.createSpan({
-			text: t('today.activeElsewhere', {
-				exercise: exercise?.name ?? '',
-				date: formatMonthDay(active.date),
-			}),
-		});
-		textButton(banner, t('today.goToActive'), () =>
-			ctx.navigate({ date: active.date === today ? null : active.date }),
-		);
-	}
+	renderElsewhereBanner(ctx, el);
 
 	const error = services.index.errorFor(date);
 	if (error) {
@@ -90,16 +77,17 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 		});
 	}
 
-	const isToday = date === today;
+	// 今日と、0 時をまたいで筋トレが続いている前の日は、タイマーで記録する
+	const live = isLiveDate(ctx);
 	// 休憩は最後にセットを終えた種目のすぐ下に出す（筋トレ中・その他のときだけ）
-	const lastSet = isToday ? latestFinishedSet(day) : null;
-	const rest = restState(sections, lastSet, isToday);
+	const lastSet = live ? latestFinishedSet(day) : null;
+	const rest = restState(sections, lastSet, live);
 	const packagesInDay = new Set(
 		sections.flatMap((s) => (s.inNote && s.pkg ? [s.pkg.id] : [])),
 	);
 	for (const section of sections)
 		renderSection(ctx, list, section, {
-			isToday,
+			live,
 			isFuture,
 			session: sessionOf(day, section),
 			rest,
@@ -155,9 +143,48 @@ export function renderTodayPage(ctx: PageContext, el: HTMLElement): void {
 }
 
 /**
+ * ほかの日で続いている筋トレ・進行中のセットの知らせ（その日へ移れる）。
+ * 0 時をまたいで前の日の筋トレが続いている間に今日を見ていれば、今日の筋トレを始めると前の日の筋トレは
+ * 今の時刻で終わることも知らせる（controller の closeOvernight）
+ */
+function renderElsewhereBanner(ctx: PageContext, el: HTMLElement): void {
+	const { date, today, overnight } = ctx;
+	const data = ctx.services.store.current;
+	const active = data.activeSet;
+	const elsewhere = overnight?.running ? overnight.date : active?.date;
+	if (!elsewhere || elsewhere === date) return;
+	const banner = el.createDiv({ cls: 'fitness-log-banner' });
+	setIcon(banner.createSpan({ cls: 'fitness-log-banner-icon' }), 'timer');
+	const text = banner.createDiv({ cls: 'fitness-log-banner-text' });
+	const exercise =
+		active?.date === elsewhere
+			? data.exercises.find((e) => e.id === active.exerciseId)
+			: undefined;
+	text.createDiv({
+		text: exercise
+			? t('today.activeElsewhere', {
+					exercise: exercise.name,
+					date: formatMonthDay(elsewhere),
+				})
+			: t('today.overnightRunning', { date: formatMonthDay(elsewhere) }),
+	});
+	if (overnight?.running && date === today)
+		text.createDiv({
+			cls: 'fitness-log-banner-sub',
+			text: t(
+				exercise ? 'today.overnightEndsWithSet' : 'today.overnightEnds',
+				{ date: formatMonthDay(elsewhere) },
+			),
+		});
+	textButton(banner, t('today.goToActive'), () =>
+		ctx.navigate({ date: elsewhere }),
+	);
+}
+
+/**
  * その日の筋トレ全体（パッケージと単発の種目をまとめて 1 日の筋トレ）の終わり方。いちばん下に 1 つだけ出す:
  * 筋トレ中は右に「■ 筋トレを終了」（まとめて終える）。終えたあとは「お疲れ様でした」とその日のまとめ、
- * 今日なら右に「↻ 筋トレを再開」（まとめて再開する）
+ * 今日（と 0 時をまたいだ前の日）なら右に「↻ 筋トレを再開」（まとめて再開する）
  */
 function renderDayEnd(
 	ctx: PageContext,
@@ -165,8 +192,8 @@ function renderDayEnd(
 	day: DayLog | undefined,
 	sections: readonly SectionModel[],
 ): void {
-	const isToday = ctx.date === ctx.today;
-	const status = dayStatus(sections, isToday);
+	const live = isLiveDate(ctx);
+	const status = dayStatus(sections, live);
 	if (status === 'running') {
 		const bar = el.createDiv({ cls: 'fitness-log-day-end' });
 		textButton(bar, t('session.end'), () => endDayWithNotice(ctx), {
@@ -214,8 +241,8 @@ function renderDayEnd(
 			() => openNoteInNewTab(ctx.app, file.path),
 			{ icon: 'file-text', cls: 'mod-quiet' },
 		);
-	// 再開は今日だけ（過去の日はタイマーで続きのセットを計れない）
-	if (isToday)
+	// 再開は今日（と 0 時をまたいだ前の日）だけ（過去の日はタイマーで続きのセットを計れない）
+	if (live)
 		textButton(
 			buttons,
 			t('session.resume'),
@@ -234,8 +261,8 @@ function renderDayEnd(
 function renderDateBar(ctx: PageContext): void {
 	const { date, today } = ctx;
 	const bar = ctx.header.center.createDiv({ cls: 'fitness-log-date-bar' });
-	const go = (target: string) =>
-		ctx.navigate({ date: target === today ? null : target });
+	// 今日を選んだら今日を追う（0 時をまたいで筋トレが続いている間は、今日の日付のまま。navigate が決める）
+	const go = (target: string) => ctx.navigate({ date: target });
 	iconButton(bar, 'chevron-left', t('date.prev'), () =>
 		go(addDays(date, -1)),
 	);
