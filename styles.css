@@ -3085,13 +3085,14 @@ a.fitness-log-card-name:hover {
 	text-align: center;
 }
 
-/* 線の下のトグルと、押すと開く欄（目標・前回の記録）。行はどれも同じ形: 左に名前、右に値 */
+/* 線の下のトグルと、押すと開く欄（目標・前回の記録）。行はどれも同じ形: 左に名前、右に値。
+   テーマのボタンの余白に負けないよう、セレクタを強くしている */
 .fitness-log-prompt-details {
 	margin-top: var(--size-4-2);
 	border-top: 1px solid var(--background-modifier-border);
 }
 
-.modal button.fitness-log-prompt-details-toggle {
+.modal .fitness-log-prompt-details button.fitness-log-prompt-details-toggle {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -3126,7 +3127,7 @@ a.fitness-log-card-name:hover {
 }
 
 .fitness-log-prompt-fact,
-.modal button.fitness-log-prompt-fact {
+.modal .fitness-log-prompt-details button.fitness-log-prompt-fact {
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-2);
