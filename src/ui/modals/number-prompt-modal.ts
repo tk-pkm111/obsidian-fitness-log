@@ -1,10 +1,19 @@
-import { Modal, Platform, type App } from 'obsidian';
+import { Modal, Platform, setIcon, type App } from 'obsidian';
 import { t } from '../../i18n';
 import { nearestIndex, repsChoices, weightChoices } from '../../lib/picker';
 import { parseNumberInput, stepValue } from '../../lib/units';
 import { iconButton, textButton } from '../helpers';
 import type { Wheel } from '../wheel';
 import { renderWheelRow } from './wheel-picker-modal';
+
+/** たたんだ欄の 1 行（左に名前、右に値）。onOpen があれば押せる（画面を閉じて移る） */
+export interface NumberPromptFact {
+	label: string;
+	value: string;
+	onOpen?: () => void;
+	/** onOpen の行の読み上げ */
+	openLabel?: string;
+}
 
 export interface NumberPromptOptions {
 	/** モーダルの見出し（種目名など） */
@@ -20,6 +29,8 @@ export interface NumberPromptOptions {
 	step: number;
 	/** 小数を入力するか（重量）。false なら数字キーボード（回数） */
 	decimal: boolean;
+	/** 見たいときだけ開く欄（目標・前回の記録）。毎回閉じた状態から始める */
+	details?: { title: string; facts: NumberPromptFact[] } | null;
 	/** 前回の記録などの補足 */
 	hint?: string;
 	submitText: string;
@@ -210,6 +221,8 @@ export class NumberPromptModal extends Modal {
 			}
 		});
 
+		if (options.details) this.renderDetails(options.details);
+
 		const buttons = contentEl.createDiv({
 			cls: 'fitness-log-modal-buttons',
 		});
@@ -222,6 +235,60 @@ export class NumberPromptModal extends Modal {
 				input.focus();
 				input.select();
 			}, 0);
+	}
+
+	/** 線の下のトグルと、押すと開く欄 */
+	private renderDetails(
+		details: NonNullable<NumberPromptOptions['details']>,
+	): void {
+		const box = this.contentEl.createDiv({
+			cls: 'fitness-log-prompt-details',
+		});
+		const toggle = box.createEl('button', {
+			cls: 'fitness-log-prompt-details-toggle',
+			attr: { type: 'button', 'aria-expanded': 'false' },
+		});
+		toggle.createSpan({ text: details.title });
+		setIcon(toggle.createSpan(), 'chevron-down');
+		const facts = box.createDiv();
+		facts.hide();
+		toggle.addEventListener('click', () => {
+			const open = !toggle.hasClass('is-open');
+			toggle.toggleClass('is-open', open);
+			toggle.setAttr('aria-expanded', String(open));
+			facts.toggle(open);
+		});
+		for (const fact of details.facts) {
+			const { onOpen } = fact;
+			const row = onOpen
+				? facts.createEl('button', {
+						attr: {
+							type: 'button',
+							'aria-label': fact.openLabel ?? fact.label,
+						},
+					})
+				: facts.createDiv();
+			row.addClass('fitness-log-prompt-fact');
+			row.createSpan({
+				cls: 'fitness-log-prompt-fact-label',
+				text: fact.label,
+			});
+			row.createSpan({
+				cls: 'fitness-log-prompt-fact-value',
+				text: fact.value,
+			});
+			// 押せる行だけ › を出す。値の右端は押せない行とそろえる
+			const chevron = row.createSpan({
+				cls: 'fitness-log-prompt-fact-chevron',
+			});
+			if (onOpen) {
+				setIcon(chevron, 'chevron-right');
+				row.addEventListener('click', () => {
+					this.close();
+					onOpen();
+				});
+			}
+		}
 	}
 
 	onClose(): void {

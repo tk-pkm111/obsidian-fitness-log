@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
 	formatSetResult,
 	formatSetsCompact,
+	formatPreviousRecord,
+	formatSetsRepsTarget,
 	formatTarget,
+	promptDetailsTitle,
 } from '../../src/lib/format';
-import type { SetLog } from '../../src/lib/model/types';
+import type { PackageItem, SetLog } from '../../src/lib/model/types';
 
 const s = (
 	weight: number | null,
@@ -91,5 +94,45 @@ describe('表示用の整形', () => {
 		expect(
 			formatTarget({ exerciseId: 'x', targetSets: 1, targetReps: '' }),
 		).toBe('1 セット');
+	});
+
+	describe('重さを聞く画面の目標と前回の記録', () => {
+		const item = (extra: Partial<PackageItem> = {}): PackageItem => ({
+			exerciseId: 'x',
+			targetSets: 3,
+			targetReps: '8-10',
+			...extra,
+		});
+
+		it('目標はセット数と回数だけ（休憩は出さない）', () => {
+			expect(formatSetsRepsTarget(item({ restSec: 150 }))).toBe(
+				'3 セット × 8-10 回',
+			);
+		});
+
+		it('回数の目標が空なら目標を出さない（セット数だけにしない）', () => {
+			expect(formatSetsRepsTarget(item({ targetReps: '' }))).toBeNull();
+			expect(formatSetsRepsTarget(item({ targetReps: '  ' }))).toBeNull();
+		});
+
+		it('パッケージの目標が無い種目（単発など）は目標を出さない', () => {
+			expect(formatSetsRepsTarget(null)).toBeNull();
+		});
+
+		it('前回の記録。別のパッケージならパッケージ名を添える', () => {
+			expect(formatPreviousRecord('40 kg × 9, 8', '10/29')).toBe(
+				'40 kg × 9, 8（10/29）',
+			);
+			expect(
+				formatPreviousRecord('40 kg × 9, 8', '10/29', 'ダミー B'),
+			).toBe('40 kg × 9, 8（ダミー B ・ 10/29）');
+		});
+
+		it('トグルの名前は中身の言葉だけ。どちらも無ければ出さない', () => {
+			expect(promptDetailsTitle(true, true)).toBe('目標と前回の記録');
+			expect(promptDetailsTitle(true, false)).toBe('目標');
+			expect(promptDetailsTitle(false, true)).toBe('前回の記録');
+			expect(promptDetailsTitle(false, false)).toBeNull();
+		});
 	});
 });

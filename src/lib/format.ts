@@ -91,3 +91,36 @@ export function formatTarget(item: PackageItem): string {
 		parts.push(t('format.rest', { time: formatDuration(item.restSec) }));
 	return parts.join(' ・ ');
 }
+
+/** 目標のセット数と回数: '3 セット × 8-10 回'（休憩は出さない）。回数の目標が無ければ null（セット数だけでは出さない） */
+export function formatSetsRepsTarget(item: PackageItem | null): string | null {
+	const reps = item?.targetReps.trim();
+	if (!item || !reps) return null;
+	return t('format.target', { sets: item.targetSets, reps });
+}
+
+/** 前回の記録: '40 kg × 9, 8（10/29）'。別のパッケージの記録なら '40 kg × 9, 8（LEGS ・ 10/29）' */
+export function formatPreviousRecord(
+	sets: string,
+	date: string,
+	otherPackage?: string,
+): string {
+	return otherPackage === undefined
+		? t('prompt.previousValue', { sets, date })
+		: t('prompt.previousOtherValue', {
+				sets,
+				date,
+				package: otherPackage,
+			});
+}
+
+/** 重さを聞く画面のトグルの名前（中身の言葉だけ）。どちらも無ければ null（トグルを出さない） */
+export function promptDetailsTitle(
+	hasTarget: boolean,
+	hasPrevious: boolean,
+): string | null {
+	if (hasTarget && hasPrevious) return t('prompt.detailsBoth');
+	if (hasTarget) return t('prompt.targetLabel');
+	if (hasPrevious) return t('prompt.detailsPrevious');
+	return null;
+}

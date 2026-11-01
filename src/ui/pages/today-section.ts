@@ -32,6 +32,7 @@ import {
 	runStart,
 	sectionRef,
 } from './today-actions';
+import { openPackageEditor } from './packages-page';
 import { renderExerciseCard, type CardEnv } from './today-card';
 
 export interface SectionEnv {
@@ -653,14 +654,6 @@ function renderFooter(
 			),
 		{ icon: 'plus', cls: 'mod-quiet' },
 	);
-}
-
-/** パッケージの編集画面へ（編集画面から「今日の画面に戻る」で戻れる） */
-function openPackageEditor(ctx: PageContext, packageId: string): void {
-	ctx.pageState('packageReturn', () => ({
-		date: null as string | null,
-	})).date = ctx.date;
-	ctx.navigate({ page: 'packages', selectedId: packageId });
 }
 
 /** パッケージのセクション（区切り）ごとのカード。設定で使わないときは 1 つ */

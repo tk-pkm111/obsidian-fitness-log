@@ -423,6 +423,18 @@ a.fitness-log-section-link:hover {
 	height: 18px;
 }
 
+.fitness-log-back-row.is-sticky {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: var(--background-primary);
+}
+
+/* 今日の画面から目標の設定へ来たとき、種目が上に固定した戻る行の下に来るように */
+.fitness-log-item {
+	scroll-margin-top: 56px;
+}
+
 .fitness-log-back-row {
 	display: flex;
 	flex-wrap: wrap;
@@ -3071,6 +3083,78 @@ a.fitness-log-card-name:hover {
 	font-size: var(--font-ui-large);
 	font-weight: var(--font-semibold);
 	text-align: center;
+}
+
+/* 線の下のトグルと、押すと開く欄（目標・前回の記録）。行はどれも同じ形: 左に名前、右に値 */
+.fitness-log-prompt-details {
+	margin-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.modal button.fitness-log-prompt-details-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: auto;
+	min-height: 44px;
+	padding: 0;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-normal);
+}
+
+.fitness-log-prompt-details-toggle > span:last-child,
+.fitness-log-prompt-fact-chevron {
+	display: inline-flex;
+	flex-shrink: 0;
+	width: 16px;
+	color: var(--text-faint);
+}
+
+.fitness-log-prompt-details-toggle svg,
+.fitness-log-prompt-fact-chevron svg {
+	width: 16px;
+	height: 16px;
+}
+
+.fitness-log-prompt-details-toggle.is-open svg {
+	transform: rotate(180deg);
+}
+
+.fitness-log-prompt-fact,
+.modal button.fitness-log-prompt-fact {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: auto;
+	min-height: 44px;
+	padding: var(--size-4-2) 0;
+	background: transparent;
+	border-radius: 0;
+	border-top: 1px solid var(--background-modifier-border);
+	box-shadow: none;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-normal);
+	white-space: normal;
+}
+
+.fitness-log-prompt-fact-label {
+	flex-shrink: 0;
+	color: var(--text-muted);
+}
+
+.fitness-log-prompt-fact-value {
+	flex: 1;
+	min-width: 0;
+	font-weight: var(--font-medium);
+	font-variant-numeric: tabular-nums;
+	text-align: right;
 }
 
 .fitness-log-prompt-hint {

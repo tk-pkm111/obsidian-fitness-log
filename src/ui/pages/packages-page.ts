@@ -78,6 +78,40 @@ function packageReturn(ctx: PageContext): { date: string | null } {
 	}));
 }
 
+/** パッケージの編集画面へ（編集画面から「今日の画面に戻る」で戻れる） */
+export function openPackageEditor(ctx: PageContext, packageId: string): void {
+	packageReturn(ctx).date = ctx.date;
+	ctx.navigate({ page: 'packages', selectedId: packageId });
+}
+
+/** その種目の目標の設定（⚙ を開いた状態）までスクロールして開く */
+export function openPackageItemTargets(
+	ctx: PageContext,
+	packageId: string,
+	exerciseId: string,
+): void {
+	const key = itemDetailsKey(packageId, exerciseId);
+	itemDetails(ctx).add(key);
+	scrollTarget(ctx).key = key;
+	openPackageEditor(ctx, packageId);
+}
+
+/** 目標の設定を開いている種目 */
+function itemDetails(ctx: PageContext): Set<string> {
+	return ctx.pageState('packageItemDetails', () => new Set<string>());
+}
+
+function itemDetailsKey(packageId: string, exerciseId: string): string {
+	return `${packageId}:${exerciseId}`;
+}
+
+/** 描いたあとで画面に入るまでスクロールする種目（今日の画面から目標の設定へ来たとき） */
+function scrollTarget(ctx: PageContext): { key: string | null } {
+	return ctx.pageState('packageItemScroll', () => ({
+		key: null as string | null,
+	}));
+}
+
 function renderPackageList(ctx: PageContext, el: HTMLElement): void {
 	const { store } = ctx.services;
 	packageReturn(ctx).date = null;
@@ -185,6 +219,8 @@ function renderPackageDetail(
 	const back = el.createDiv({ cls: 'fitness-log-back-row' });
 	const ret = packageReturn(ctx);
 	const returnDate = ret.date;
+	// 下のほうの種目の目標を直しているときも戻れるように、上に固定する
+	back.toggleClass('is-sticky', returnDate !== null);
 	if (returnDate !== null)
 		textButton(
 			back,
@@ -521,12 +557,14 @@ function renderItemRow(
 	});
 	titleEl.toggleClass('is-missing', !exercise);
 	const buttons = head.createDiv({ cls: 'fitness-log-item-buttons' });
-	// 目標（セット数・回数・休憩・メモ）は詳細設定にしまう（今日の画面には出さない）
-	const openDetails = ctx.pageState(
-		'packageItemDetails',
-		() => new Set<string>(),
-	);
-	const detailsKey = `${pkg.id}:${item.exerciseId}`;
+	// 目標（セット数・回数・休憩・メモ）は詳細設定にしまう（今日の画面では「今日は何 kg？」のトグルの中だけに目標を出す）
+	const openDetails = itemDetails(ctx);
+	const detailsKey = itemDetailsKey(pkg.id, item.exerciseId);
+	const scroll = scrollTarget(ctx);
+	if (scroll.key === detailsKey) {
+		scroll.key = null;
+		window.setTimeout(() => row.scrollIntoView({ block: 'start' }), 0);
+	}
 	const isOpen = openDetails.has(detailsKey);
 	const toggle = iconButton(
 		buttons,

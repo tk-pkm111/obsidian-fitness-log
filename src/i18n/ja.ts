@@ -205,6 +205,13 @@ export const ja = {
 	'today.unilateral': '片側',
 
 	'prompt.weightTitle': '今日は何 {unit}？',
+	'prompt.detailsBoth': '目標と前回の記録',
+	'prompt.detailsPrevious': '前回の記録',
+	'prompt.targetLabel': '目標',
+	'prompt.previousLabel': '前回',
+	'prompt.previousValue': '{sets}（{date}）',
+	'prompt.previousOtherValue': '{sets}（{package} ・ {date}）',
+	'prompt.editTarget': '{exercise} の目標を変更',
 	'prompt.repsTitle': '何回できた？',
 	'prompt.distanceTitle': '距離は？',
 	'prompt.next': '次へ',

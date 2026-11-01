@@ -109,6 +109,8 @@ run(`document.querySelector('.fitness-log-drawer-backdrop').click(); await sleep
 // 筋トレを記録する
 run(`await click('筋トレを開始'); await sleep(1200); [...document.querySelectorAll('.fitness-log-view button')].filter((b) => b.getAttribute('aria-label') === '開始')[1].click(); await sleep(1000); return 1`);
 shot('prompt-weight');
+run(`document.querySelector('.fitness-log-prompt-details-toggle').click(); await sleep(400); return 1`);
+shot('prompt-weight-details');
 run(`const m = [...document.querySelectorAll('.modal-container')].pop(); [...m.querySelectorAll('button')].find((b) => b.innerText.trim() === '開始').click(); await sleep(4000); top(); return 1`);
 shot('today-set-running');
 run(`[...document.querySelectorAll('.fitness-log-view button')].find((b) => b.getAttribute('aria-label') === '終了').click(); await sleep(1000); return 1`);

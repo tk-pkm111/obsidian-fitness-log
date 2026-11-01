@@ -1,6 +1,11 @@
 import { Notice, Platform } from 'obsidian';
 import { t } from '../../i18n';
-import { formatSetsCompact } from '../../lib/format';
+import {
+	formatPreviousRecord,
+	formatSetsCompact,
+	formatSetsRepsTarget,
+	promptDetailsTitle,
+} from '../../lib/format';
 import { summarizeWorkout } from '../../lib/log/summary';
 import {
 	carryOver,
@@ -28,16 +33,20 @@ import {
 } from '../../session/session-controller';
 import { ConfirmModal } from '../modals/confirm-modal';
 import { ExerciseHistoryModal } from '../modals/exercise-history-modal';
-import { NumberPromptModal } from '../modals/number-prompt-modal';
+import {
+	NumberPromptModal,
+	type NumberPromptFact,
+} from '../modals/number-prompt-modal';
 import { SetEditModal } from '../modals/set-edit-modal';
 import { WheelPickerModal } from '../modals/wheel-picker-modal';
 import { isLiveDate, type PageContext } from '../page-context';
 import { openExerciseLog } from './log-page';
+import { openPackageItemTargets } from './packages-page';
 
 /**
  * 今日ページの種目カードの操作（開始・終了・手入力）。
  * 前回値の引き継ぎ（実装計画 §4.3）で入力の初期値を決め、初回だけ重量を聞く。
- * 「前回 10 kg × 9, 8（9/28）」のヒントはカードには出さず、入力画面にだけ出す。
+ * 目標と前回の記録はカードには出さず、入力画面にだけ出す（重量を聞く画面ではトグルの中）。
  */
 
 /** 「50 分」。1 分未満は「1 分未満」 */
@@ -337,6 +346,8 @@ interface CardHistory {
 	done: SetLog[];
 	/** 「前回 10 kg × 9, 8（9/28）」 */
 	hint?: string;
+	/** 重さを聞く画面の前回の行の値: 「10 kg × 9, 8（9/28）」 */
+	previous?: string;
 }
 
 function cardHistory(
@@ -373,8 +384,50 @@ function cardHistory(
 					sets,
 					date,
 				});
+		history.previous = formatPreviousRecord(
+			sets,
+			date,
+			last.samePackage
+				? undefined
+				: (last.occurrence.sessionName ?? t('today.other')),
+		);
 	}
 	return history;
+}
+
+/**
+ * 重さを聞く画面のたたんだ欄: 目標と前回の記録。目標の行を押すと、その種目の目標の設定へ移る
+ * （パッケージの編集画面。「今日の画面に戻る」で戻れる）
+ */
+function weightPromptDetails(
+	ctx: PageContext,
+	section: SectionModel,
+	card: CardModel,
+	previous: string | undefined,
+): { title: string; facts: NumberPromptFact[] } | null {
+	const target = formatSetsRepsTarget(card.item);
+	const title = promptDetailsTitle(target !== null, previous !== undefined);
+	if (title === null) return null;
+	const facts: NumberPromptFact[] = [];
+	const packageId = section.pkg?.id;
+	const exerciseId = card.exercise?.id;
+	if (target !== null)
+		facts.push({
+			label: t('prompt.targetLabel'),
+			value: target,
+			...(packageId && exerciseId
+				? {
+						onOpen: () =>
+							openPackageItemTargets(ctx, packageId, exerciseId),
+						openLabel: t('prompt.editTarget', {
+							exercise: card.name,
+						}),
+					}
+				: {}),
+		});
+	if (previous !== undefined)
+		facts.push({ label: t('prompt.previousLabel'), value: previous });
+	return { title, facts };
 }
 
 export function startSet(
@@ -419,7 +472,7 @@ export function startSet(
 			quick: quickWeights(initial, store.settings.weightStep),
 			step: store.settings.weightStep,
 			decimal: true,
-			hint: hist.hint,
+			details: weightPromptDetails(ctx, section, card, hist.previous),
 			submitText: t('prompt.start'),
 			allowEmpty: true,
 			wheelMax: wheelMaxWeight(unit),
